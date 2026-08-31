@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusChip } from "@/components/StatusChip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Link, useNavigate } from "react-router-dom";
@@ -102,24 +101,17 @@ export default function Dashboard() {
 
   const passed = all.filter((r) => r.latest?.status === "pass");
   const failed = all.filter((r) => r.latest?.status === "fail");
-  const critFailed = failed.filter(
-    (r) => ((r.latest?.criticality || r.scenario.criticality || "").toLowerCase() === "critical"),
-  );
   const pending = all.filter((r) => !r.latest || r.latest.status === "pending");
 
   // workstream rollup of latest-per-scenario
-  const wsMap = new Map<string, { id: string; name: string; pass: number; fail: number; critFail: number; total: number }>();
+  const wsMap = new Map<string, { id: string; name: string; pass: number; fail: number; total: number }>();
   for (const r of all) {
     const ws = r.scenario.reports?.workstreams;
     if (!ws?.id) continue;
-    const cur = wsMap.get(ws.id) || { id: ws.id, name: ws.name, pass: 0, fail: 0, critFail: 0, total: 0 };
+    const cur = wsMap.get(ws.id) || { id: ws.id, name: ws.name, pass: 0, fail: 0, total: 0 };
     cur.total += 1;
     if (r.latest?.status === "pass") cur.pass += 1;
-    if (r.latest?.status === "fail") {
-      cur.fail += 1;
-      const c = (r.latest?.criticality || r.scenario.criticality || "").toLowerCase();
-      if (c === "critical") cur.critFail += 1;
-    }
+    if (r.latest?.status === "fail") cur.fail += 1;
     wsMap.set(ws.id, cur);
   }
   const wsRows = Array.from(wsMap.values()).sort((a, b) => b.fail - a.fail);
@@ -142,7 +134,7 @@ export default function Dashboard() {
           <Select value={wsId} onValueChange={(v) => { setWsId(v); setReportId("all"); }}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All workstreams</SelectItem>
+              <SelectItem value="all">All reports</SelectItem>
               {workstreams.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -157,7 +149,6 @@ export default function Dashboard() {
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All criticality</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
               <SelectItem value="high">High</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="low">Low</SelectItem>
@@ -166,7 +157,7 @@ export default function Dashboard() {
           <div className="text-xs text-muted-foreground mono ml-auto">{all.length} scenarios</div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 gap-4">
           <Stat label="Total scenarios" value={all.length} linkTo="/scenarios" />
           <Stat
             label="Passed"
@@ -180,17 +171,11 @@ export default function Dashboard() {
             tone="destructive"
             linkTo="/scenarios?status=fail"
           />
-          <Stat
-            label="Critical failed"
-            value={critFailed.length}
-            tone="destructive"
-            linkTo="/scenarios?status=fail&criticality=critical"
-          />
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>By workstream</CardTitle>
+            <CardTitle>By report</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {wsRows.map((w) => (
@@ -198,33 +183,6 @@ export default function Dashboard() {
             ))}
             {!wsRows.length && (
               <div className="text-sm text-muted-foreground">No scenarios configured.</div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Critical failing scenarios</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {critFailed.slice(0, 10).map((r) => (
-              <Link
-                key={r.scenario.id}
-                to={`/scenarios/${r.scenario.id}`}
-                className="block border border-border rounded-md p-3 hover:bg-secondary/40"
-              >
-                <div className="flex items-center gap-2">
-                  <StatusChip status="fail" />
-                  <span className="text-sm font-medium">{r.scenario.title}</span>
-                  <span className="text-xs text-muted-foreground mono ml-auto">
-                    {r.scenario.reports?.workstreams?.name} / {r.scenario.reports?.name}
-                  </span>
-                </div>
-                {r.latest?.analysis && <div className="text-xs mt-1">{r.latest.analysis}</div>}
-              </Link>
-            ))}
-            {!critFailed.length && (
-              <div className="text-sm text-muted-foreground">No critical failures. 🎉</div>
             )}
           </CardContent>
         </Card>
@@ -273,18 +231,12 @@ function WorkstreamRow({ ws, rows, lastRunByReport }: { ws: any; rows: Row[]; la
           <Link to={`/scenarios?status=fail&workstream_id=${ws.id}`} className="text-destructive hover:underline">
             {ws.fail} failed
           </Link>
-          <Link
-            to={`/scenarios?status=fail&criticality=critical&workstream_id=${ws.id}`}
-            className="text-destructive hover:underline"
-          >
-            {ws.critFail} critical
-          </Link>
         </div>
       </div>
       {open && (
         <div className="border-t border-border bg-secondary/20 p-3 space-y-1">
           {reports.length === 0 && (
-            <div className="text-xs text-muted-foreground">No reports in this workstream.</div>
+            <div className="text-xs text-muted-foreground">No screens in this report.</div>
           )}
           {reports.map((r) => {
             const runId = lastRunByReport[r.id];

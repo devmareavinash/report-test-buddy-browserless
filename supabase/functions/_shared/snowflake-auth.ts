@@ -1,8 +1,14 @@
-// Snowflake auth helpers — password, OAuth token, and SSO (external browser).
+// Snowflake auth helpers — password, OAuth token, SSO (external browser), and key-pair (JWT).
 
 export function isSsoAuth(authenticator?: string | null): boolean {
   const a = (authenticator || "password").trim().toLowerCase();
   return a === "sso" || a === "externalbrowser" || a.startsWith("http");
+}
+
+export function isKeypairAuth(authenticator?: string | null, authMethod?: string | null): boolean {
+  if ((authMethod || "").trim().toLowerCase() === "keypair") return true;
+  const a = (authenticator || "").trim().toLowerCase();
+  return a === "snowflake_jwt" || a === "keypair" || a === "key_pair";
 }
 
 export function normalizeSnowflakeAuth(input: {
@@ -10,19 +16,33 @@ export function normalizeSnowflakeAuth(input: {
   authenticator?: string | null;
   password_secret_ref?: string | null;
   token_secret_ref?: string | null;
+  extra?: Record<string, unknown> | null;
 }): {
   auth_method: string;
   authenticator: string;
   password_secret_ref: string | null;
   token_secret_ref: string | null;
+  extra: Record<string, unknown>;
 } {
   const auth = (input.authenticator || input.auth_method || "password").trim();
+  const extra = { ...(input.extra || {}) };
+
   if (input.token_secret_ref?.trim()) {
     return {
       auth_method: "token",
       authenticator: "token",
       password_secret_ref: null,
       token_secret_ref: input.token_secret_ref.trim(),
+      extra: { ...extra, authenticator: "token" },
+    };
+  }
+  if (isKeypairAuth(auth, input.auth_method)) {
+    return {
+      auth_method: "keypair",
+      authenticator: "SNOWFLAKE_JWT",
+      password_secret_ref: null,
+      token_secret_ref: null,
+      extra: { ...extra, authenticator: "SNOWFLAKE_JWT" },
     };
   }
   if (isSsoAuth(auth)) {
@@ -32,6 +52,7 @@ export function normalizeSnowflakeAuth(input: {
       authenticator: normalized,
       password_secret_ref: null,
       token_secret_ref: null,
+      extra: { ...extra, authenticator: normalized },
     };
   }
   return {
@@ -39,6 +60,7 @@ export function normalizeSnowflakeAuth(input: {
     authenticator: "password",
     password_secret_ref: input.password_secret_ref?.trim() || null,
     token_secret_ref: null,
+    extra: { ...extra, authenticator: "password" },
   };
 }
 
@@ -69,12 +91,43 @@ export function snowflakeConfigured(connector: {
 
   const auth = connectorAuthenticator(connector);
   if (connector.token_secret_ref?.trim()) return true;
-  if (isSsoAuth(auth) || connector.auth_method === "sso") return true;
-  return Boolean((connector.username || "").trim() && (connector.password_secret_ref || "").trim());
+
+  const user = (connector.username || "").trim();
+  if (isKeypairAuth(auth, connector.auth_method)) {
+    const extra = (connector.extra || {}) as Record<string, unknown>;
+    const keyPath = typeof extra.private_key_path === "string" ? extra.private_key_path.trim() : "";
+    const keyPem = typeof extra.private_key_pem === "string" ? extra.private_key_pem.trim() : "";
+    return Boolean(user && (keyPath || keyPem));
+  }
+  if (isSsoAuth(auth) || connector.auth_method === "sso") {
+    // Snowflake connector requires user even for externalbrowser (error 251005).
+    return Boolean(user);
+  }
+  return Boolean(user && (connector.password_secret_ref || "").trim());
 }
 
-export function interpretSnowflakeError(raw: string, authMode: "sso" | "password" | "token"): string {
+export type SnowflakeAuthMode = "sso" | "password" | "token" | "keypair";
+
+export function resolveAuthMode(connector: {
+  token_secret_ref?: string | null;
+  auth_method?: string | null;
+  extra?: Record<string, unknown> | null;
+}): SnowflakeAuthMode {
+  if (connector.token_secret_ref?.trim()) return "token";
+  const auth = connectorAuthenticator(connector);
+  if (isKeypairAuth(auth, connector.auth_method) || connector.auth_method === "keypair") return "keypair";
+  if (isSsoAuth(auth) || connector.auth_method === "sso") return "sso";
+  return "password";
+}
+
+export function interpretSnowflakeError(raw: string, authMode: SnowflakeAuthMode): string {
   const lower = raw.toLowerCase();
+  if (lower.includes("251005") || lower.includes("user is empty")) {
+    return (
+      "Snowflake username is required. Enter your Snowflake login name (USER) in Settings → Warehouses. " +
+      "SSO and key-pair auth both need a username."
+    );
+  }
   if (authMode === "sso") {
     if (lower.includes("<!doctype html") || lower.includes("cannot connect") || lower.includes("mwg-internal")) {
       return (
@@ -93,6 +146,15 @@ export function interpretSnowflakeError(raw: string, authMode: "sso" | "password
     if (lower.includes("login timeout") || lower.includes("timeout")) {
       return (
         "Snowflake SSO login timed out. A browser window should open on the backend host — sign in there and retry."
+      );
+    }
+  }
+  if (authMode === "keypair") {
+    if (lower.includes("jwt") || lower.includes("private key") || lower.includes("390144") || lower.includes("390143")) {
+      return (
+        "Key-pair auth failed. Confirm the private key path is readable on the Snowflake SSO host, " +
+        "the public key is registered on the Snowflake user (ALTER USER … SET RSA_PUBLIC_KEY), " +
+        "and the username matches that user."
       );
     }
   }
@@ -141,4 +203,25 @@ export async function callSnowflakeSso(
     throw new Error(String(data.error || "Snowflake SSO request failed"));
   }
   return data;
+}
+
+/** Payload fields the Python sidecar needs for SSO / key-pair. */
+export function snowflakeSidecarConnector(connector: Record<string, unknown>): Record<string, unknown> {
+  const extra = (connector.extra || {}) as Record<string, unknown>;
+  return {
+    account: connector.account,
+    host: connector.host,
+    database: connector.database,
+    schema: connector.schema,
+    warehouse: connector.warehouse,
+    role: connector.role,
+    username: connector.username,
+    authenticator: connectorAuthenticator(connector as any),
+    auth_method: connector.auth_method,
+    private_key_path: typeof extra.private_key_path === "string" ? extra.private_key_path : null,
+    private_key_pem: typeof extra.private_key_pem === "string" ? extra.private_key_pem : null,
+    private_key_passphrase: typeof extra.private_key_passphrase === "string"
+      ? extra.private_key_passphrase
+      : null,
+  };
 }

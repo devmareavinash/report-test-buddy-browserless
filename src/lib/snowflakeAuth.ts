@@ -1,13 +1,14 @@
 import { invokeFunction } from "@/lib/functions";
 
-export type SfAuthMethod = "password" | "sso" | "token";
+export type SfAuthMethod = "password" | "sso" | "token" | "keypair";
 
 export function resolveSfAuthMethod(authenticator?: string | null, authMethod?: string | null): SfAuthMethod {
-  if (authMethod === "token" || authMethod === "sso") return authMethod;
+  if (authMethod === "token" || authMethod === "sso" || authMethod === "keypair") return authMethod;
   const a = (authenticator || authMethod || "password").toLowerCase();
   if (a === "externalbrowser" || a === "sso") return "sso";
   if (a.startsWith("http")) return "sso";
   if (a === "token") return "token";
+  if (a === "snowflake_jwt" || a === "keypair" || a === "key_pair") return "keypair";
   return "password";
 }
 
@@ -24,6 +25,8 @@ export function snowflakePayload(
     username: string;
     password_secret_ref: string;
     token_secret_ref: string;
+    private_key_path?: string;
+    private_key_passphrase?: string;
   },
   sfAuthMethod: SfAuthMethod,
   idpUrl: string,
@@ -32,7 +35,16 @@ export function snowflakePayload(
     ? (idpUrl.trim() || "sso")
     : sfAuthMethod === "token"
     ? "token"
+    : sfAuthMethod === "keypair"
+    ? "SNOWFLAKE_JWT"
     : "password";
+
+  const extra: Record<string, string> = { authenticator };
+  if (sfAuthMethod === "keypair") {
+    if (fields.private_key_path?.trim()) extra.private_key_path = fields.private_key_path.trim();
+    if (fields.private_key_passphrase?.trim()) extra.private_key_passphrase = fields.private_key_passphrase.trim();
+  }
+
   return {
     name: fields.name,
     kind: fields.kind,
@@ -46,7 +58,7 @@ export function snowflakePayload(
     password_secret_ref: sfAuthMethod === "password" ? (fields.password_secret_ref || null) : null,
     token_secret_ref: sfAuthMethod === "token" ? (fields.token_secret_ref || null) : null,
     auth_method: sfAuthMethod,
-    extra: { authenticator },
+    extra,
   };
 }
 

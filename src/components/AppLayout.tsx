@@ -18,7 +18,7 @@ export const AppLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </div>
         <NavLink to="/" icon={<Activity className="h-4 w-4" />}>Dashboard</NavLink>
-        <NavLink to="/reports" icon={<FileText className="h-4 w-4" />}>Reports</NavLink>
+        <NavLink to="/reports" icon={<FileText className="h-4 w-4" />}>Screens</NavLink>
         <NavLink to="/scenarios" icon={<FlaskConical className="h-4 w-4" />}>Tests execution status</NavLink>
         <NavLink to="/runs" icon={<Bug className="h-4 w-4" />}>Runs</NavLink>
         <NavLink to="/sql-templates" icon={<Database className="h-4 w-4" />}>SQL templates</NavLink>

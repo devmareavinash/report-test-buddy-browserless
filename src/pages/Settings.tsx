@@ -36,12 +36,12 @@ export default function Settings() {
             <TabsTrigger value="llm">LLM Providers</TabsTrigger>
             <TabsTrigger value="agents">Agent Models</TabsTrigger>
             <TabsTrigger value="warehouse">Warehouses</TabsTrigger>
-            <TabsTrigger value="creds">Report Credentials</TabsTrigger>
+            <TabsTrigger value="creds">Screen Credentials</TabsTrigger>
             <TabsTrigger value="browser">Browser Runtime</TabsTrigger>
             
             <TabsTrigger value="schedule">Schedules</TabsTrigger>
             <TabsTrigger value="api">External Triggers</TabsTrigger>
-            <TabsTrigger value="org">Workstreams</TabsTrigger>
+            <TabsTrigger value="org">Reports</TabsTrigger>
           </TabsList>
           <TabsContent value="llm"><LlmTab /></TabsContent>
           <TabsContent value="agents"><AgentsTab /></TabsContent>
@@ -159,6 +159,7 @@ function AgentsTab() {
 function WarehouseTab() {
   const qc = useQueryClient();
   const { data } = useQuery({ queryKey: ["wh"], queryFn: async () => (await supabase.from("warehouse_connectors").select("*")).data ?? [] });
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [kind, setKind] = useState("snowflake");
   const [account, setAccount] = useState("");
@@ -172,28 +173,97 @@ function WarehouseTab() {
   const [token, setToken] = useState("");
   const [sfAuthMethod, setSfAuthMethod] = useState<SfAuthMethod>("password");
   const [idpUrl, setIdpUrl] = useState("");
+  const [privateKeyPath, setPrivateKeyPath] = useState("");
+  const [privateKeyPassphrase, setPrivateKeyPassphrase] = useState("");
   const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const formFields = () => ({
     name, kind, account, host, database: db, schema, warehouse, role,
     username: user, password_secret_ref: pass, token_secret_ref: token,
+    private_key_path: privateKeyPath, private_key_passphrase: privateKeyPassphrase,
   });
 
-  const add = async () => {
-    if (!name) return toast.error("Name required");
-    const payload = snowflakePayload(formFields(), sfAuthMethod, idpUrl);
-    const { error } = await supabase.from("warehouse_connectors").insert(payload);
-    if (error) return toast.error(error.message);
-    setName(""); setAccount(""); setHost(""); setDb(""); setSchema(""); setWarehouse(""); setRole(""); setUser(""); setPass(""); setToken(""); setIdpUrl(""); setSfAuthMethod("password");
-    toast.success("Warehouse saved");
-    qc.invalidateQueries({ queryKey: ["wh"] });
+  const resetForm = () => {
+    setEditingId(null);
+    setName(""); setAccount(""); setHost(""); setDb(""); setSchema(""); setWarehouse("");
+    setRole(""); setUser(""); setPass(""); setToken(""); setIdpUrl("");
+    setPrivateKeyPath(""); setPrivateKeyPassphrase(""); setSfAuthMethod("password");
+  };
+
+  const validateForm = () => {
+    if (!name.trim()) {
+      toast.error("Name required");
+      return false;
+    }
+    if ((sfAuthMethod === "sso" || sfAuthMethod === "keypair") && !user.trim()) {
+      toast.error("Username is required for SSO and key-pair auth");
+      return false;
+    }
+    if (sfAuthMethod === "keypair" && !privateKeyPath.trim()) {
+      toast.error("Private key path is required for key-pair auth");
+      return false;
+    }
+    return true;
+  };
+
+  const startEdit = (w: any) => {
+    const extra = (w.extra || {}) as Record<string, unknown>;
+    const method = resolveSfAuthMethod(
+      typeof extra.authenticator === "string" ? extra.authenticator : null,
+      w.auth_method,
+    );
+    setEditingId(w.id);
+    setName(w.name || "");
+    setKind(w.kind || "snowflake");
+    setAccount(w.account || "");
+    setHost(w.host || "");
+    setDb(w.database || "");
+    setSchema(w.schema || "");
+    setWarehouse(w.warehouse || "");
+    setRole(w.role || "");
+    setUser(w.username || "");
+    setPass(w.password_secret_ref || "");
+    setToken(w.token_secret_ref || "");
+    setSfAuthMethod(method);
+    const authenticator = typeof extra.authenticator === "string" ? extra.authenticator : "";
+    setIdpUrl(authenticator.toLowerCase().startsWith("http") ? authenticator : "");
+    setPrivateKeyPath(typeof extra.private_key_path === "string" ? extra.private_key_path : "");
+    setPrivateKeyPassphrase(typeof extra.private_key_passphrase === "string" ? extra.private_key_passphrase : "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const save = async () => {
+    if (!validateForm()) return;
+    setSaving(true);
+    try {
+      const payload = snowflakePayload(formFields(), sfAuthMethod, idpUrl);
+      if (editingId) {
+        const { error } = await supabase.from("warehouse_connectors").update(payload).eq("id", editingId);
+        if (error) return toast.error(error.message);
+        toast.success("Warehouse updated");
+      } else {
+        const { error } = await supabase.from("warehouse_connectors").insert(payload);
+        if (error) return toast.error(error.message);
+        toast.success("Warehouse saved");
+      }
+      resetForm();
+      qc.invalidateQueries({ queryKey: ["wh"] });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const testConnection = async () => {
     if (!account && !host) return toast.error("Account is required");
     if (!warehouse || !role) return toast.error("Warehouse and role are required");
     if (sfAuthMethod === "password" && (!user || !pass)) return toast.error("Username and password required for password auth");
+    if (sfAuthMethod === "sso" && !user.trim()) return toast.error("Username is required for SSO (Snowflake error 251005)");
     if (sfAuthMethod === "token" && !token) return toast.error("OAuth token secret name required");
+    if (sfAuthMethod === "keypair") {
+      if (!user.trim()) return toast.error("Username is required for key-pair auth");
+      if (!privateKeyPath.trim()) return toast.error("Private key path is required for key-pair auth");
+    }
     setTesting(true);
     try {
       const payload = snowflakePayload(formFields(), sfAuthMethod, idpUrl);
@@ -236,13 +306,18 @@ function WarehouseTab() {
       typeof extra.authenticator === "string" ? extra.authenticator : null,
       w.auth_method,
     );
-    return method === "sso" ? "SSO" : method === "token" ? "OAuth token" : "Password";
+    if (method === "sso") return "SSO";
+    if (method === "token") return "OAuth token";
+    if (method === "keypair") return "Key pair";
+    return "Password";
   };
 
   return (
     <div className="space-y-4 mt-4">
       <Card>
-        <CardHeader><CardTitle>Add warehouse</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>{editingId ? "Edit warehouse" : "Add warehouse"}</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-2 gap-2">
           <Input placeholder="Name (e.g. Snowflake ZS)" value={name} onChange={(e) => setName(e.target.value)} />
           <Select value={kind} onValueChange={setKind}>
@@ -260,36 +335,76 @@ function WarehouseTab() {
             <SelectContent>
               <SelectItem value="password">Password</SelectItem>
               <SelectItem value="sso">SSO (external browser)</SelectItem>
+              <SelectItem value="keypair">Key pair (JWT)</SelectItem>
               <SelectItem value="token">OAuth token</SelectItem>
             </SelectContent>
           </Select>
-          <Input placeholder="Username (optional for SSO)" value={user} onChange={(e) => setUser(e.target.value)} />
+          <Input
+            placeholder={sfAuthMethod === "token" ? "Username (optional for token)" : "Username (required)"}
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+          />
           {sfAuthMethod === "password" && (
             <Input placeholder="Password (or secret name)" type="password" value={pass} onChange={(e) => setPass(e.target.value)} />
           )}
           {sfAuthMethod === "sso" && (
             <Input placeholder="IdP URL (optional — leave blank for default SSO)" value={idpUrl} onChange={(e) => setIdpUrl(e.target.value)} className="col-span-2" />
           )}
+          {sfAuthMethod === "keypair" && (
+            <>
+              <Input
+                placeholder="Private key path on SSO host (e.g. C:\\keys\\rsa_key.p8)"
+                value={privateKeyPath}
+                onChange={(e) => setPrivateKeyPath(e.target.value)}
+                className="col-span-2"
+              />
+              <Input
+                placeholder="Private key passphrase (optional)"
+                type="password"
+                value={privateKeyPassphrase}
+                onChange={(e) => setPrivateKeyPassphrase(e.target.value)}
+                className="col-span-2"
+              />
+            </>
+          )}
           {sfAuthMethod === "token" && (
             <Input placeholder="OAuth token secret name (e.g. SNOWFLAKE_OAUTH_TOKEN)" value={token} onChange={(e) => setToken(e.target.value)} className="col-span-2" />
           )}
           {sfAuthMethod === "sso" && (
             <p className="col-span-2 text-xs text-muted-foreground">
-              SSO opens a browser on the machine running the Snowflake SSO backend service (your VDI), not in this tab.
+              Username is required. SSO opens a browser on the machine running the Snowflake SSO backend service (your VDI), not in this tab.
               Ensure <span className="mono">SNOWFLAKE_SSO_URL</span> is configured on the backend.
             </p>
           )}
+          {sfAuthMethod === "keypair" && (
+            <p className="col-span-2 text-xs text-muted-foreground">
+              Uses <span className="mono">SNOWFLAKE_JWT</span> via the Snowflake sidecar. The private key file must be readable on that host (your VDI).
+              Register the public key on the Snowflake user with <span className="mono">ALTER USER … SET RSA_PUBLIC_KEY=…</span>.
+            </p>
+          )}
           <div className="col-span-2 flex gap-2">
-            <Button variant="outline" onClick={testConnection} disabled={testing}>
+            <Button variant="outline" onClick={testConnection} disabled={testing || saving}>
               {testing ? "Testing…" : "Test connection"}
             </Button>
-            <Button onClick={add}>Add warehouse</Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving…" : editingId ? "Save changes" : "Add warehouse"}
+            </Button>
+            {editingId && (
+              <Button variant="ghost" onClick={resetForm} disabled={saving}>
+                Cancel
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
       <div className="space-y-2">
         {(data || []).map((w) => (
-          <div key={w.id} className="border border-border rounded p-3 text-sm flex justify-between items-center gap-2">
+          <div
+            key={w.id}
+            className={`border rounded p-3 text-sm flex justify-between items-center gap-2 ${
+              editingId === w.id ? "border-primary bg-muted/40" : "border-border"
+            }`}
+          >
             <div>
               <span className="font-medium">{w.name}</span>
               <span className="mono text-xs text-muted-foreground ml-2">
@@ -297,16 +412,21 @@ function WarehouseTab() {
               </span>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button size="sm" variant="outline" onClick={() => testSaved(w)} disabled={testing}>
+              <Button size="sm" variant="outline" onClick={() => startEdit(w)} disabled={testing || saving}>
+                Edit
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => testSaved(w)} disabled={testing || saving}>
                 Test
               </Button>
               <Button
                 size="sm"
                 variant="destructive"
+                disabled={testing || saving}
                 onClick={async () => {
                   if (!confirm(`Delete warehouse "${w.name}"? This cannot be undone.`)) return;
                   const { error } = await supabase.from("warehouse_connectors").delete().eq("id", w.id);
                   if (error) return toast.error(error.message);
+                  if (editingId === w.id) resetForm();
                   toast.success("Warehouse deleted");
                   qc.invalidateQueries({ queryKey: ["wh"] });
                 }}
@@ -358,6 +478,7 @@ function BrowserTab() {
     <div className="space-y-4 mt-4">
       <Card><CardContent className="pt-4 space-y-2">
         <div className="text-sm text-muted-foreground">Configure a hosted Playwright/CDP endpoint (Browserless, Browserbase, AWS Fargate, self-hosted) for live scraping and the headed script-debug stream.</div>
+        <div className="text-sm text-muted-foreground">Suite parallelism is set on the Screens page (or <span className="mono">ORCHESTRATE_CONCURRENCY</span> in <span className="mono">.env</span>, default 3). Browserless <span className="mono">CONCURRENT</span> should be at least as high so extra sessions queue instead of failing.</div>
         <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <Input placeholder="Provider (browserless|browserbase|fargate|custom)" value={provider} onChange={(e) => setProvider(e.target.value)} />
         <Input placeholder="WS endpoint secret name" value={secret} onChange={(e) => setSecret(e.target.value)} />
@@ -388,8 +509,8 @@ function SchedulesTab() {
         <Select value={scope} onValueChange={(v: any) => { setScope(v); setScopeId(""); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="report">Report</SelectItem>
-            <SelectItem value="workstream">Workstream</SelectItem>
+            <SelectItem value="report">Screen</SelectItem>
+            <SelectItem value="workstream">Report</SelectItem>
           </SelectContent>
         </Select>
         <Select value={scopeId} onValueChange={setScopeId}>
@@ -445,8 +566,8 @@ function ApiTab() {
         <Select value={scope} onValueChange={(v: any) => { setScope(v); setScopeId(""); }}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="report">Report</SelectItem>
-            <SelectItem value="workstream">Workstream</SelectItem>
+            <SelectItem value="report">Screen</SelectItem>
+            <SelectItem value="workstream">Report</SelectItem>
           </SelectContent>
         </Select>
         <Select value={scopeId} onValueChange={setScopeId}>
@@ -473,7 +594,7 @@ function OrgTab() {
   const addW = async () => { if (!w) return; await supabase.from("workstreams").insert({ name: w }); setW(""); qc.invalidateQueries({ queryKey: ["ws"] }); };
   return (
     <div className="mt-4">
-      <Card><CardHeader><CardTitle>Workstreams</CardTitle></CardHeader><CardContent className="space-y-2">
+      <Card><CardHeader><CardTitle>Reports</CardTitle></CardHeader><CardContent className="space-y-2">
         <div className="flex gap-2"><Input value={w} onChange={(e) => setW(e.target.value)} placeholder="Name" /><Button onClick={addW}>Add</Button></div>
         {(ws || []).map((x) => <div key={x.id} className="text-sm border border-border rounded px-2 py-1.5">{x.name}</div>)}
       </CardContent></Card>

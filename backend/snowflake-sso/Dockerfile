@@ -4,10 +4,15 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# Corporate proxies: pass HTTP_PROXY/HTTPS_PROXY as build-args when needed.
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG NO_PROXY=127.0.0.1,localhost
+ARG no_proxy=127.0.0.1,localhost
 
+# Use prebuilt wheels only — avoids apt-get (often blocked by corp DNS/proxy in Docker).
 COPY backend/snowflake-sso/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

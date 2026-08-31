@@ -1,13 +1,21 @@
 # ---------- Build stage ----------
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 
-# Install deps (use bun if lockfile present, else npm)
-COPY package.json bun.lockb* package-lock.json* ./
-RUN if [ -f bun.lockb ]; then \
-      npm install -g bun && bun install --frozen-lockfile; \
+# Corporate proxies (optional build-args)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG http_proxy
+ARG https_proxy
+ARG NO_PROXY=127.0.0.1,localhost
+ARG no_proxy=127.0.0.1,localhost
+
+# Install deps — prefer npm when package-lock.json exists (team uses npm on this repo)
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then \
+      npm ci --no-audit --no-fund; \
     else \
-      npm ci || npm install; \
+      npm install --no-audit --no-fund; \
     fi
 
 # Build-time env (Vite inlines VITE_* vars at build time)

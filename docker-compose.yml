@@ -1,3 +1,6 @@
+# Four containers: web (UI :8080), backend (Deno :8000), snowflake-sso (:8002),
+# browserless Chromium OSS (:3000). On AWS, only publish 8080 in the security group.
+# Do not expose 8000 / 8002 / 3000 to the internet.
 services:
   web:
     build:
@@ -25,8 +28,11 @@ services:
       SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       LOVABLE_API_KEY: ${LOVABLE_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       BROWSERLESS_HOST: ${BROWSERLESS_HOST:-http://browserless:3000}
       BROWSERLESS_TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}
+      BROWSERLESS_OSS: ${BROWSERLESS_OSS:-true}
+      ORCHESTRATE_CONCURRENCY: ${ORCHESTRATE_CONCURRENCY:-3}
       # Snowflake SSO — override with host.docker.internal:8002 when running Python natively on VDI
       SNOWFLAKE_SSO_URL: ${SNOWFLAKE_SSO_URL:-http://snowflake-sso:8002}
       LOCAL_FUNCTIONS_URL: http://127.0.0.1:8000/functions/v1

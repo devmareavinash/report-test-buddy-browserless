@@ -11,12 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2 } from "lucide-react";
+import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2, Download } from "lucide-react";
+import { ConcurrencySelect, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
+import { exportScreensToExcel } from "@/lib/exportScreensExcel";
 
 export default function Reports() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [wsId, setWsId] = useState("all");
+  const [exporting, setExporting] = useState(false);
+  const [editWorkstream, setEditWorkstream] = useState<{ id: string; name: string } | null>(null);
+  const { concurrency, setConcurrency } = useOrchestrateConcurrency();
   const { data: tree } = useQuery({
     queryKey: ["report-tree"],
     queryFn: async () => {
@@ -61,7 +66,7 @@ export default function Reports() {
 
   const run = useMutation({
     mutationFn: async (vars: { scope_type: string; scope_id: string }) => {
-      const { data, error } = await invokeFunction("agent-orchestrate", vars);
+      const { data, error } = await invokeFunction("agent-orchestrate", { ...vars, concurrency });
       if (error) throw error;
       return data;
     },
@@ -94,15 +99,15 @@ export default function Reports() {
       <div className="p-8 space-y-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">Reports</h1>
-            <p className="text-sm text-muted-foreground">Workstream → Reports. Run a full suite at any level.</p>
+            <h1 className="text-2xl font-semibold">Screens</h1>
+            <p className="text-sm text-muted-foreground">Report → Screen. Run a full suite at any level.</p>
           </div>
           <NewReportDialog tree={tree} />
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
           <Input
-            placeholder="Search reports by name or URL…"
+            placeholder="Search screens by name or URL…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="max-w-sm"
@@ -110,13 +115,34 @@ export default function Reports() {
           <Select value={wsId} onValueChange={setWsId}>
             <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All workstreams</SelectItem>
+              <SelectItem value="all">All reports</SelectItem>
               {(tree?.ws || []).map((w: any) => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="text-xs text-muted-foreground mono ml-auto">{filteredReports.length} reports</div>
+          <ConcurrencySelect value={concurrency} onChange={setConcurrency} disabled={run.isPending} />
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={exporting}
+            onClick={async () => {
+              setExporting(true);
+              try {
+                const counts = await exportScreensToExcel({ workstreamId: wsId, search });
+                toast.success(`Exported ${counts.reports} report(s), ${counts.screens} screen(s), ${counts.testCases} test case(s)`);
+              } catch (e: any) {
+                toast.error(e?.message || "Export failed");
+              } finally {
+                setExporting(false);
+              }
+            }}
+            title="Download reports, screens, and test cases as Excel"
+          >
+            {exporting ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />}
+            Export Excel
+          </Button>
+          <div className="text-xs text-muted-foreground mono ml-auto">{filteredReports.length} screens</div>
         </div>
 
         <div className="space-y-4">
@@ -132,6 +158,14 @@ export default function Reports() {
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
+                      variant="ghost"
+                      title="Rename report"
+                      onClick={() => setEditWorkstream(w)}
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="outline"
                       disabled={run.isPending && run.variables?.scope_id === w.id}
                       onClick={() => run.mutate({ scope_type: "workstream", scope_id: w.id })}
@@ -139,24 +173,24 @@ export default function Reports() {
                       {run.isPending && run.variables?.scope_id === w.id
                         ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                         : <Play className="h-3 w-3 mr-1" />}
-                      Run workstream
+                      Run report
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="text-destructive hover:text-destructive"
-                      title="Delete workstream"
+                      title="Delete report"
                       onClick={async () => {
                         const reportCount = (tree?.rep || []).filter((r: any) => r.workstream_id === w.id).length;
                         if (reportCount > 0) {
-                          return toast.error(`Cannot delete "${w.name}": it still contains ${reportCount} report(s). Delete or move them first.`);
+                          return toast.error(`Cannot delete "${w.name}": it still contains ${reportCount} screen(s). Delete or move them first.`);
                         }
-                        if (!confirm(`Delete workstream "${w.name}"?`)) return;
+                        if (!confirm(`Delete report "${w.name}"?`)) return;
                         await supabase.from("runs").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
                         await supabase.from("schedules").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
                         const { error } = await supabase.from("workstreams").delete().eq("id", w.id);
                         if (error) return toast.error(error.message);
-                        toast.success("Workstream deleted");
+                        toast.success("Report deleted");
                         qc.invalidateQueries({ queryKey: ["report-tree"] });
                       }}
                     >
@@ -175,15 +209,73 @@ export default function Reports() {
                     />
                   ))}
                   {!wsReports.length && (
-                    <div className="text-xs text-muted-foreground">No reports yet.</div>
+                    <div className="text-xs text-muted-foreground">No screens yet.</div>
                   )}
                 </CardContent>
               </Card>
             );
           })}
         </div>
+        <WorkstreamEditDialog
+          workstream={editWorkstream}
+          open={!!editWorkstream}
+          onOpenChange={(open) => { if (!open) setEditWorkstream(null); }}
+        />
       </div>
     </AppLayout>
+  );
+}
+
+function WorkstreamEditDialog({
+  workstream,
+  open,
+  onOpenChange,
+}: {
+  workstream: { id: string; name: string } | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+
+  React.useEffect(() => {
+    if (open) setName(workstream?.name || "");
+  }, [open, workstream]);
+
+  const save = async () => {
+    if (!workstream) return;
+    const trimmed = name.trim();
+    if (!trimmed) return toast.error("Report name is required");
+    const { error } = await supabase.from("workstreams").update({ name: trimmed }).eq("id", workstream.id);
+    if (error) return toast.error(error.message);
+    toast.success("Report renamed");
+    qc.invalidateQueries({ queryKey: ["report-tree"] });
+    qc.invalidateQueries({ queryKey: ["ws"] });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename report</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="ws-name">Name</Label>
+          <Input
+            id="ws-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Report name"
+            onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -199,7 +291,7 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
     },
   });
   const del = async () => {
-    if (!confirm(`Delete report "${r.name}"? This also deletes its scenarios, scripts, version history, and results.`)) return;
+    if (!confirm(`Delete screen "${r.name}"? This also deletes its scenarios, scripts, version history, and results.`)) return;
     // Collect scenarios for cascade
     const scs = (await supabase.from("scenarios").select("id").eq("report_id", r.id)).data ?? [];
     const sids = scs.map((s: any) => s.id);
@@ -218,7 +310,7 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
     await supabase.from("schedules").delete().eq("scope_type", "report").eq("scope_id", r.id);
     const { error } = await supabase.from("reports").delete().eq("id", r.id);
     if (error) return toast.error(error.message);
-    toast.success("Report deleted");
+    toast.success("Screen deleted");
     qc.invalidateQueries({ queryKey: ["report-tree"] });
     qc.invalidateQueries({ queryKey: ["report-status-map"] });
   };
@@ -248,7 +340,7 @@ function NewReportDialog({ tree }: { tree: any }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Add report</Button>
+      <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Add screen</Button>
       <ReportDialog tree={tree} open={open} onOpenChange={setOpen} />
     </>
   );
@@ -306,7 +398,7 @@ export function ReportDialog({
   });
 
   const save = async () => {
-    if (!wsId) return toast.error("Workstream is required");
+    if (!wsId) return toast.error("Report is required");
     if (!name || !url) return toast.error("Name and URL are required");
     const payload = {
       name,
@@ -322,7 +414,7 @@ export function ReportDialog({
       ? await supabase.from("reports").update(payload).eq("id", report.id)
       : await supabase.from("reports").insert(payload);
     if (error) return toast.error(error.message);
-    toast.success(isEdit ? "Report updated" : "Report added");
+    toast.success(isEdit ? "Screen updated" : "Screen added");
     onOpenChange(false);
     qc.invalidateQueries({ queryKey: ["report-tree"] });
     if (isEdit) qc.invalidateQueries({ queryKey: ["report", report.id] });
@@ -336,15 +428,15 @@ export function ReportDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl sm:max-w-3xl">
-        <DialogHeader><DialogTitle>{isEdit ? "Edit report" : "New report"}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{isEdit ? "Edit screen" : "New screen"}</DialogTitle></DialogHeader>
         <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           <div className="space-y-2">
-            <Label>Workstream <span className="text-destructive">*</span></Label>
+            <Label>Report <span className="text-destructive">*</span></Label>
             <Select
               value={wsId}
               onValueChange={async (v) => {
                 if (v === "__add_new__") {
-                  const name = window.prompt("New workstream name:")?.trim();
+                  const name = window.prompt("New report name:")?.trim();
                   if (!name) return;
                   const { data, error } = await supabase
                     .from("workstreams")
@@ -352,7 +444,7 @@ export function ReportDialog({
                     .select("id")
                     .single();
                   if (error) return toast.error(error.message);
-                  toast.success("Workstream created");
+                  toast.success("Report created");
                   qc.invalidateQueries({ queryKey: ["report-tree"] });
                   setWsId(data!.id as string);
                   return;
@@ -360,21 +452,21 @@ export function ReportDialog({
                 setWsId(v);
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Select workstream" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select report" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="__add_new__" className="text-primary">
-                  <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Create new workstream</span>
+                  <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Create new report</span>
                 </SelectItem>
                 {(tree?.ws || []).map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Report Name <span className="text-destructive">*</span></Label>
-            <Input placeholder="Report name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Label>Screen Name <span className="text-destructive">*</span></Label>
+            <Input placeholder="Screen name" value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Report URL <span className="text-destructive">*</span></Label>
+            <Label>Screen URL <span className="text-destructive">*</span></Label>
             <Input placeholder="Primary URL" value={url} onChange={(e) => setUrl(e.target.value)} />
           </div>
           <div className="space-y-2">
@@ -385,7 +477,7 @@ export function ReportDialog({
           <div className="border-t pt-3 space-y-3">
             <div className="text-xs font-semibold uppercase text-muted-foreground">Test Script Configuration</div>
             <div className="space-y-2">
-              <Label>Report Login Credentials</Label>
+              <Label>Screen Login Credentials</Label>
               <Select
                 value={credId || "__none__"}
                 onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }}

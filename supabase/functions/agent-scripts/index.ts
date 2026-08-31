@@ -1,6 +1,71 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/auth.ts";
 import { callAgent, getSupabase, tryParseJson } from "../_shared/llm.ts";
+import {
+  assembleOverviewScript,
+  isOverviewScenario,
+  normalizeReportUrl,
+  parseKpiLabels,
+} from "../_shared/mstr-overview-template.ts";
+
+async function persistGeneratedScript(
+  sb: ReturnType<typeof getSupabase>,
+  opts: {
+    scenario_id: string;
+    playwright_code: string;
+    isReferenceTarget: boolean;
+    mainShouldUseReferenceSource: boolean;
+    credId: string | null;
+    generatedBy: string;
+  },
+) {
+  const { scenario_id, playwright_code, isReferenceTarget, mainShouldUseReferenceSource, credId, generatedBy } = opts;
+  const { data: existing } = await sb.from("scripts")
+    .select("id, assertion_spec, playwright_code, credential_profile_id")
+    .eq("scenario_id", scenario_id).maybeSingle();
+  if (isReferenceTarget) {
+    const prevSpec: any = (existing as any)?.assertion_spec || {};
+    const nextSpec = {
+      ...prevSpec,
+      __reference_playwright_code: playwright_code,
+      __reference_generated_by: generatedBy,
+      __reference_generated_at: new Date().toISOString(),
+    };
+    if (existing) {
+      const { data } = await sb.from("scripts").update({ assertion_spec: nextSpec }).eq("id", existing.id).select().single();
+      return data;
+    }
+    const { data } = await sb.from("scripts").insert({
+      scenario_id, playwright_code: "", assertion_spec: nextSpec, debug_status: "draft",
+    }).select().single();
+    return data;
+  }
+  if (existing) {
+    const prevSpec: any = (existing as any).assertion_spec || {};
+    const nextSpec = {
+      ...prevSpec,
+      __main_uses_reference_source: mainShouldUseReferenceSource || undefined,
+      __generated_by: generatedBy,
+      __generated_at: new Date().toISOString(),
+    };
+    const update: any = { playwright_code, debug_status: "draft", assertion_spec: nextSpec };
+    if (mainShouldUseReferenceSource && credId) update.credential_profile_id = credId;
+    const { data } = await sb.from("scripts").update(update).eq("id", existing.id).select().single();
+    return data;
+  }
+  const insertRow: any = {
+    scenario_id,
+    playwright_code,
+    debug_status: "draft",
+    assertion_spec: {
+      __generated_by: generatedBy,
+      ...(mainShouldUseReferenceSource ? { __main_uses_reference_source: true } : {}),
+    },
+  };
+  if (mainShouldUseReferenceSource && credId) insertRow.credential_profile_id = credId;
+  const { data } = await sb.from("scripts").insert(insertRow).select().single();
+  return data;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -59,6 +124,33 @@ Deno.serve(async (req) => {
     const primaryUrl: string = scenario.reports?.url || "";
     const referenceUrl: string = (scenario.reports as any)?.reference_url || "";
     const targetUrl: string = useReferenceSource ? (referenceUrl || primaryUrl) : primaryUrl;
+
+    // Overview page: fill the proven template (URL + KPI names only). Other screens stay on LLM.
+    if (isOverviewScenario(scenario, existingScript, isReferenceTarget)) {
+      const kpiLabels = parseKpiLabels(scenario, existingScript);
+      const playwright_code = assembleOverviewScript({
+        reportUrl: normalizeReportUrl(targetUrl),
+        kpiLabels,
+      });
+      const inserted = await persistGeneratedScript(sb, {
+        scenario_id,
+        playwright_code,
+        isReferenceTarget,
+        mainShouldUseReferenceSource,
+        credId,
+        generatedBy: "overview_template",
+      });
+      return new Response(
+        JSON.stringify({
+          script: inserted,
+          target,
+          generated_by: "overview_template",
+          kpi_labels: kpiLabels,
+          report_url: normalizeReportUrl(targetUrl),
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const sys = `You generate Playwright scripts for Browserless.io /function endpoint that scrape BI report KPIs.
 
@@ -997,54 +1089,16 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
       }
     }
 
-    // Upsert by scenario_id so regenerate updates in place (which fires the script_versions trigger).
-    const { data: existing } = await sb.from("scripts").select("id, assertion_spec, playwright_code, credential_profile_id").eq("scenario_id", scenario_id).maybeSingle();
-    let inserted;
-    if (isReferenceTarget) {
-      // Store the reference script alongside the main script inside
-      // assertion_spec.__reference_playwright_code so the run-time picks it up
-      // via the existing reference-script pathway.
-      const prevSpec: any = (existing as any)?.assertion_spec || {};
-      const nextSpec = {
-        ...prevSpec,
-        __reference_playwright_code: playwright_code,
-        __reference_generated_by: "agent",
-        __reference_generated_at: new Date().toISOString(),
-      };
-      if (existing) {
-        const { data } = await sb.from("scripts")
-          .update({ assertion_spec: nextSpec })
-          .eq("id", existing.id).select().single();
-        inserted = data;
-      } else {
-        const { data } = await sb.from("scripts").insert({
-          scenario_id, playwright_code: "", assertion_spec: nextSpec, debug_status: "draft",
-        }).select().single();
-        inserted = data;
-      }
-    } else if (existing) {
-      const prevSpec: any = (existing as any).assertion_spec || {};
-      const nextSpec = {
-        ...prevSpec,
-        __main_uses_reference_source: mainShouldUseReferenceSource || undefined,
-      };
-      const update: any = { playwright_code, debug_status: "draft", assertion_spec: nextSpec };
-      if (mainShouldUseReferenceSource && credId) update.credential_profile_id = credId;
-      const { data } = await sb.from("scripts")
-        .update(update)
-        .eq("id", existing.id).select().single();
-      inserted = data;
-    } else {
-      const insertRow: any = {
-        scenario_id, playwright_code, debug_status: "draft",
-        assertion_spec: mainShouldUseReferenceSource ? { __main_uses_reference_source: true } : {},
-      };
-      if (mainShouldUseReferenceSource && credId) insertRow.credential_profile_id = credId;
-      const { data } = await sb.from("scripts").insert(insertRow).select().single();
-      inserted = data;
-    }
+    const inserted = await persistGeneratedScript(sb, {
+      scenario_id,
+      playwright_code,
+      isReferenceTarget,
+      mainShouldUseReferenceSource,
+      credId,
+      generatedBy: "agent",
+    });
 
-    return new Response(JSON.stringify({ script: inserted, target }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ script: inserted, target, generated_by: "agent" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

@@ -194,7 +194,7 @@ export default function RunDetail() {
           <Select value={wsId} onValueChange={(v) => { setWsId(v); setReportId("all"); }}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All workstreams</SelectItem>
+              <SelectItem value="all">All reports</SelectItem>
               {workstreams.map((w) => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
               ))}

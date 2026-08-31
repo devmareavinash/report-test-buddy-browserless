@@ -3,7 +3,7 @@
 
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabase } from "../_shared/llm.ts";
-import { requireAuth } from "../_shared/auth.ts";
+import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 
 type Mode = "headed" | "headless";
 
@@ -66,12 +66,33 @@ async function callBrowserlessFunction(rt: BrowserlessRuntime, jsCode: string) {
   const url = buildBrowserlessFunctionUrl(rt);
   const resp = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/javascript" },
+    headers: {
+      "Content-Type": "application/javascript",
+      Authorization: `Bearer ${rt.token}`,
+    },
     body: jsCode,
   });
   const text = await resp.text();
   if (!resp.ok) {
-    const err: any = new Error(`browserless ${resp.status}: ${text}`);
+    let detail = text;
+    const looksLikeCodespace = /github\.dev|github\.com|codespace|forwarded port/i.test(rt.baseUrl + " " + text);
+    if (resp.status === 401 && (!text || /github|codespace|forwarded port/i.test(text))) {
+      detail =
+        "401 from the Browserless URL (empty body usually means GitHub Codespaces, not Browserless). " +
+        "In the Codespace Ports tab set 3000 to Public, then retry. " +
+        `Host: ${rt.baseUrl}`;
+    } else if (resp.status === 404 && looksLikeCodespace && !text.trim()) {
+      detail =
+        `404 from ${rt.baseUrl} (empty body). The GitHub Codespace is stopped or port 3000 is no longer forwarded. ` +
+        "Re-open the Codespace, wait until Browserless is healthy, set port 3000 to Public, " +
+        "then update BROWSERLESS_HOST if the github.dev URL changed.";
+    } else if (resp.status === 404 && !text.trim()) {
+      detail =
+        `404 from ${rt.baseUrl}${rt.functionPath} with an empty body. ` +
+        "The host is up but this path is missing — confirm BROWSERLESS_OSS=true (OSS uses /chromium/function) " +
+        "and that Browserless is running.";
+    }
+    const err: any = new Error(`browserless ${resp.status}: ${detail}`);
     err.status = resp.status;
     err.body = text;
     throw err;
@@ -294,10 +315,22 @@ Deno.serve(async (req) => {
   const unauthorized = await requireAuth(req);
   if (unauthorized) return unauthorized;
   try {
-    const { mode = "headless", scenario_id, code = "", target = "main" } = await req.json() as {
-      mode: Mode; scenario_id?: string; code?: string; target?: "main" | "reference";
+    const {
+      mode = "headless",
+      scenario_id,
+      code = "",
+      target = "main",
+      filter_combinations: filterComboOverride,
+    } = await req.json() as {
+      mode: Mode;
+      scenario_id?: string;
+      code?: string;
+      target?: "main" | "reference";
+      filter_combinations?: { label?: string; filters?: Record<string, unknown> }[];
     };
-    const sb = getSupabase();
+    const sb = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim()
+      ? getSupabase()
+      : getSupabaseForRequest(req);
     const rt = await getRuntime(sb);
 
     const { data: job } = await sb.from("playwright_jobs").insert({
@@ -321,7 +354,15 @@ Deno.serve(async (req) => {
     const tgt: "main" | "reference" = target === "reference" ? "reference" : "main";
     const creds = await resolveCreds(sb, scenario_id, tgt);
     const reportUrl = await resolveReportUrl(sb, scenario_id, tgt);
-    const filterCombinations = await resolveFilterCombinations(sb, scenario_id);
+    const requestedCombos = (filterComboOverride || [])
+      .filter((c) => c && typeof c === "object")
+      .map((c, i) => ({
+        label: String(c.label || `combo_${i + 1}`),
+        filters: (c.filters || {}) as Record<string, unknown>,
+      }));
+    const filterCombinations = requestedCombos.length
+      ? requestedCombos
+      : await resolveFilterCombinations(sb, scenario_id);
 
     // Cloud plans without Live URLs: silently run headless instead of failing.
     let effectiveMode: Mode = mode;

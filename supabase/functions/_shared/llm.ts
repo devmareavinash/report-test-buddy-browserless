@@ -81,10 +81,16 @@ export async function callAgent(opts: {
 }
 
 export function getSupabase() {
-  return createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+  const url = (Deno.env.get("SUPABASE_URL") || "").trim();
+  const key = (
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+    Deno.env.get("SUPABASE_ANON_KEY") ||
+    ""
+  ).trim();
+  if (!url || !key) {
+    throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) are required");
+  }
+  return createClient(url, key);
 }
 
 export function tryParseJson(s: string): any {

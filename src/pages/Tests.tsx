@@ -65,7 +65,7 @@ export default function Tests() {
       <div className="p-8 space-y-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">All tests</h1>
-          <p className="text-sm text-muted-foreground">Latest result per scenario across every workstream and report.</p>
+          <p className="text-sm text-muted-foreground">Latest result per test case across every report and screen.</p>
         </div>
 
         <div className="flex gap-2 items-center flex-wrap">
@@ -78,7 +78,7 @@ export default function Tests() {
           <Select value={wsId} onValueChange={setWsId}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All workstreams</SelectItem>
+              <SelectItem value="all">All reports</SelectItem>
               {(workstreams || []).map((w: any) => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
               ))}
@@ -103,8 +103,8 @@ export default function Tests() {
                 <TableRow>
                   <TableHead>Status</TableHead>
                   <TableHead>Test</TableHead>
-                  <TableHead>Workstream</TableHead>
                   <TableHead>Report</TableHead>
+                  <TableHead>Screen</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Latest run</TableHead>
                   <TableHead></TableHead>

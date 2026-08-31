@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { extractFirstTableAlias, qualifyColumn } from "@/lib/sqlFilter";
 
 const canonFilters = (f: Record<string, string>) => {
   const keys = Object.keys(f || {}).map((k) => k.trim()).filter(Boolean).sort();
@@ -72,6 +73,7 @@ export default function ScenarioDetail() {
   const [runError, setRunError] = useState<string | null>(null);
   const [runResult, setRunResult] = useState<any>(null);
   const [running, setRunning] = useState<null | "headed" | "headless">(null);
+  const [detailTab, setDetailTab] = useState("script");
   const [healing, setHealing] = useState(false);
   const [healProposal, setHealProposal] = useState<{ patched_playwright_code?: string; rationale?: string; changes?: string[] } | null>(null);
   const [maxRetries, setMaxRetries] = useState(10);
@@ -94,6 +96,8 @@ export default function ScenarioDetail() {
   const [discardOpen, setDiscardOpen] = useState(false);
   const [comboResults, setComboResults] = useState<Record<string, any>>({});
   const [comboRunning, setComboRunning] = useState<string | null>(null);
+  const [comboScriptRunning, setComboScriptRunning] = useState<string | null>(null);
+  const [comboScriptBlocks, setComboScriptBlocks] = useState<Record<string, any>>({});
   const [allCombosRunning, setAllCombosRunning] = useState(false);
   const [kpiTolerances, setKpiTolerances] = useState<Record<string, Tolerance>>({});
   const [savingTolerances, setSavingTolerances] = useState(false);
@@ -262,11 +266,53 @@ export default function ScenarioDetail() {
         else if (data?.requested_mode === "headed" && data?.mode === "headless") {
           setRunResult(data);
           toast.info(data.fallback_reason || "Live debug is unavailable; ran headless instead.");
+          setDetailTab("result");
+          void persistManualHeadlessRun({
+            scenarioId: id!,
+            reportId: (scenario as any)?.reports?.id,
+            payload: data,
+            combos: combos || [],
+            criticality: (scenario as any)?.criticality,
+            referencePayload: refRunResult,
+            storedRows: latestResults || [],
+            tolerances: kpiTolerances,
+            sqlByCombo: comboResults,
+            sqlResult,
+            isReferenceMatch,
+          }).then((ok) => {
+            if (ok) {
+              qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+              qc.invalidateQueries({ queryKey: ["tests-overview"] });
+              qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
+            }
+          });
         }
         else setRunError("Runtime did not return a live_url");
       } else {
         setRunResult(data);
-        if (data?.extracted) toast.success(`Extracted ${Object.keys(data.extracted).length} KPIs`);
+        const kpis = extractKpisFromRun(data);
+        if (kpis) toast.success(`Extracted ${Object.keys(kpis).length} KPIs`);
+        else toast.success("Headless run finished");
+        setDetailTab("result");
+        void persistManualHeadlessRun({
+          scenarioId: id!,
+          reportId: (scenario as any)?.reports?.id,
+          payload: data,
+          combos: combos || [],
+          criticality: (scenario as any)?.criticality,
+          referencePayload: refRunResult,
+          storedRows: latestResults || [],
+          tolerances: kpiTolerances,
+          sqlByCombo: comboResults,
+          sqlResult,
+          isReferenceMatch,
+        }).then((ok) => {
+          if (ok) {
+            qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+            qc.invalidateQueries({ queryKey: ["tests-overview"] });
+            qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
+          }
+        });
       }
     } catch (e: any) {
       setRunError(String(e?.message || e));
@@ -340,6 +386,26 @@ export default function ScenarioDetail() {
           log(`✓ Script succeeded on attempt ${attempt}.`);
           toast.success(`Auto-heal converged after ${attempt} attempt(s)`);
           setRunError(null);
+          setDetailTab("result");
+          void persistManualHeadlessRun({
+            scenarioId: id!,
+            reportId: (scenario as any)?.reports?.id,
+            payload: runData,
+            combos: combos || [],
+            criticality: (scenario as any)?.criticality,
+            referencePayload: refRunResult,
+            storedRows: latestResults || [],
+            tolerances: kpiTolerances,
+            sqlByCombo: comboResults,
+            sqlResult,
+            isReferenceMatch,
+          }).then((ok) => {
+            if (ok) {
+              qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+              qc.invalidateQueries({ queryKey: ["tests-overview"] });
+              qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
+            }
+          });
           return;
         }
         setRunError(errMsg || "Run failed");
@@ -395,6 +461,38 @@ export default function ScenarioDetail() {
     }
   };
 
+  const runSingleCombo = async (combo: any, idx: number) => {
+    const label = combo.label || `Filter #${idx + 1}`;
+    setComboScriptRunning(combo.id);
+    toast.loading(`Running ${label}…`, { id: `combo-run-${combo.id}` });
+    try {
+      const { data, error } = await invokeFunction("playwright-runtime", {
+        mode: "headless",
+        scenario_id: id,
+        code,
+        filter_combinations: [{ label, filters: combo.filters || {} }],
+      });
+      const errorMessage = data?.message || error?.message
+        || (data?.ok === false ? data?.error : null) || (!data ? "Run failed" : null);
+      if (errorMessage) {
+        toast.error(errorMessage, { id: `combo-run-${combo.id}` });
+        return;
+      }
+      const block = singleComboBlock(data, label, idx, combo.id);
+      if (!block) {
+        toast.error(`No result returned for ${label}`, { id: `combo-run-${combo.id}` });
+        return;
+      }
+      setComboScriptBlocks((prev) => ({ ...prev, [combo.id]: block }));
+      setDetailTab("result");
+      toast.success(`${label} re-run complete`, { id: `combo-run-${combo.id}` });
+    } catch (e: any) {
+      toast.error(String(e?.message || e), { id: `combo-run-${combo.id}` });
+    } finally {
+      setComboScriptRunning(null);
+    }
+  };
+
   const runRefMode = async (mode: "headed" | "headless") => {
     setRefRunError(null); setRefRunResult(null); setRefLiveUrl(null); setRefRunning(mode);
     try {
@@ -409,7 +507,20 @@ export default function ScenarioDetail() {
         } else setRefRunError("Runtime did not return a live_url");
       } else {
         setRefRunResult(data);
-        if (data?.extracted) toast.success(`Reference: extracted ${Object.keys(data.extracted).length} KPIs`);
+        const kpis = extractKpisFromRun(data);
+        toast.success(kpis ? `Reference: extracted ${Object.keys(kpis).length} KPIs` : "Reference run finished");
+        setDetailTab("result");
+        void persistReferenceHeadlessRun({
+          scenarioId: id!,
+          payload: data,
+          combos: combos || [],
+          tolerances: kpiTolerances,
+        }).then((ok) => {
+          if (ok) {
+            qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+            qc.invalidateQueries({ queryKey: ["tests-overview"] });
+          }
+        });
       }
     } catch (e: any) {
       setRefRunError(String(e?.message || e));
@@ -468,8 +579,14 @@ export default function ScenarioDetail() {
       if (!be) { missing.push(fe); continue; }
       pairs.push({ fe, be, value: val });
     }
+    const tplSql =
+      editedSqlText ||
+      String((templates || []).find((t: any) => t.id === tplId)?.sql_text || "");
+    const firstAlias = extractFirstTableAlias(tplSql);
     const esc = (s: string) => s.replace(/'/g, "''");
-    const where = pairs.map((p) => `"${p.be}" = '${esc(p.value)}'`).join(" AND ");
+    const where = pairs
+      .map((p) => `${qualifyColumn(p.be, firstAlias)} = '${esc(p.value)}'`)
+      .join(" AND ");
     return { where, pairs, missing };
   };
 
@@ -528,6 +645,22 @@ export default function ScenarioDetail() {
         .eq("scenario_id", id!)
         .order("created_at", { ascending: false })
         .limit(25)).data ?? [],
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
+  const { data: lastPwJob } = useQuery({
+    queryKey: ["playwright-job-latest", id],
+    queryFn: async () =>
+      (await supabase
+        .from("playwright_jobs")
+        .select("last_event, created_at, status")
+        .eq("scenario_id", id!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()).data,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
   const latest = latestResults?.[0];
   const selectedTpl = (templates || []).find((t: any) => t.id === tplId);
@@ -569,35 +702,6 @@ export default function ScenarioDetail() {
   // Build "manual" latest from in-memory run results: Test Script (Run headless/headed)
   // populates the Actual column; Warehouse SQL (Run) populates the Expected column
   // (or the Reference Script output when this is a reference_match scenario).
-  const extractKpisFromRun = (rr: any): Record<string, any> | null => {
-    const candidates = [
-      rr?.extracted?.extracted,
-      rr?.extracted?.result?.extracted,
-      rr?.result?.extracted,
-      rr?.extracted?.result,
-      rr?.result,
-      rr?.extracted,
-    ];
-    for (const ex of candidates) {
-      if (!ex || typeof ex !== "object") continue;
-      const out: Record<string, any> = {};
-      if (ex.kpis && typeof ex.kpis === "object" && !Array.isArray(ex.kpis)) {
-        for (const [k, v] of Object.entries(ex.kpis)) {
-          if (v === null || typeof v === "object" || typeof v === "boolean") continue;
-          out[k] = v;
-        }
-      }
-      for (const [k, v] of Object.entries(ex)) {
-        if (k.startsWith("__")) continue;
-        if (["screenshot", "screenshot_b64", "screenshot_url", "title", "note", "url", "ok", "error", "result", "extracted", "kpis", "raw_values", "debug", "page_snapshot", "report_url", "filters_applied"].includes(k)) continue;
-        if (v === null || typeof v === "object" || typeof v === "boolean") continue;
-        if (out[k] !== undefined) continue;
-        out[k] = v;
-      }
-      if (Object.keys(out).length) return out;
-    }
-    return null;
-  };
   const manualActual = extractKpisFromRun(runResult);
   const manualReference = isReferenceMatch ? extractKpisFromRun(refRunResult) : null;
   const manualExpected = (() => {
@@ -618,8 +722,14 @@ export default function ScenarioDetail() {
     }
     return null;
   })();
-  const hasComboData = !!runResult || Object.keys(comboResults).length > 0 || !!refRunResult;
-  const hasManual = !!(manualActual || manualExpected) || (!!combos?.length && hasComboData);
+  const hasComboData = Object.keys(comboResults).length > 0 || !!refRunResult;
+  const liveComboHasKpis = !!(combos?.length && runResult && (combos as any[]).some((c: any, idx: number) => {
+    const root = pickResultRoot(runResult);
+    const label = c.label || `Filter #${idx + 1}`;
+    const block = pickComboBlock(root, label, idx, c.id);
+    return Object.keys(extractKpisFromBlock(block)).length > 0;
+  }));
+  const hasManual = !!(manualActual || manualExpected) || liveComboHasKpis || hasComboData;
   // Suite-stored test_results wrap KPI maps under `.values` (alongside filter / filters_applied / source).
   // Unwrap so KpiRowsTable receives a flat KPI map, matching the live (manual) shape.
   const unwrapSuiteKpis = (block: any): any => {
@@ -627,52 +737,64 @@ export default function ScenarioDetail() {
     if (block.values && typeof block.values === "object" && !Array.isArray(block.values)) return block.values;
     return block;
   };
-  const displayActual = hasManual ? (manualActual ?? {}) : unwrapSuiteKpis(latest?.actual);
-  const displayExpected = hasManual ? (manualExpected ?? {}) : unwrapSuiteKpis(latest?.expected);
+  const displayActual = (hasManual && manualActual)
+    ? manualActual
+    : (kpiMapFromStored(latest?.actual) || unwrapSuiteKpis(latest?.actual) || {});
+  const displayExpected = (hasManual && manualExpected)
+    ? manualExpected
+    : (kpiMapFromStored(latest?.expected) || unwrapSuiteKpis(latest?.expected) || {});
   const displayDiff = hasManual ? null : latest?.diff;
 
-  // When there's no live manual run, hydrate FilterComparisonTable from the latest suite run's
-  // test_results rows so the per-combo Actual / Expected / Filter cells render with stored values.
+  // Hydrate FilterComparisonTable from stored test_results (and the last playwright job
+  // if the stored row has an empty values map).
   const suiteRunData = (() => {
-    if (hasManual) return null;
     if (!combos?.length) return null;
-    if (!latest?.run_id || !latestResults?.length) return null;
-    const rows = latestResults.filter((r: any) => r.run_id === latest.run_id);
-    if (!rows.length) return null;
+    const rows = (latest?.run_id && latestResults?.length)
+      ? latestResults.filter((r: any) => r.run_id === latest.run_id)
+      : [];
     const pwResult: Record<string, any> = {};
     const refResult: Record<string, any> = {};
     const comboMap: Record<string, any> = {};
-    for (const r of rows as any[]) {
-      const label = r.actual?.filter || r.expected?.filter;
-      if (!label) continue;
-      const actualValues = (r.actual && typeof r.actual === "object" && r.actual.values && typeof r.actual.values === "object") ? r.actual.values : null;
-      const expectedValues = (r.expected && typeof r.expected === "object" && r.expected.values && typeof r.expected.values === "object") ? r.expected.values : null;
-      const filtersApplied = r.actual?.filters_applied || null;
+    const jobRoot = lastPwJob?.last_event ? pickResultRoot(lastPwJob.last_event) : null;
+    for (const c of combos as any[]) {
+      const idx = (combos as any[]).indexOf(c);
+      const row = rows.find((r: any) =>
+        normComboLabel(r.actual?.filter || r.expected?.filter || "") === normComboLabel(c.label || "")
+      ) || rows[idx];
+      const label = c.label || row?.actual?.filter || `combo_${idx + 1}`;
+      const fromStored = row ? kpiMapFromStored(row.actual) : null;
+      const fromJob = jobRoot ? extractKpisFromBlock(pickComboBlock(jobRoot, label, idx, c.id)) : null;
+      const actualValues = (fromStored && Object.keys(fromStored).length)
+        ? fromStored
+        : (fromJob && Object.keys(fromJob).length ? fromJob : null);
+      const expectedValues = row ? kpiMapFromStored(row.expected) : null;
+      const filtersApplied = row?.actual?.filters_applied || null;
       if (actualValues) pwResult[label] = { ...actualValues, filters_applied: filtersApplied };
-      const combo = combos.find((c: any) => c.label === label);
       if (expectedValues) {
         if (isReferenceMatch) {
           refResult[label] = { ...expectedValues };
-        } else if (combo) {
+        } else {
           const cols = Object.keys(expectedValues);
-          comboMap[combo.id] = { ok: true, rows: [expectedValues], columns: cols };
+          comboMap[c.id] = { ok: true, rows: [expectedValues], columns: cols };
         }
       }
     }
     return {
-      runResult: Object.keys(pwResult).length ? { result: pwResult } : null,
+      runResult: Object.keys(pwResult).length ? { result: pwResult } : (jobRoot ? lastPwJob?.last_event : null),
       refRunResult: Object.keys(refResult).length ? { result: refResult } : null,
       comboResults: comboMap,
     };
   })();
-  const effectiveRunResult = runResult || suiteRunData?.runResult || null;
+  const effectiveRunResult = (runResult && (liveComboHasKpis || manualActual))
+    ? runResult
+    : (suiteRunData?.runResult || runResult || lastPwJob?.last_event || null);
   const effectiveRefRunResult = refRunResult || suiteRunData?.refRunResult || null;
   const effectiveComboResults = (Object.keys(comboResults).length ? comboResults : (suiteRunData?.comboResults || {}));
 
   // ----- Compute displayed overall status (drives "Update run suite result" button) -----
-  const _rootOf = (rr: any) => rr?.result || rr?.extracted?.result || rr?.extracted?.extracted || rr?.extracted || null;
+  const _rootOf = (rr: any) => pickResultRoot(rr);
   const _blockFor = (root: any, label: string, idx: number, comboId?: string) =>
-    (root && (root[label] || root[`Filter #${idx + 1}`] || root[`combo_${idx + 1}`] || root[`combo${idx + 1}`] || (comboId && root[comboId]))) || null;
+    pickComboBlock(root, label, idx, comboId);
   const _normKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const _lookupKpi = (obj: any, k: string): any => {
     if (!obj || typeof obj !== "object") return null;
@@ -1038,7 +1160,7 @@ export default function ScenarioDetail() {
 
         <FilterCombinations scenarioId={id!} reportId={(scenario as any).reports?.id} />
 
-        <Tabs defaultValue="script">
+        <Tabs value={detailTab} onValueChange={setDetailTab}>
           <TabsList>
             <TabsTrigger value="script">Test script</TabsTrigger>
             {isReferenceMatch && <TabsTrigger value="ref">Reference script</TabsTrigger>}
@@ -1508,6 +1630,9 @@ export default function ScenarioDetail() {
                         globalSqlResult={sqlResult}
                         onResetTolerances={resetTolerancesToLastRun}
                         canResetTolerances={tolerancesChanged && Object.keys(lastRunTolerances).length > 0}
+                        onRunCombo={runSingleCombo}
+                        runningComboId={comboScriptRunning}
+                        comboBlockOverrides={comboScriptBlocks}
                       />
                     ) : (
                       <KpiRowsTable
@@ -1543,14 +1668,27 @@ export default function ScenarioDetail() {
           <CardContent>
             {!latestResults?.length && <div className="text-xs text-muted-foreground">No previous executions.</div>}
             <div className="divide-y divide-border">
-              {(latestResults || []).map((r: any) => (
+              {(latestResults || []).map((r: any) => {
+                const actualVals = kpiMapFromStored(r.actual) || r.actual?.values || {};
+                const expectedVals = expectedValuesFromStoredRow(r);
+                const fallbackExpected = isReferenceMatch
+                  ? (extractKpisFromRun(refRunResult) || findStoredExpected(latestResults, r.actual?.filter || r.expected?.filter))
+                  : expectedVals;
+                const compared = statusFromKpis(
+                  actualVals,
+                  Object.keys(expectedVals).length ? expectedVals : fallbackExpected,
+                  kpiTolerances,
+                );
+                const shown = compared !== "pending" ? compared : r.status;
+                return (
                 <Link key={r.id} to={r.run_id ? `/runs/${r.run_id}` : "#"} className="flex items-center gap-3 py-2 text-xs hover:bg-secondary/30 px-2 rounded">
-                  <span className={`mono uppercase text-[10px] px-1.5 py-0.5 rounded ${r.status === "pass" ? "bg-emerald-500/15 text-emerald-500" : r.status === "fail" ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>{r.status}</span>
+                  <span className={`mono uppercase text-[10px] px-1.5 py-0.5 rounded ${shown === "pass" ? "bg-emerald-500/15 text-emerald-500" : shown === "fail" ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>{shown}</span>
                   <span className="mono text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
                   <span className="flex-1 truncate text-muted-foreground">{r.analysis || (r.actual ? JSON.stringify(r.actual).slice(0, 120) : "—")}</span>
                   {r.run_id && <span className="mono text-muted-foreground">run {r.run_id.slice(0, 8)}</span>}
                 </Link>
-              ))}
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -1786,7 +1924,382 @@ function extractKpisFromBlock(block: any): Record<string, any> {
     }
     out[k] = v;
   }
+  if (Object.keys(out).length) return out;
+  if (block.results && typeof block.results === "object" && !Array.isArray(block.results)) {
+    return extractKpisFromBlock(block.results);
+  }
+  const nested = Object.entries(block).filter(([k, v]) => {
+    if (KPI_SKIP_KEYS.has(k) || k.startsWith("__")) return false;
+    return !!v && typeof v === "object" && !Array.isArray(v);
+  });
+  if (nested.length === 1) return extractKpisFromBlock(nested[0][1]);
   return out;
+}
+
+function flattenResultRoot(c: any): any {
+  if (!c || typeof c !== "object" || Array.isArray(c)) return null;
+  if (c.results && typeof c.results === "object" && !Array.isArray(c.results)) {
+    return flattenResultRoot(c.results);
+  }
+  // Browserless wrapper: { ok, error, result, url }
+  if (c.result && typeof c.result === "object" && !Array.isArray(c.result) && ("ok" in c || "error" in c || "url" in c || "extracted" in c)) {
+    return flattenResultRoot(c.result);
+  }
+  return c;
+}
+
+function pickResultRoot(rr: any): any {
+  if (!rr || typeof rr !== "object") return null;
+  const candidates = [
+    rr?.extracted?.result?.results,
+    rr?.result?.results,
+    rr?.extracted?.result?.result,
+    rr?.extracted?.result,
+    rr?.result?.result,
+    rr?.extracted?.extracted,
+    rr?.result,
+    rr?.extracted,
+    rr,
+  ];
+  for (const c of candidates) {
+    const flat = flattenResultRoot(c);
+    if (flat) return flat;
+  }
+  return null;
+}
+
+function normComboLabel(s: string) {
+  return String(s || "").toLowerCase().replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+}
+
+function pickComboBlock(root: any, label: string, idx: number, comboId?: string): any {
+  if (!root || typeof root !== "object") return null;
+  const exact = [
+    label,
+    `Filter #${idx + 1}`,
+    `combo_${idx + 1}`,
+    `combo${idx + 1}`,
+    comboId,
+    String(idx),
+    String(idx + 1),
+  ].filter(Boolean) as string[];
+  for (const k of exact) {
+    if (root[k] && typeof root[k] === "object" && !Array.isArray(root[k])) return root[k];
+  }
+  const want = normComboLabel(label);
+  for (const [k, v] of Object.entries(root)) {
+    if (KPI_SKIP_KEYS.has(k) || k.startsWith("__")) continue;
+    if (v && typeof v === "object" && !Array.isArray(v) && normComboLabel(k) === want) return v;
+  }
+  const children = Object.entries(root).filter(([k, v]) => {
+    if (KPI_SKIP_KEYS.has(k) || k.startsWith("__")) return false;
+    if (!v || typeof v !== "object" || Array.isArray(v)) return false;
+    return Object.keys(extractKpisFromBlock(v)).length > 0;
+  });
+  if (children.length === 1) return children[0][1];
+  if (Object.keys(extractKpisFromBlock(root)).length) return root;
+  return null;
+}
+
+function singleComboBlock(rr: any, label: string, idx: number, comboId?: string): any | null {
+  const direct = pickComboBlock(pickResultRoot(rr), label, idx, comboId);
+  if (direct) return direct;
+  const kpis = extractKpisFromRun(rr);
+  return kpis && Object.keys(kpis).length ? kpis : null;
+}
+
+function kpiMapFromStored(actual: any): Record<string, any> | null {
+  if (!actual || typeof actual !== "object") return null;
+  if (actual.values && typeof actual.values === "object") {
+    const fromValues = extractKpisFromBlock(flattenResultRoot(actual.values) || actual.values);
+    if (Object.keys(fromValues).length) return fromValues;
+  }
+  if (actual.extracted) {
+    const fromExtracted = extractKpisFromRun({ extracted: actual.extracted });
+    if (fromExtracted && Object.keys(fromExtracted).length) return fromExtracted;
+  }
+  const flat = extractKpisFromBlock(actual);
+  return Object.keys(flat).length ? flat : null;
+}
+
+function extractKpisFromRun(rr: any): Record<string, any> | null {
+  if (!rr) return null;
+  const candidates = [
+    rr?.extracted?.result?.kpis,
+    rr?.extracted?.result?.extracted,
+    rr?.extracted?.result,
+    rr?.extracted?.kpis,
+    rr?.extracted?.extracted,
+    rr?.result?.extracted,
+    rr?.result,
+    rr?.extracted,
+    rr,
+  ];
+  for (const ex of candidates) {
+    if (!ex || typeof ex !== "object" || Array.isArray(ex)) continue;
+    if (ex.kpis && typeof ex.kpis === "object" && !Array.isArray(ex.kpis)) {
+      const fromKpis = extractKpisFromBlock(ex.kpis);
+      if (Object.keys(fromKpis).length) return fromKpis;
+    }
+    const flat = extractKpisFromBlock(ex);
+    if (Object.keys(flat).length) return flat;
+    const comboKeys = Object.keys(ex).filter((k) => !k.startsWith("__") && !KPI_SKIP_KEYS.has(k));
+    const comboBlocks = comboKeys.filter((k) => ex[k] && typeof ex[k] === "object" && !Array.isArray(ex[k]));
+    if (comboBlocks.length && comboBlocks.length === comboKeys.length) {
+      const merged: Record<string, any> = {};
+      for (const ck of comboBlocks) Object.assign(merged, extractKpisFromBlock(ex[ck]));
+      if (Object.keys(merged).length) return merged;
+    }
+  }
+  return null;
+}
+
+function expectedValuesFromStoredRow(row: any): Record<string, any> {
+  const exp = row?.expected;
+  if (exp?.values && typeof exp.values === "object") {
+    const fromValues = extractKpisFromBlock(flattenResultRoot(exp.values) || exp.values);
+    if (Object.keys(fromValues).length) return fromValues;
+  }
+  return kpiMapFromStored(exp) || {};
+}
+
+function findStoredExpected(rows: any[] | undefined, label?: string): Record<string, any> {
+  if (!rows?.length) return {};
+  if (label) {
+    const match = rows.find((r) => {
+      const lbl = r?.actual?.filter || r?.expected?.filter || r?.actual?.filters_applied?.__label;
+      return lbl && String(lbl) === String(label);
+    });
+    const fromMatch = expectedValuesFromStoredRow(match);
+    if (Object.keys(fromMatch).length) return fromMatch;
+  }
+  for (const r of rows) {
+    const v = expectedValuesFromStoredRow(r);
+    if (Object.keys(v).length) return v;
+  }
+  return {};
+}
+
+function expectedFromSql(sqlRes: any, actualKeys: string[]): Record<string, any> {
+  const out: Record<string, any> = {};
+  if (!sqlRes?.ok) return out;
+  for (const k of actualKeys) {
+    const exp = expectedForKpi(sqlRes, k);
+    if (exp !== null && exp !== undefined) out[k] = exp;
+  }
+  return out;
+}
+
+function resolveExpectedValues(opts: {
+  label: string;
+  idx: number;
+  comboId?: string;
+  actualKeys: string[];
+  isReferenceMatch?: boolean;
+  referencePayload?: any;
+  storedRows?: any[];
+  sqlByCombo?: Record<string, any>;
+  sqlResult?: any;
+}): Record<string, any> {
+  const { label, idx, comboId, actualKeys, isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult } = opts;
+  if (isReferenceMatch) {
+    if (referencePayload) {
+      const block = pickComboBlock(pickResultRoot(referencePayload), label, idx, comboId);
+      const fromBlock = extractKpisFromBlock(block);
+      if (Object.keys(fromBlock).length) return fromBlock;
+      const fromRun = extractKpisFromRun(referencePayload);
+      if (fromRun && Object.keys(fromRun).length) return fromRun;
+    }
+    return findStoredExpected(storedRows, label);
+  }
+  const sqlRes = (comboId && sqlByCombo?.[comboId]) || sqlResult;
+  return expectedFromSql(sqlRes, actualKeys);
+}
+
+function lookupKpi(obj: any, k: string): any {
+  if (!obj || typeof obj !== "object") return null;
+  if (obj[k] !== undefined) return obj[k];
+  const t = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const f = Object.keys(obj).find((rk) => String(rk).toLowerCase().replace(/[^a-z0-9]+/g, "") === t);
+  return f ? obj[f] : null;
+}
+
+function statusFromKpis(
+  actualValues: Record<string, any> | null | undefined,
+  expectedValues: Record<string, any> | null | undefined,
+  tolerances: Record<string, Tolerance> | undefined,
+  scrapeFailed?: boolean,
+): "pass" | "fail" | "pending" {
+  if (scrapeFailed) return "fail";
+  const actual = actualValues && typeof actualValues === "object" ? actualValues : {};
+  const keys = Object.keys(actual).filter((k) => !k.startsWith("__"));
+  if (!keys.length) return "pending";
+  const expected = expectedValues && typeof expectedValues === "object" ? expectedValues : {};
+  const passes = keys
+    .map((k) => evalPass(actual[k], lookupKpi(expected, k), getTol(tolerances || {}, k)))
+    .filter((p) => p !== null);
+  if (!passes.length) return "pending";
+  return passes.every(Boolean) ? "pass" : "fail";
+}
+
+async function persistManualHeadlessRun(opts: {
+  scenarioId: string;
+  reportId?: string;
+  payload: any;
+  combos: any[];
+  criticality?: string;
+  referencePayload?: any;
+  storedRows?: any[];
+  tolerances?: Record<string, Tolerance>;
+  sqlByCombo?: Record<string, any>;
+  sqlResult?: any;
+  isReferenceMatch?: boolean;
+}): Promise<boolean> {
+  const {
+    scenarioId, reportId, payload, combos, criticality,
+    referencePayload, storedRows, tolerances, sqlByCombo, sqlResult, isReferenceMatch,
+  } = opts;
+  if (!scenarioId || !reportId || !payload) return false;
+  const scrapeFailed = payload?.extracted?.ok === false || !!payload?.extracted?.error || !!payload?.error;
+  const crit = criticality || "medium";
+  const { data: run, error: runErr } = await supabase.from("runs").insert({
+    scope_type: "report",
+    scope_id: reportId,
+    trigger_source: "manual",
+    status: scrapeFailed ? "failed" : "completed",
+    finished_at: new Date().toISOString(),
+    summary: { source: "headless", total: 0 },
+  }).select("id").single();
+  if (runErr || !run) return false;
+
+  const root = pickResultRoot(payload);
+  const rows: any[] = [];
+  if (combos?.length) {
+    for (let i = 0; i < combos.length; i++) {
+      const c = combos[i];
+      const label = c.label || `combo_${i + 1}`;
+      const block = pickComboBlock(root, label, i, c.id);
+      let values = extractKpisFromBlock(block);
+      if (!Object.keys(values).length) values = extractKpisFromRun(payload) || {};
+      const expectedValues = resolveExpectedValues({
+        label, idx: i, comboId: c.id, actualKeys: Object.keys(values),
+        isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult,
+      });
+      const status = statusFromKpis(values, expectedValues, tolerances, scrapeFailed);
+      rows.push({
+        run_id: run.id,
+        scenario_id: scenarioId,
+        status,
+        expected: {
+          source: Object.keys(expectedValues).length
+            ? (isReferenceMatch ? "reference_script" : "warehouse_sql")
+            : "manual_headless",
+          filter: label,
+          values: expectedValues,
+        },
+        actual: {
+          filter: label,
+          values,
+          source: "manual_headless",
+          extracted: payload?.extracted ?? null,
+        },
+        diff: null,
+        criticality: crit,
+        severity: crit,
+      });
+    }
+  } else {
+    const values = extractKpisFromRun(payload) || {};
+    const expectedValues = resolveExpectedValues({
+      label: "", idx: 0, actualKeys: Object.keys(values),
+      isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult,
+    });
+    const status = statusFromKpis(values, expectedValues, tolerances, scrapeFailed);
+    rows.push({
+      run_id: run.id,
+      scenario_id: scenarioId,
+      status,
+      expected: {
+        source: Object.keys(expectedValues).length
+          ? (isReferenceMatch ? "reference_script" : "warehouse_sql")
+          : "manual_headless",
+        values: expectedValues,
+      },
+      actual: { values, source: "manual_headless" },
+      diff: null,
+      criticality: crit,
+      severity: crit,
+    });
+  }
+  if (!rows.length) return false;
+  const { error: insErr } = await supabase.from("test_results").insert(rows);
+  if (insErr) return false;
+  const anyFail = rows.some((r) => r.status === "fail");
+  await supabase.from("runs").update({
+    status: scrapeFailed || anyFail ? "failed" : "completed",
+    summary: {
+      source: "headless",
+      pass: rows.filter((r) => r.status === "pass").length,
+      fail: rows.filter((r) => r.status === "fail").length,
+      pending: rows.filter((r) => r.status === "pending").length,
+      total: rows.length,
+    },
+  }).eq("id", run.id);
+  return true;
+}
+
+async function persistReferenceHeadlessRun(opts: {
+  scenarioId: string;
+  payload: any;
+  combos: any[];
+  tolerances?: Record<string, Tolerance>;
+}): Promise<boolean> {
+  const { scenarioId, payload, combos, tolerances } = opts;
+  if (!scenarioId || !payload) return false;
+  const { data: recent } = await supabase
+    .from("test_results")
+    .select("id, run_id, expected, actual, status")
+    .eq("scenario_id", scenarioId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+  if (!recent?.length) return false;
+
+  const root = pickResultRoot(payload);
+  const expectedByLabel = new Map<string, Record<string, any>>();
+  if (combos?.length) {
+    for (let i = 0; i < combos.length; i++) {
+      const lbl = combos[i].label || `combo_${i + 1}`;
+      const block = pickComboBlock(root, lbl, i, combos[i].id);
+      let vals = extractKpisFromBlock(block);
+      if (!Object.keys(vals).length) vals = extractKpisFromRun(payload) || {};
+      if (Object.keys(vals).length) expectedByLabel.set(String(lbl), vals);
+    }
+  }
+  const fallbackValues = extractKpisFromRun(payload) || {};
+  if (!expectedByLabel.size && !Object.keys(fallbackValues).length) return false;
+
+  let updated = 0;
+  for (const row of recent) {
+    const rowLabel = row.actual?.filter || row.expected?.filter || combos?.[0]?.label;
+    const values = (rowLabel && expectedByLabel.get(String(rowLabel)))
+      || (expectedByLabel.size === 1 ? [...expectedByLabel.values()][0] : fallbackValues);
+    if (!values || !Object.keys(values).length) continue;
+    const prevExpected = (row.expected && typeof row.expected === "object") ? row.expected : {};
+    const actualValues = kpiMapFromStored(row.actual) || {};
+    const status = statusFromKpis(actualValues, values, tolerances);
+    const { error } = await supabase.from("test_results").update({
+      expected: {
+        ...prevExpected,
+        source: "reference_script",
+        filter: rowLabel || prevExpected.filter || null,
+        values,
+        extracted: payload?.extracted ?? null,
+      },
+      ...(status !== "pending" ? { status } : {}),
+    }).eq("id", row.id);
+    if (!error) updated += 1;
+  }
+  return updated > 0;
 }
 
 function toNum(v: any): number {
@@ -2014,6 +2527,7 @@ function TolerancesEditor({
 function FilterComparisonTable({
   combos, comboResults, runResult, tolerances, onTolerancesChange, savingTolerances,
   isReferenceMatch, referenceKpis, refRunResult, globalSqlResult, onResetTolerances, canResetTolerances,
+  onRunCombo, runningComboId, comboBlockOverrides,
 }: {
   combos: any[];
   comboResults: Record<string, any>;
@@ -2027,27 +2541,17 @@ function FilterComparisonTable({
   globalSqlResult?: any;
   onResetTolerances?: () => void;
   canResetTolerances?: boolean;
+  onRunCombo?: (combo: any, idx: number) => void;
+  runningComboId?: string | null;
+  comboBlockOverrides?: Record<string, any>;
 }) {
   const [openCombo, setOpenCombo] = useState<any>(null);
 
-  const rootOf = (rr: any) =>
-    rr?.result ||
-    rr?.extracted?.result ||
-    rr?.extracted?.extracted ||
-    rr?.extracted ||
-    null;
-
-  const pwRoot = rootOf(runResult);
-  const refRoot = rootOf(refRunResult);
+  const pwRoot = pickResultRoot(runResult);
+  const refRoot = pickResultRoot(refRunResult);
 
   const blockFor = (root: any, label: string, idx: number, comboId?: string) =>
-    (root && (
-      root[label] ||
-      root[`Filter #${idx + 1}`] ||
-      root[`combo_${idx + 1}`] ||
-      root[`combo${idx + 1}`] ||
-      (comboId && root[comboId])
-    )) || null;
+    pickComboBlock(root, label, idx, comboId);
 
   type Row = {
     combo: any; comboIdx: number; kpi: string; actual: any; expected: any;
@@ -2065,10 +2569,12 @@ function FilterComparisonTable({
 
   const perCombo = combos.map((c, idx) => {
     const label = c.label || `Filter #${idx + 1}`;
-    const pwBlock = blockFor(pwRoot, label, idx, c.id);
+    const pwBlock = comboBlockOverrides?.[c.id] ?? blockFor(pwRoot, label, idx, c.id);
     const refBlock = blockFor(refRoot, label, idx, c.id);
-    const kpis = extractKpisFromBlock(pwBlock);
-    const refKpis = refBlock ? extractKpisFromBlock(refBlock) : null;
+    let kpis = extractKpisFromBlock(pwBlock);
+    if (!Object.keys(kpis).length) kpis = extractKpisFromRun(runResult) || {};
+    let refKpis = refBlock ? extractKpisFromBlock(refBlock) : null;
+    if (!refKpis || !Object.keys(refKpis).length) refKpis = extractKpisFromRun(refRunResult);
     const sqlRes = comboResults[c.id] || (globalSqlResult?.ok ? globalSqlResult : null);
     const rows: Row[] = Object.entries(kpis).map(([k, v]) => {
       const exp = isReferenceMatch
@@ -2145,14 +2651,29 @@ function FilterComparisonTable({
             </tr>
           </thead>
           <tbody>
-            {perCombo.flatMap(({ combo, label, rows, overall }) =>
+            {perCombo.flatMap(({ combo, idx, label, rows, overall }) =>
               rows.map((r, i) => (
                 <tr key={`${combo.id}-${i}`} className={`border-t border-border ${r.pass === false ? "bg-destructive/5" : ""}`}>
                   {i === 0 && (
                     <td className="p-2 align-top" rowSpan={rows.length}>
-                      <button className="text-accent hover:underline font-semibold text-left" onClick={() => setOpenCombo(combo)}>
-                        {label}
-                      </button>
+                      <div className="space-y-1.5">
+                        <button className="text-accent hover:underline font-semibold text-left block" onClick={() => setOpenCombo(combo)}>
+                          {label}
+                        </button>
+                        {onRunCombo && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px]"
+                            disabled={!!runningComboId}
+                            onClick={() => onRunCombo(combo, idx)}
+                            title="Re-run the script for this filter combination only"
+                          >
+                            <Play className="h-3 w-3 mr-1" />
+                            {runningComboId === combo.id ? "Running…" : "Run"}
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   )}
                   <td className="p-2 mono">{r.kpi}</td>
@@ -2570,7 +3091,7 @@ function FilterCombinations({ scenarioId, reportId }: { scenarioId: string; repo
           <div>
             <CardTitle className="text-sm">Filter combinations</CardTitle>
             <div className="text-xs text-muted-foreground">
-              The generated Playwright script will run once per combination and return expected values for each.
+              Shared across all scenarios in this screen. The Playwright script runs once per combination. You can also re-run one combination from Latest result.
             </div>
           </div>
           <Button size="sm" variant="outline" onClick={() => setMapOpen(true)}>

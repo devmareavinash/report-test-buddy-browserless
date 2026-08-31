@@ -2,10 +2,11 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 import {
   callSnowflakeSso,
-  connectorAuthenticator,
   interpretSnowflakeError,
-  isSsoAuth,
+  resolveAuthMode,
+  snowflakeSidecarConnector,
 } from "../_shared/snowflake-auth.ts";
+import { extractFirstTableAlias, qualifyColumn, applyFilterPredicate } from "../_shared/sql-filter.ts";
 
 function normalizeHost(v?: string | null): string {
   return (v || "")
@@ -15,24 +16,14 @@ function normalizeHost(v?: string | null): string {
     .replace(/\.snowflakecomputing\.com$/i, "");
 }
 
-async function executeViaSso(
+async function executeViaSidecar(
   connector: Record<string, unknown>,
   sql: string,
   limit: number,
 ): Promise<Record<string, unknown>> {
   return callSnowflakeSso("/v1/query", {
     connector_id: String(connector.id || "inline"),
-    connector: {
-      account: connector.account,
-      host: connector.host,
-      database: connector.database,
-      schema: connector.schema,
-      warehouse: connector.warehouse,
-      role: connector.role,
-      username: connector.username,
-      authenticator: connectorAuthenticator(connector as any),
-      auth_method: connector.auth_method,
-    },
+    connector: snowflakeSidecarConnector(connector),
     sql,
     limit,
   });
@@ -64,28 +55,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    const escSql = (s: string) => String(s).replace(/'/g, "''");
-    const escRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    // Prefer first FROM table alias so join-shared columns are not ambiguous.
+    const firstAlias = extractFirstTableAlias(resolvedSql);
 
     const pairs: { be: string; value: string }[] = Array.isArray(filter_pairs) ? filter_pairs : [];
     const toAppend: string[] = [];
     for (const p of pairs) {
       if (!p?.be) continue;
-      const val = String(p.value ?? "");
-      const re = new RegExp(`("?)\\b${escRe(p.be)}\\b\\1(\\s*(?:=|<>|!=)\\s*)'([^']*)'`, "gi");
-      let replaced = false;
-      resolvedSql = resolvedSql.replace(re, (_m, q, op) => {
-        replaced = true;
-        return `${q}${p.be}${q}${op}'${escSql(val)}'`;
-      });
-      if (!replaced) toAppend.push(`"${p.be}" = '${escSql(val)}'`);
+      const applied = applyFilterPredicate(resolvedSql, p.be, String(p.value ?? ""), firstAlias);
+      resolvedSql = applied.sql;
+      if (applied.append) toAppend.push(applied.append);
     }
 
     const legacyWc = (!pairs.length && where_clause && typeof where_clause === "string" && where_clause.trim())
       ? where_clause.trim()
       : "";
     if (toAppend.length || legacyWc) {
-      const extra = [toAppend.join(" AND "), legacyWc].filter(Boolean).join(" AND ");
+      let extra = [toAppend.join(" AND "), legacyWc].filter(Boolean).join(" AND ");
+      // Qualify bare "COL" = '…' predicates in legacy where_clause too.
+      if (firstAlias && legacyWc) {
+        extra = extra.replace(
+          /(?<![.\w"])("?)([A-Za-z_][\w$]*)\1(\s*(?:=|<>|!=)\s*'[^']*')/g,
+          (_m, _q, col, rest) => `${qualifyColumn(col, firstAlias)}${rest}`,
+        );
+      }
       let body = resolvedSql.trim().replace(/;\s*$/, "");
       // Find the first top-level (paren depth 0) tail keyword so we don't
       // inject filters into a subquery's WHERE clause.
@@ -175,23 +168,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    const authMode = connector.token_secret_ref
-      ? "token"
-      : (isSsoAuth(connectorAuthenticator(connector as any)) || connector.auth_method === "sso")
-      ? "sso"
-      : "password";
+    const authMode = resolveAuthMode(connector as any);
 
     try {
-      if (authMode === "sso") {
-        const data = await executeViaSso(connector, resolvedSql, topN);
+      if (authMode === "sso" || authMode === "keypair") {
+        const data = await executeViaSidecar(connector, resolvedSql, topN);
         return new Response(
           JSON.stringify({
             ok: true,
             source: "snowflake",
-            auth_mode: "sso",
+            auth_mode: authMode,
             connector: connector.name,
             template_name: templateName,
             resolved_sql: resolvedSql,
+            filter_table_alias: firstAlias,
             columns: data.columns || [],
             row_count: data.row_count ?? (data.rows as unknown[])?.length ?? 0,
             rows: data.rows || [],
@@ -353,6 +343,7 @@ Deno.serve(async (req) => {
           connector: connector.name,
           template_name: templateName,
           resolved_sql: resolvedSql,
+          filter_table_alias: firstAlias,
           columns: cols,
           row_count: dataRows.length,
           rows,
@@ -369,6 +360,7 @@ Deno.serve(async (req) => {
           auth_mode: authMode,
           connector: connector?.name,
           resolved_sql: resolvedSql,
+          filter_table_alias: firstAlias,
           error: interpretSnowflakeError(raw, authMode),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },

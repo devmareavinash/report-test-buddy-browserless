@@ -109,7 +109,7 @@ export default function Scenarios() {
           <Select value={wsId} onValueChange={setWsId}>
             <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All workstreams</SelectItem>
+              <SelectItem value="all">All reports</SelectItem>
               {(workstreams || []).map((w: any) => (
                 <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
               ))}

@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReportDialog } from "./Reports";
+import { ConcurrencySelect, readOrchestrateConcurrency, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
 
 const CRIT = ["low", "medium", "high", "critical"];
 
@@ -60,16 +61,19 @@ export default function ReportDetail() {
 
   const [tab, setTab] = useState("scenarios");
   const [genContext, setGenContext] = useState("");
+  const { concurrency, setConcurrency } = useOrchestrateConcurrency();
   const genScenarios = useMutation({
     mutationFn: async () => (await invokeFunction("agent-scenarios", { report_id: id, context: genContext })).data,
     onSuccess: () => { toast.success("Scenarios generated"); qc.invalidateQueries({ queryKey: ["scenarios", id] }); },
   });
   const runSuite = useMutation({
-    mutationFn: async () => (await invokeFunction("agent-orchestrate", { scope_type: "report", scope_id: id })).data,
+    mutationFn: async () => (await invokeFunction("agent-orchestrate", { scope_type: "report", scope_id: id, concurrency })).data,
     onSuccess: (d: any) => {
       const shortId = d?.run_id ? String(d.run_id).slice(0, 8) : "—";
       toast.success(`Run: ${shortId} is in progress`);
       qc.invalidateQueries({ queryKey: ["runs-report", id] });
+      qc.invalidateQueries({ queryKey: ["scenario-results"] });
+      qc.invalidateQueries({ queryKey: ["tests-overview"] });
       setTab("runs");
     },
   });
@@ -106,6 +110,7 @@ export default function ReportDetail() {
                 )}
               </Tooltip>
             </TooltipProvider>
+            <ConcurrencySelect value={concurrency} onChange={setConcurrency} disabled={runSuite.isPending} />
             <Button onClick={() => runSuite.mutate()} disabled={runSuite.isPending}>
               {runSuite.isPending
                 ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Running suite…</>
@@ -144,7 +149,7 @@ export default function ReportDetail() {
               <Link key={r.id} to={`/runs/${r.id}`} className="flex items-center justify-between border border-border rounded-md p-3 hover:bg-secondary/40">
                 <span className="mono text-xs">{r.id.slice(0, 8)}</span>
                 <span className="text-[10px] uppercase mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                  {r.scope_type === "workstream" ? "workstream" : "report"}
+                  {r.scope_type === "workstream" ? "report" : "screen"}
                 </span>
                 <span className="text-xs">{(r.summary as any)?.pass ?? 0}✓ / {(r.summary as any)?.fail ?? 0}✗</span>
                 <span className="text-xs text-muted-foreground">{new Date(r.started_at!).toLocaleString()}</span>
@@ -180,7 +185,7 @@ function ReportHeader({ report }: { report: any }) {
     },
   });
   const del = async () => {
-    if (!confirm(`Delete report "${report.name}"? This deletes its scenarios, scripts, version history, results, and schedules.`)) return;
+    if (!confirm(`Delete screen "${report.name}"? This deletes its scenarios, scripts, version history, results, and schedules.`)) return;
     const scs = (await supabase.from("scenarios").select("id").eq("report_id", report.id)).data ?? [];
     const sids = scs.map((s: any) => s.id);
     if (sids.length) {
@@ -198,7 +203,7 @@ function ReportHeader({ report }: { report: any }) {
     await supabase.from("schedules").delete().eq("scope_type", "report").eq("scope_id", report.id);
     const { error } = await supabase.from("reports").delete().eq("id", report.id);
     if (error) return toast.error(error.message);
-    toast.success("Report deleted");
+    toast.success("Screen deleted");
     navigate("/reports");
   };
   return (
@@ -210,7 +215,7 @@ function ReportHeader({ report }: { report: any }) {
         {report.reference_url && <div className="text-xs text-muted-foreground mono">ref: {report.reference_url}</div>}
       </div>
       <div className="flex flex-wrap gap-1 items-center justify-end">
-        <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Pencil className="h-3 w-3 mr-1" /> Edit Report Details</Button>
+        <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Pencil className="h-3 w-3 mr-1" /> Edit Screen Details</Button>
         <Button size="sm" variant="outline" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3 mr-1" /> Delete</Button>
       </div>
       <ReportDialog tree={tree} report={report} open={edit} onOpenChange={setEdit} />
@@ -432,7 +437,7 @@ function ScheduleEditor({ reportId }: { reportId: string }) {
   };
   const runNow = async (s: any) => {
     try {
-      await invokeFunction("agent-orchestrate", { scope_type: "report", scope_id: reportId, trigger_source: "schedule_manual", schedule_id: s.id });
+      await invokeFunction("agent-orchestrate", { scope_type: "report", scope_id: reportId, trigger_source: "schedule_manual", schedule_id: s.id, concurrency: readOrchestrateConcurrency() });
       toast.success("Run started with schedule's comparator");
     } catch (e: any) {
       toast.error(e?.message || "Failed to start run");

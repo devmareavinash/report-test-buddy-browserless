@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 import { resolveFunctionAuth, resolveFunctionUrl } from "../_shared/internal-functions.ts";
+import { extractFirstTableAlias, qualifyColumn } from "../_shared/sql-filter.ts";
 
 // Orchestrator: scope_type ∈ {workstream, report}.
 // For each non-deferred scenario:
@@ -57,6 +58,29 @@ async function finalizeChild(sb: any, runId: string, addPass: number, addFail: n
     if (!error) return;
     await new Promise((r) => setTimeout(r, 100 + attempt * 150));
   }
+}
+
+function orchestrateConcurrency(override?: unknown): number {
+  const fromBody = Number(override);
+  if (Number.isFinite(fromBody) && fromBody >= 1) return Math.min(10, Math.floor(fromBody));
+  const raw = Deno.env.get("ORCHESTRATE_CONCURRENCY") || Deno.env.get("BROWSERLESS_CONCURRENT") || "3";
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 1 ? Math.min(10, Math.floor(n)) : 3;
+}
+
+async function mapPool<T, R>(items: T[], concurrency: number, fn: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  if (!items.length) return [];
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, async () => {
+    while (true) {
+      const index = next++;
+      if (index >= items.length) return;
+      results[index] = await fn(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 
@@ -162,19 +186,24 @@ function swapGotoUrl(src: string, newUrl: string, oldUrl?: string): string {
   return out;
 }
 
-function buildWhere(filters: Record<string, any>, keyMap: any[]): { where: string; pairs: { be: string; value: string }[]; missing: string[] } {
+function buildWhere(
+  filters: Record<string, any>,
+  keyMap: any[],
+  sqlText?: string | null,
+): { where: string; pairs: { be: string; value: string }[]; missing: string[] } {
   const map = new Map<string, string>((keyMap || []).map((k: any) => [k.fe_label, k.be_column]));
   const parts: string[] = [];
   const pairs: { be: string; value: string }[] = [];
   const missing: string[] = [];
   const esc = (s: string) => String(s).replace(/'/g, "''");
+  const firstAlias = extractFirstTableAlias(sqlText || "");
   for (const [fe, v] of Object.entries(filters || {})) {
     const val = String(v ?? "");
     // "Total" is a UI-only sentinel — applied on the page by Playwright, but skipped in SQL WHERE.
     if (val.trim().toLowerCase() === "total") continue;
     const be = map.get(fe);
     if (!be) { missing.push(fe); continue; }
-    parts.push(`"${be}" = '${esc(val)}'`);
+    parts.push(`${qualifyColumn(be, firstAlias)} = '${esc(val)}'`);
     pairs.push({ be, value: val });
   }
   return { where: parts.join(" AND "), pairs, missing };
@@ -189,7 +218,8 @@ Deno.serve(async (req) => {
   const sb = getSupabaseForRequest(req);
   try {
     const body = await req.json();
-    const { scope_type, scope_id, trigger_source = "manual", existing_run_id, single_report_id, schedule_id } = body;
+    const { scope_type, scope_id, trigger_source = "manual", existing_run_id, single_report_id, schedule_id, concurrency: requestedConcurrency } = body;
+    const concurrency = orchestrateConcurrency(requestedConcurrency);
     let comparator_override: string | null = body.comparator_override || null;
     if (!comparator_override && schedule_id) {
       const { data: sch } = await sb.from("schedules").select("comparator").eq("id", schedule_id).maybeSingle();
@@ -219,7 +249,9 @@ Deno.serve(async (req) => {
     } else {
       const { data } = await sb.from("runs").insert({
         scope_type, scope_id, trigger_source, status: "running",
-        summary: scope_type === "workstream" ? { pass: 0, fail: 0, total: 0, done: 0, child_count: reportIds.length } : {},
+        summary: scope_type === "workstream"
+          ? { pass: 0, fail: 0, total: 0, done: 0, child_count: reportIds.length, concurrency }
+          : { concurrency },
       }).select().single();
       run = data;
     }
@@ -228,16 +260,21 @@ Deno.serve(async (req) => {
     // each child processes its report and atomically finalises the parent run when last.
     if (!existing_run_id && scope_type === "workstream") {
       const dispatch = async () => {
-        await Promise.all(reportIds.map((rid) =>
-          callFn("agent-orchestrate", {
+        // Cap in-flight child reports. Local Deno awaits each child until that
+        // report finishes, so this pool actually limits Browserless load.
+        const reportConcurrency = Math.min(2, concurrency, reportIds.length || 1);
+        const childConcurrency = Math.max(1, Math.floor(concurrency / reportConcurrency));
+        await mapPool(reportIds, reportConcurrency, async (rid) => {
+          await callFn("agent-orchestrate", {
             scope_type: "report",
             scope_id: rid,
             trigger_source,
             existing_run_id: run.id,
             single_report_id: rid,
             comparator_override,
-          }).catch((e) => console.error("child dispatch failed", rid, e))
-        ));
+            concurrency: childConcurrency,
+          }).catch((e) => console.error("child dispatch failed", rid, e));
+        });
       };
       // @ts-ignore
       if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
@@ -279,7 +316,7 @@ Deno.serve(async (req) => {
             .eq("report_id", reportId)
             .eq("deferred", false);
 
-          for (const s of scenarios || []) {
+          const scenarioOutcomes = await mapPool(scenarios || [], concurrency, async (s) => {
             let { data: script } = await sb.from("scripts")
               .select("id, playwright_code, sql_template_id, updated_at")
               .eq("scenario_id", s.id)
@@ -297,8 +334,7 @@ Deno.serve(async (req) => {
                   actual: { error: gen?.message || gen?.error || "agent-scripts returned no code" },
                   diff: null, criticality: s.criticality || "medium", severity: s.criticality || "medium",
                 });
-                fail++;
-                continue;
+                return { pass: 0, fail: 1 };
               }
             }
 
@@ -313,8 +349,7 @@ Deno.serve(async (req) => {
                 diff: null, criticality: s.criticality || "medium", severity: s.criticality || "medium",
                 screenshot_url: runResp?.screenshot_url || null,
               });
-              fail++;
-              continue;
+              return { pass: 0, fail: 1 };
             }
 
             const { data: matrix } = await sb.from("scenario_filter_matrix")
@@ -374,7 +409,7 @@ Deno.serve(async (req) => {
               }
             }
 
-            for (const combo of combos) {
+            const comboOutcomes = await mapPool(combos, Math.min(concurrency, 8), async (combo) => {
               const scraped = pickComboKpis(runResp, combo.label) || {};
 
               let expectedMap: Record<string, number | null> = {};
@@ -504,7 +539,6 @@ Deno.serve(async (req) => {
               }
 
               const status = comboPass ? "pass" : "fail";
-              if (comboPass) pass++; else fail++;
               const worstDiff = Object.values(diffMap)
                 .map((d: any) => (typeof d?.pct === "number" ? d.pct : null))
                 .filter((x): x is number => x != null)
@@ -541,7 +575,18 @@ Deno.serve(async (req) => {
               if (!comboPass && tr?.id) {
                 callFn("agent-analyze", { test_result_id: tr.id }).catch(() => {});
               }
+              return { pass: comboPass ? 1 : 0, fail: comboPass ? 0 : 1 };
+            });
+            let localPass = 0, localFail = 0;
+            for (const o of comboOutcomes) {
+              localPass += o.pass;
+              localFail += o.fail;
             }
+            return { pass: localPass, fail: localFail };
+          });
+          for (const o of scenarioOutcomes) {
+            pass += o.pass;
+            fail += o.fail;
           }
         }
 
@@ -565,15 +610,26 @@ Deno.serve(async (req) => {
       }
     };
 
+    // Child invocations (workstream → report) await work locally so the parent
+    // pool can cap in-flight Browserless sessions. Hosted Edge still uses
+    // waitUntil to stay under the 150s request timeout.
     // @ts-ignore — EdgeRuntime is available in Supabase Edge runtime
-    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+    const isEdge = typeof EdgeRuntime !== "undefined";
+    if (existing_run_id && !isEdge) {
+      await work();
+      return new Response(JSON.stringify({ run_id: run.id, status: "completed", concurrency }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // @ts-ignore — EdgeRuntime is available in Supabase Edge runtime
+    if (isEdge && EdgeRuntime?.waitUntil) {
       // @ts-ignore
       EdgeRuntime.waitUntil(work());
     } else {
       work().catch(() => {});
     }
 
-    return new Response(JSON.stringify({ run_id: run.id, status: "running" }), {
+    return new Response(JSON.stringify({ run_id: run.id, status: "running", concurrency }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 

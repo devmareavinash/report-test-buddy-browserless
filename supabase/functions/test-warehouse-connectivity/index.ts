@@ -2,11 +2,11 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 import {
   callSnowflakeSso,
-  connectorAuthenticator,
   interpretSnowflakeError,
-  isSsoAuth,
   normalizeSnowflakeAuth,
+  resolveAuthMode,
   snowflakeConfigured,
+  snowflakeSidecarConnector,
 } from "../_shared/snowflake-auth.ts";
 
 function normalizeHost(v?: string | null): string {
@@ -123,21 +123,11 @@ async function testPasswordOrToken(connector: Record<string, unknown>): Promise<
   return { ok: true, auth_mode: authMode, version, message: "Snowflake connection successful" };
 }
 
-async function testSso(connector: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function testViaSidecar(connector: Record<string, unknown>): Promise<Record<string, unknown>> {
   const connectorId = String(connector.id || crypto.randomUUID());
   return callSnowflakeSso("/v1/test", {
     connector_id: connectorId,
-    connector: {
-      account: connector.account,
-      host: connector.host,
-      database: connector.database,
-      schema: connector.schema,
-      warehouse: connector.warehouse,
-      role: connector.role,
-      username: connector.username,
-      authenticator: connectorAuthenticator(connector as any),
-      auth_method: connector.auth_method,
-    },
+    connector: snowflakeSidecarConnector(connector),
   });
 }
 
@@ -158,19 +148,17 @@ Deno.serve(async (req) => {
     } else if (body.connector && typeof body.connector === "object") {
       const norm = normalizeSnowflakeAuth({
         auth_method: body.connector.auth_method,
-        authenticator: body.connector.authenticator,
+        authenticator: body.connector.authenticator ?? body.connector.extra?.authenticator,
         password_secret_ref: body.connector.password_secret_ref,
         token_secret_ref: body.connector.token_secret_ref,
+        extra: body.connector.extra,
       });
       connector = {
         ...body.connector,
         auth_method: norm.auth_method,
         password_secret_ref: norm.password_secret_ref,
         token_secret_ref: norm.token_secret_ref,
-        extra: {
-          ...(body.connector.extra || {}),
-          authenticator: norm.authenticator,
-        },
+        extra: norm.extra,
       };
     } else {
       throw new Error("Provide connector_id or connector payload");
@@ -180,23 +168,18 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "Incomplete Snowflake configuration. Account, warehouse, and role are required. " +
-            "Password auth also needs username/password; SSO does not need a password.",
+          error: "Incomplete Snowflake configuration. Account, warehouse, role, and username are required. " +
+            "Password needs a password; SSO needs username; key-pair needs username + private key path.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    const auth = connectorAuthenticator(connector as any);
-    const authMode = connector.token_secret_ref
-      ? "token"
-      : (isSsoAuth(auth) || connector.auth_method === "sso")
-      ? "sso"
-      : "password";
+    const authMode = resolveAuthMode(connector as any);
 
     try {
-      const result = authMode === "sso"
-        ? await testSso(connector)
+      const result = (authMode === "sso" || authMode === "keypair")
+        ? await testViaSidecar(connector)
         : await testPasswordOrToken(connector);
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -212,6 +195,11 @@ Deno.serve(async (req) => {
             ? [
               "SSO opens a browser on the machine running the Snowflake SSO service (your VDI/backend), not in this browser tab.",
               "Complete IdP login within ~2 minutes, then retry.",
+            ]
+            : authMode === "keypair"
+            ? [
+              "Private key path must be readable on the Snowflake SSO host (VDI), not only on your laptop.",
+              "Public key must be set on the Snowflake user (ALTER USER … SET RSA_PUBLIC_KEY).",
             ]
             : [],
         }),
