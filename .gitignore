@@ -19,6 +19,8 @@ dist-ssr
 
 # Local Python SSO venv
 .venv/
+**/__pycache__/
+*.pyc
 
 # Editor directories and files
 .vscode/*
