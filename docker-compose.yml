@@ -1,0 +1,57 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
+        VITE_USE_LOCAL_BACKEND: "true"
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      LOVABLE_API_KEY: ${LOVABLE_API_KEY:-}
+      BROWSERLESS_HOST: ${BROWSERLESS_HOST:-http://browserless:3000}
+      BROWSERLESS_TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}
+      # Snowflake SSO — override with host.docker.internal:8002 when running Python natively on VDI
+      SNOWFLAKE_SSO_URL: ${SNOWFLAKE_SSO_URL:-http://snowflake-sso:8002}
+      LOCAL_FUNCTIONS_URL: http://127.0.0.1:8000/functions/v1
+    restart: unless-stopped
+    depends_on:
+      - browserless
+      - snowflake-sso
+
+  snowflake-sso:
+    build:
+      context: .
+      dockerfile: backend/snowflake-sso/Dockerfile
+    ports:
+      - "8002:8002"
+    restart: unless-stopped
+
+  browserless:
+    image: ghcr.io/browserless/chromium:v2.55.4
+    ports:
+      - "3000:3000"
+    environment:
+      TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}
+      CONCURRENT: ${BROWSERLESS_CONCURRENT:-10}
+      QUEUED: ${BROWSERLESS_QUEUED:-10}
+      TIMEOUT: ${BROWSERLESS_TIMEOUT_MS:-300000}
+      CORS: "true"
+    shm_size: "2g"
+    restart: unless-stopped

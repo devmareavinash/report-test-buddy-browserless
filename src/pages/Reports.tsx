@@ -1,0 +1,481 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { invokeFunction } from "@/lib/functions";
+import { AppLayout } from "@/components/AppLayout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Link } from "react-router-dom";
+import React, { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2 } from "lucide-react";
+
+export default function Reports() {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [wsId, setWsId] = useState("all");
+  const { data: tree } = useQuery({
+    queryKey: ["report-tree"],
+    queryFn: async () => {
+      const ws = (await supabase.from("workstreams").select("*").order("name")).data ?? [];
+      const rep = (await supabase.from("reports").select("*").order("name")).data ?? [];
+      return { ws, rep };
+    },
+  });
+
+  const { data: statusMap } = useQuery({
+    queryKey: ["report-status-map"],
+    queryFn: async () => {
+      const scenarios = (await supabase
+        .from("scenarios")
+        .select("id, report_id")
+        .eq("deferred", false)
+        .limit(5000)).data ?? [];
+      const results = (await supabase
+        .from("test_results")
+        .select("scenario_id, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10000)).data ?? [];
+      const latest = new Map<string, string>();
+      for (const r of results) {
+        const sid = r.scenario_id as string;
+        if (!latest.has(sid)) latest.set(sid, r.status as string);
+      }
+      const map: Record<string, { pass: number; fail: number; pending: number; total: number }> = {};
+      for (const s of scenarios) {
+        const rep = s.report_id as string;
+        if (!rep) continue;
+        const m = (map[rep] ||= { pass: 0, fail: 0, pending: 0, total: 0 });
+        m.total += 1;
+        const st = latest.get(s.id as string);
+        if (st === "pass") m.pass += 1;
+        else if (st === "fail") m.fail += 1;
+        else m.pending += 1;
+      }
+      return map;
+    },
+  });
+
+  const run = useMutation({
+    mutationFn: async (vars: { scope_type: string; scope_id: string }) => {
+      const { data, error } = await invokeFunction("agent-orchestrate", vars);
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (d: any, vars) => {
+      const shortId = d?.run_id ? String(d.run_id).slice(0, 8) : "—";
+      toast.success(`Run: ${shortId} is in progress`);
+      qc.invalidateQueries({ queryKey: ["runs"] });
+      if (vars.scope_type === "report") {
+        qc.invalidateQueries({ queryKey: ["runs-report", vars.scope_id] });
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const filteredReports = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return (tree?.rep || []).filter((r: any) => {
+      if (wsId !== "all" && r.workstream_id !== wsId) return false;
+      if (!q) return true;
+      return r.name?.toLowerCase().includes(q) || r.url?.toLowerCase().includes(q);
+    });
+  }, [tree, search, wsId]);
+
+  const visibleWs = (tree?.ws || []).filter((w: any) =>
+    wsId === "all" ? true : w.id === wsId,
+  );
+
+  return (
+    <AppLayout>
+      <div className="p-8 space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">Reports</h1>
+            <p className="text-sm text-muted-foreground">Workstream → Reports. Run a full suite at any level.</p>
+          </div>
+          <NewReportDialog tree={tree} />
+        </div>
+
+        <div className="flex gap-2 flex-wrap items-center">
+          <Input
+            placeholder="Search reports by name or URL…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="max-w-sm"
+          />
+          <Select value={wsId} onValueChange={setWsId}>
+            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All workstreams</SelectItem>
+              {(tree?.ws || []).map((w: any) => (
+                <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="text-xs text-muted-foreground mono ml-auto">{filteredReports.length} reports</div>
+        </div>
+
+        <div className="space-y-4">
+          {visibleWs.map((w) => {
+            const wsReports = filteredReports.filter((r: any) => r.workstream_id === w.id);
+            if (search || wsId !== "all") {
+              if (!wsReports.length) return null;
+            }
+            return (
+              <Card key={w.id}>
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="text-base">{w.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={run.isPending && run.variables?.scope_id === w.id}
+                      onClick={() => run.mutate({ scope_type: "workstream", scope_id: w.id })}
+                    >
+                      {run.isPending && run.variables?.scope_id === w.id
+                        ? <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        : <Play className="h-3 w-3 mr-1" />}
+                      Run workstream
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      title="Delete workstream"
+                      onClick={async () => {
+                        const reportCount = (tree?.rep || []).filter((r: any) => r.workstream_id === w.id).length;
+                        if (reportCount > 0) {
+                          return toast.error(`Cannot delete "${w.name}": it still contains ${reportCount} report(s). Delete or move them first.`);
+                        }
+                        if (!confirm(`Delete workstream "${w.name}"?`)) return;
+                        await supabase.from("runs").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
+                        await supabase.from("schedules").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
+                        const { error } = await supabase.from("workstreams").delete().eq("id", w.id);
+                        if (error) return toast.error(error.message);
+                        toast.success("Workstream deleted");
+                        qc.invalidateQueries({ queryKey: ["report-tree"] });
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  {wsReports.map((r: any) => (
+                    <ReportRow
+                      key={r.id}
+                      r={r}
+                      stats={statusMap?.[r.id]}
+                      onRun={() => run.mutate({ scope_type: "report", scope_id: r.id })}
+                      running={run.isPending && run.variables?.scope_id === r.id}
+                    />
+                  ))}
+                  {!wsReports.length && (
+                    <div className="text-xs text-muted-foreground">No reports yet.</div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+    </AppLayout>
+  );
+}
+
+function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: number; fail: number; pending: number; total: number }; onRun: () => void; running?: boolean }) {
+  const qc = useQueryClient();
+  const [edit, setEdit] = useState(false);
+  const { data: tree } = useQuery({
+    queryKey: ["report-tree"],
+    queryFn: async () => {
+      const ws = (await supabase.from("workstreams").select("*").order("name")).data ?? [];
+      const rep = (await supabase.from("reports").select("*").order("name")).data ?? [];
+      return { ws, rep };
+    },
+  });
+  const del = async () => {
+    if (!confirm(`Delete report "${r.name}"? This also deletes its scenarios, scripts, version history, and results.`)) return;
+    // Collect scenarios for cascade
+    const scs = (await supabase.from("scenarios").select("id").eq("report_id", r.id)).data ?? [];
+    const sids = scs.map((s: any) => s.id);
+    if (sids.length) {
+      const scripts = (await supabase.from("scripts").select("id").in("scenario_id", sids)).data ?? [];
+      const scriptIds = scripts.map((s: any) => s.id);
+      if (scriptIds.length) await supabase.from("script_versions").delete().in("script_id", scriptIds);
+      await supabase.from("scripts").delete().in("scenario_id", sids);
+      await supabase.from("scenario_versions").delete().in("scenario_id", sids);
+      await supabase.from("scenario_filter_matrix").delete().in("scenario_id", sids);
+      await supabase.from("test_results").delete().in("scenario_id", sids);
+      await supabase.from("scenarios").delete().in("id", sids);
+    }
+    await supabase.from("prerun_scripts").delete().eq("report_id", r.id);
+    await supabase.from("runs").delete().eq("scope_type", "report").eq("scope_id", r.id);
+    await supabase.from("schedules").delete().eq("scope_type", "report").eq("scope_id", r.id);
+    const { error } = await supabase.from("reports").delete().eq("id", r.id);
+    if (error) return toast.error(error.message);
+    toast.success("Report deleted");
+    qc.invalidateQueries({ queryKey: ["report-tree"] });
+    qc.invalidateQueries({ queryKey: ["report-status-map"] });
+  };
+  return (
+    <div className="flex items-center justify-between hover:bg-secondary/40 rounded px-2 py-1.5 gap-2">
+      <Link to={`/reports/${r.id}`} className="text-sm flex-1 truncate">{r.name}</Link>
+      <span className="text-xs text-muted-foreground mono truncate max-w-xs">{r.url}</span>
+      {stats && stats.total > 0 ? (
+        <div className="flex gap-2 text-xs whitespace-nowrap">
+          <Link to={`/scenarios?status=pass&workstream_id=${r.workstream_id}`} className="text-success hover:underline">{stats.pass}✓</Link>
+          <Link to={`/scenarios?status=fail&workstream_id=${r.workstream_id}`} className="text-destructive hover:underline">{stats.fail}✗</Link>
+          {stats.pending > 0 && <span className="text-muted-foreground">{stats.pending}·</span>}
+          <span className="text-muted-foreground">/ {stats.total}</span>
+        </div>
+      ) : (
+        <span className="text-xs text-muted-foreground">no scenarios</span>
+      )}
+      <Button size="sm" variant="ghost" onClick={() => setEdit(true)}><Pencil className="h-3 w-3" /></Button>
+      <Button size="sm" variant="ghost" onClick={onRun} disabled={running}>{running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}</Button>
+      <Button size="sm" variant="ghost" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+      <ReportDialog tree={tree} report={r} open={edit} onOpenChange={setEdit} />
+    </div>
+  );
+}
+
+function NewReportDialog({ tree }: { tree: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4 mr-1" /> Add report</Button>
+      <ReportDialog tree={tree} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+export function ReportDialog({
+  tree,
+  report,
+  open,
+  onOpenChange,
+}: {
+  tree: any;
+  report?: any;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const isEdit = !!report;
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [refUrl, setRefUrl] = useState("");
+  const [wsId, setWsId] = useState("");
+  const [credId, setCredId] = useState("");
+  const [refCredId, setRefCredId] = useState("");
+  const [whId, setWhId] = useState("");
+  const [tplId, setTplId] = useState("");
+
+  // Hydrate when opening
+  React.useEffect(() => {
+    if (!open) return;
+    setName(report?.name || "");
+    setUrl(report?.url || "");
+    setRefUrl(report?.reference_url || "");
+    setWsId(report?.workstream_id || "");
+    setCredId(report?.credential_profile_id || "");
+    setRefCredId((report as any)?.reference_credential_profile_id || "");
+    setWhId(report?.warehouse_connector_id || "");
+    setTplId(report?.default_sql_template_id || "");
+  }, [open, report]);
+
+  const { data: creds } = useQuery({
+    queryKey: ["cred-profiles"],
+    queryFn: async () => (await supabase.from("credential_profiles").select("id,name,username").order("name")).data ?? [],
+    enabled: open,
+  });
+  const { data: warehouses } = useQuery({
+    queryKey: ["wh-connectors"],
+    queryFn: async () => (await supabase.from("warehouse_connectors").select("id,name,kind").order("created_at", { ascending: false })).data ?? [],
+    enabled: open,
+  });
+  const { data: tpls } = useQuery({
+    queryKey: ["sql-templates-bind"],
+    queryFn: async () => (await supabase.from("sql_templates").select("id,name,scope").order("name")).data ?? [],
+    enabled: open,
+  });
+
+  const save = async () => {
+    if (!wsId) return toast.error("Workstream is required");
+    if (!name || !url) return toast.error("Name and URL are required");
+    const payload = {
+      name,
+      url,
+      reference_url: refUrl || null,
+      workstream_id: wsId,
+      credential_profile_id: credId || null,
+      reference_credential_profile_id: refCredId || null,
+      warehouse_connector_id: whId || null,
+      default_sql_template_id: tplId || null,
+    } as any;
+    const { error } = isEdit
+      ? await supabase.from("reports").update(payload).eq("id", report.id)
+      : await supabase.from("reports").insert(payload);
+    if (error) return toast.error(error.message);
+    toast.success(isEdit ? "Report updated" : "Report added");
+    onOpenChange(false);
+    qc.invalidateQueries({ queryKey: ["report-tree"] });
+    if (isEdit) qc.invalidateQueries({ queryKey: ["report", report.id] });
+  };
+
+  const openCredsTab = () => {
+    const qs = url ? `&loginUrl=${encodeURIComponent(url)}` : "";
+    window.open(`/settings?tab=creds${qs}`, "_blank");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl sm:max-w-3xl">
+        <DialogHeader><DialogTitle>{isEdit ? "Edit report" : "New report"}</DialogTitle></DialogHeader>
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="space-y-2">
+            <Label>Workstream <span className="text-destructive">*</span></Label>
+            <Select
+              value={wsId}
+              onValueChange={async (v) => {
+                if (v === "__add_new__") {
+                  const name = window.prompt("New workstream name:")?.trim();
+                  if (!name) return;
+                  const { data, error } = await supabase
+                    .from("workstreams")
+                    .insert({ name })
+                    .select("id")
+                    .single();
+                  if (error) return toast.error(error.message);
+                  toast.success("Workstream created");
+                  qc.invalidateQueries({ queryKey: ["report-tree"] });
+                  setWsId(data!.id as string);
+                  return;
+                }
+                setWsId(v);
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Select workstream" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__add_new__" className="text-primary">
+                  <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Create new workstream</span>
+                </SelectItem>
+                {(tree?.ws || []).map((w: any) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Report Name <span className="text-destructive">*</span></Label>
+            <Input placeholder="Report name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Report URL <span className="text-destructive">*</span></Label>
+            <Input placeholder="Primary URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Reference URL <span className="text-xs text-muted-foreground font-normal">(required for Reference matching scenarios)</span></Label>
+            <Input placeholder="Reference report URL" value={refUrl} onChange={(e) => setRefUrl(e.target.value)} />
+          </div>
+
+          <div className="border-t pt-3 space-y-3">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Test Script Configuration</div>
+            <div className="space-y-2">
+              <Label>Report Login Credentials</Label>
+              <Select
+                value={credId || "__none__"}
+                onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }}
+                onValueChange={(v) => {
+                  if (v === "__add_new__") { openCredsTab(); return; }
+                  setCredId(v === "__none__" ? "" : v);
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="— Select credentials —" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {(creds || []).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}{c.username ? ` · ${c.username}` : ""}</SelectItem>
+                  ))}
+                  <SelectItem value="__add_new__" className="text-primary">
+                    <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Add New Credentials<ExternalLink className="h-3 w-3 ml-1" /></span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Reference URL Login Credentials <span className="text-xs text-muted-foreground font-normal">(used when running the reference script)</span></Label>
+              <Select
+                value={refCredId || "__none__"}
+                onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }}
+                onValueChange={(v) => {
+                  if (v === "__add_new__") { openCredsTab(); return; }
+                  setRefCredId(v === "__none__" ? "" : v);
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="— Select credentials —" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None —</SelectItem>
+                  {(creds || []).map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}{c.username ? ` · ${c.username}` : ""}</SelectItem>
+                  ))}
+                  <SelectItem value="__add_new__" className="text-primary">
+                    <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Add New Credentials<ExternalLink className="h-3 w-3 ml-1" /></span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="border-t pt-3 space-y-3">
+            <div className="text-xs font-semibold uppercase text-muted-foreground">Warehouse SQL Configuration</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Warehouse</Label>
+                <Select
+                  value={whId || "__none__"}
+                  onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["wh-connectors"] }); }}
+                  onValueChange={(v) => {
+                    if (v === "__add_new__") { window.open(`/settings?tab=warehouse`, "_blank"); return; }
+                    setWhId(v === "__none__" ? "" : v);
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="— Select warehouse —" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— None —</SelectItem>
+                    {(warehouses || []).map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name} · {c.kind}</SelectItem>
+                    ))}
+                    <SelectItem value="__add_new__" className="text-primary">
+                      <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Add New Warehouse<ExternalLink className="h-3 w-3 ml-1" /></span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>SQL Template</Label>
+                <Select
+                  value={tplId || "__none__"}
+                  onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["sql-templates-bind"] }); }}
+                  onValueChange={(v) => setTplId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger><SelectValue placeholder="— Select SQL template —" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— None —</SelectItem>
+                    {(tpls || []).map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name} · {t.scope}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+        <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
