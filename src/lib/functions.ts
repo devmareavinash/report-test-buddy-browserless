@@ -48,7 +48,22 @@ export async function invokeFunction<T = any>(name: string, body: any): Promise<
       body: JSON.stringify(body ?? {}),
     });
     const text = await response.text();
-    const payload = text ? JSON.parse(text) : null;
+    let payload: any = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        const snippet = text.replace(/\s+/g, " ").slice(0, 180);
+        return {
+          data: null,
+          error: new Error(
+            response.ok
+              ? `Expected JSON from ${name}, got: ${snippet}`
+              : `Edge function returned ${response.status} (non-JSON): ${snippet}`,
+          ),
+        };
+      }
+    }
     if (!response.ok) {
       return {
         data: payload,

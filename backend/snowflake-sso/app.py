@@ -133,6 +133,16 @@ def connect_params(connector: dict[str, Any]) -> dict[str, Any]:
             "This service handles SSO (externalbrowser) and key-pair (SNOWFLAKE_JWT) only"
         )
 
+    # Corp VDI Docker: traffic goes through Skyhigh MITM — hostname/cert mismatch unless
+    # the Bayer root CA is installed in the image. Prefer SNOWFLAKE_INSECURE_SSL=true on
+    # VDI; leave unset on AWS ECS (direct TLS to Snowflake).
+    insecure = os.environ.get("SNOWFLAKE_INSECURE_SSL", "").strip().lower()
+    if insecure in ("1", "true", "yes") or (
+        insecure != "false"
+        and bool(os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY"))
+    ):
+        params["insecure_mode"] = True
+
     return params
 
 

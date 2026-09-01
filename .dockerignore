@@ -10,3 +10,5 @@ dist
 .env.*.local
 infra/terraform/.terraform
 coverage
+backend/.deno_dir
+.venv

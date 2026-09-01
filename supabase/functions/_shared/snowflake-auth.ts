@@ -131,9 +131,10 @@ export function interpretSnowflakeError(raw: string, authMode: SnowflakeAuthMode
   if (authMode === "sso") {
     if (lower.includes("<!doctype html") || lower.includes("cannot connect") || lower.includes("mwg-internal")) {
       return (
-        "Cannot reach the Snowflake SSO service on this machine. Your corporate proxy is blocking local " +
-        "connections to the SSO sidecar. Set SNOWFLAKE_SSO_URL=http://127.0.0.1:8002 and " +
-        "NO_PROXY=127.0.0.1,localhost on the Deno backend, then restart it."
+        "Cannot reach the Snowflake SSO service. Corporate proxy is intercepting the call to the SSO sidecar. " +
+        "Native Deno: SNOWFLAKE_SSO_URL=http://127.0.0.1:8002 and NO_PROXY=127.0.0.1,localhost. " +
+        "Docker Compose: SNOWFLAKE_SSO_URL=http://host.docker.internal:8002 and include host.docker.internal in NO_PROXY; " +
+        "run scripts/dev-sso.ps1 on the VDI so externalbrowser can open."
       );
     }
     if (lower.includes("incorrect username or password") || lower.includes("250001")) {

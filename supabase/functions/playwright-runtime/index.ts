@@ -59,7 +59,36 @@ async function getRuntime(_sb: any): Promise<BrowserlessRuntime | null> {
 }
 
 function buildBrowserlessFunctionUrl(rt: BrowserlessRuntime): string {
-  return `${rt.baseUrl}${rt.functionPath}?token=${encodeURIComponent(rt.token)}`;
+  const params = new URLSearchParams();
+  params.set("token", rt.token);
+
+  // Corp VDI Docker: Chromium cannot resolve Bayer intranet DNS (ERR_NAME_NOT_RESOLVED →
+  // chrome-error://chromewebdata/). Pass --proxy-server on the Browserless URL so
+  // navigations to mstr-*.bayer.com go through Skyhigh. AWS ECS: leave proxy unset.
+  const chromiumProxy = (
+    Deno.env.get("CHROMIUM_PROXY") ||
+    Deno.env.get("HTTPS_PROXY") ||
+    Deno.env.get("HTTP_PROXY") ||
+    ""
+  ).trim();
+  if (chromiumProxy) {
+    params.set("--proxy-server", chromiumProxy);
+    params.set("--ignore-certificate-errors", "");
+  }
+
+  // Extra Chromium flags as comma-separated "--flag" or "--flag=value" entries.
+  const extra = (Deno.env.get("BROWSERLESS_CHROMIUM_ARGS") || "").trim();
+  if (extra) {
+    for (const raw of extra.split(",")) {
+      const flag = raw.trim();
+      if (!flag) continue;
+      const eq = flag.indexOf("=");
+      if (eq > 0) params.set(flag.slice(0, eq), flag.slice(eq + 1));
+      else params.set(flag, "");
+    }
+  }
+
+  return `${rt.baseUrl}${rt.functionPath}?${params.toString()}`;
 }
 
 async function callBrowserlessFunction(rt: BrowserlessRuntime, jsCode: string) {

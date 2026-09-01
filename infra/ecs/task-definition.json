@@ -1,0 +1,97 @@
+# ECS Fargate task definition template (single task, 4 containers).
+# Replace ACCOUNT_ID, REGION, and secret ARN before registering.
+
+{
+  "family": "rtb",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "2048",
+  "memory": "8192",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "web",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/rtb-web:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 80, "protocol": "tcp" }],
+      "dependsOn": [
+        { "containerName": "backend", "condition": "START" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/rtb",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "web"
+        }
+      }
+    },
+    {
+      "name": "backend",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/rtb-backend:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "BROWSERLESS_HOST", "value": "http://127.0.0.1:3000" },
+        { "name": "BROWSERLESS_OSS", "value": "true" },
+        { "name": "SNOWFLAKE_SSO_URL", "value": "http://127.0.0.1:8002" },
+        { "name": "LOCAL_FUNCTIONS_URL", "value": "http://127.0.0.1:8000/functions/v1" },
+        { "name": "ORCHESTRATE_CONCURRENCY", "value": "3" },
+        { "name": "PORT", "value": "8000" }
+      ],
+      "secrets": [
+        { "name": "SUPABASE_URL", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:rtb/prod:SUPABASE_URL::" },
+        { "name": "SUPABASE_ANON_KEY", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:rtb/prod:SUPABASE_ANON_KEY::" },
+        { "name": "SUPABASE_SERVICE_ROLE_KEY", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:rtb/prod:SUPABASE_SERVICE_ROLE_KEY::" },
+        { "name": "BROWSERLESS_TOKEN", "valueFrom": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:rtb/prod:BROWSERLESS_TOKEN::" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/rtb",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "backend"
+        }
+      }
+    },
+    {
+      "name": "snowflake-sso",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/rtb-snowflake-sso:latest",
+      "essential": false,
+      "portMappings": [{ "containerPort": 8002, "protocol": "tcp" }],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/rtb",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "snowflake-sso"
+        }
+      }
+    },
+    {
+      "name": "browserless",
+      "image": "ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/rtb-browserless:v2.55.4",
+      "essential": true,
+      "portMappings": [{ "containerPort": 3000, "protocol": "tcp" }],
+      "environment": [
+        { "name": "TOKEN", "value": "REPLACE_WITH_SAME_TOKEN_AS_SECRET" },
+        { "name": "CONCURRENT", "value": "10" },
+        { "name": "QUEUED", "value": "10" },
+        { "name": "TIMEOUT", "value": "300000" },
+        { "name": "CORS", "value": "true" }
+      ],
+      "linuxParameters": {
+        "sharedMemorySize": 2048
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/rtb",
+          "awslogs-region": "REGION",
+          "awslogs-stream-prefix": "browserless"
+        }
+      }
+    }
+  ]
+}

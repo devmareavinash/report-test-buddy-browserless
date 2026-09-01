@@ -22,6 +22,9 @@ dist-ssr
 **/__pycache__/
 *.pyc
 
+# Host-side Deno module cache (optional VDI helper; Docker image caches at build)
+backend/.deno_dir/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

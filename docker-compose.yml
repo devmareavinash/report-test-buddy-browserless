@@ -11,6 +11,13 @@ services:
         VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY}
         VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
         VITE_USE_LOCAL_BACKEND: "true"
+        NGINX_CONF: nginx.docker.conf
+        HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
+        HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+        http_proxy: ${HTTP_PROXY:-http://10.185.190.10:8080}
+        https_proxy: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+        NO_PROXY: ${NO_PROXY:-127.0.0.1,localhost}
+        no_proxy: ${NO_PROXY:-127.0.0.1,localhost}
     ports:
       - "8080:80"
     restart: unless-stopped
@@ -21,6 +28,10 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
+        HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+        NO_PROXY: ${NO_PROXY:-127.0.0.1,localhost}
     ports:
       - "8000:8000"
     environment:
@@ -29,24 +40,46 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       LOVABLE_API_KEY: ${LOVABLE_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      BROWSERLESS_HOST: ${BROWSERLESS_HOST:-http://browserless:3000}
+      # Bypass Skyhigh for compose + host sidecar. Do not inherit .env NO_PROXY alone —
+      # host.docker.internal must be listed or Deno proxies SSO and fails.
+      HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
+      HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+      NO_PROXY: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal
+      no_proxy: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal
+      # Force compose-network hostnames (ignore Codespaces/local .env overrides)
+      BROWSERLESS_HOST: http://browserless:3000
       BROWSERLESS_TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}
-      BROWSERLESS_OSS: ${BROWSERLESS_OSS:-true}
+      BROWSERLESS_OSS: "true"
       ORCHESTRATE_CONCURRENCY: ${ORCHESTRATE_CONCURRENCY:-3}
-      # Snowflake SSO — override with host.docker.internal:8002 when running Python natively on VDI
-      SNOWFLAKE_SSO_URL: ${SNOWFLAKE_SSO_URL:-http://snowflake-sso:8002}
+      # Must be host.docker.internal — do NOT use .env's 127.0.0.1 (that is for native Deno).
+      # Inside the backend container, 127.0.0.1 is the container itself.
+      SNOWFLAKE_SSO_URL: http://host.docker.internal:8002
       LOCAL_FUNCTIONS_URL: http://127.0.0.1:8000/functions/v1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     depends_on:
       - browserless
-      - snowflake-sso
 
   snowflake-sso:
+    profiles: ["docker-sso"]
     build:
       context: .
       dockerfile: backend/snowflake-sso/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
+        HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+        NO_PROXY: ${NO_PROXY:-127.0.0.1,localhost}
     ports:
       - "8002:8002"
+    environment:
+      # Corp VDI: Docker DNS can't resolve *.snowflakecomputing.com — use Skyhigh proxy.
+      # Leave unset on AWS ECS. insecure_mode auto-enables when a proxy is present.
+      HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
+      HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
+      NO_PROXY: ${NO_PROXY:-127.0.0.1,localhost,backend,browserless,web}
+      no_proxy: ${NO_PROXY:-127.0.0.1,localhost,backend,browserless,web}
+      SNOWFLAKE_INSECURE_SSL: ${SNOWFLAKE_INSECURE_SSL:-true}
     restart: unless-stopped
 
   browserless:
@@ -59,5 +92,9 @@ services:
       QUEUED: ${BROWSERLESS_QUEUED:-10}
       TIMEOUT: ${BROWSERLESS_TIMEOUT_MS:-300000}
       CORS: "true"
+      # Corp VDI: Chromium cannot resolve Bayer intranet DNS from Docker.
+      # Route all browser traffic through Skyhigh; ignore MITM TLS certs.
+      # On AWS ECS leave CHROMIUM_PROXY empty (task networking reaches targets directly).
+      DEFAULT_LAUNCH_ARGS: ${BROWSERLESS_LAUNCH_ARGS:-["--proxy-server=http://10.185.190.10:8080","--ignore-certificate-errors","--ignore-certificate-errors-spki-list"]}
     shm_size: "2g"
     restart: unless-stopped
