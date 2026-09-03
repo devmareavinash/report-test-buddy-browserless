@@ -91,16 +91,34 @@ function buildBrowserlessFunctionUrl(rt: BrowserlessRuntime): string {
   return `${rt.baseUrl}${rt.functionPath}?${params.toString()}`;
 }
 
+function formatFetchError(err: unknown, label: string): string {
+  const e = err as { message?: string; cause?: { message?: string } };
+  const cause = e?.cause?.message || e?.message || String(err);
+  if (/unknownissuer|certificate|cert/i.test(cause)) {
+    return (
+      `${label} failed (TLS: ${cause}). ` +
+      "On this VDI the corp proxy rewrites HTTPS certs. Restart the backend with scripts/dev-backend.ps1 " +
+      "so Deno ignores Skyhigh MITM certificates."
+    );
+  }
+  return `${label} failed: ${cause}`;
+}
+
 async function callBrowserlessFunction(rt: BrowserlessRuntime, jsCode: string) {
   const url = buildBrowserlessFunctionUrl(rt);
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/javascript",
-      Authorization: `Bearer ${rt.token}`,
-    },
-    body: jsCode,
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/javascript",
+        Authorization: `Bearer ${rt.token}`,
+      },
+      body: jsCode,
+    });
+  } catch (e) {
+    throw new Error(formatFetchError(e, `Browserless ${rt.baseUrl}${rt.functionPath}`));
+  }
   const text = await resp.text();
   if (!resp.ok) {
     let detail = text;
@@ -112,9 +130,10 @@ async function callBrowserlessFunction(rt: BrowserlessRuntime, jsCode: string) {
         `Host: ${rt.baseUrl}`;
     } else if (resp.status === 404 && looksLikeCodespace && !text.trim()) {
       detail =
-        `404 from ${rt.baseUrl} (empty body). The GitHub Codespace is stopped or port 3000 is no longer forwarded. ` +
-        "Re-open the Codespace, wait until Browserless is healthy, set port 3000 to Public, " +
-        "then update BROWSERLESS_HOST if the github.dev URL changed.";
+        `404 from ${rt.baseUrl} (empty body). This VDI cannot reach the Codespace port-forward URL ` +
+        "(GitHub returns 404 even when Ports shows 3000 Public). " +
+        "Use Docker Desktop Browserless OSS on http://127.0.0.1:3000 instead " +
+        "(scripts/dev-browserless.ps1 or docker compose). Restart the local backend after that.";
     } else if (resp.status === 404 && !text.trim()) {
       detail =
         `404 from ${rt.baseUrl}${rt.functionPath} with an empty body. ` +

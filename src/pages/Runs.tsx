@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +7,11 @@ import { Link, useSearchParams } from "react-router-dom";
 import { StatusChip } from "@/components/StatusChip";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { XCircle } from "lucide-react";
+import { XCircle, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Runs() {
+  const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const status = params.get("status");
   const [search, setSearch] = useState("");
@@ -83,6 +84,21 @@ export default function Runs() {
     if (s) next.set("status", s);
     else next.delete("status");
     setParams(next);
+  };
+
+  const deleteRun = async (runId: string, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (!confirm(`Delete run ${runId.slice(0, 8)} and all its results? This cannot be undone.`)) return;
+    const { error } = await supabase.from("runs").delete().eq("id", runId);
+    if (error) toast({ title: "Failed to delete run", description: error.message, variant: "destructive" });
+    else {
+      toast({ title: "Run deleted" });
+      queryClient.invalidateQueries({ queryKey: ["all-runs"] });
+      queryClient.invalidateQueries({ queryKey: ["run-meta"] });
+      queryClient.invalidateQueries({ queryKey: ["scenario-results"] });
+      queryClient.invalidateQueries({ queryKey: ["runs-report"] });
+    }
   };
 
   const filteredReports = (reports || []).filter((r: any) => wsId === "all" || r.workstream_id === wsId);
@@ -169,23 +185,39 @@ export default function Runs() {
                     {new Date(r.started_at!).toLocaleString()}
                   </span>
                   <StatusChip status={r.status} />
-                  {r.status === "running" && (
+                  {r.status === "running" ? (
                     <button
                       onClick={async (e) => {
                         e.preventDefault();
                         e.stopPropagation();
                         if (!confirm(`Cancel run ${r.id.slice(0, 8)}?`)) return;
+                        const curSummary = (r.summary as any) || {};
                         const { error } = await supabase
                           .from("runs")
-                          .update({ status: "cancelled", finished_at: new Date().toISOString() })
+                          .update({
+                            status: "cancelled",
+                            finished_at: new Date().toISOString(),
+                            summary: { ...curSummary, in_progress: false, cancelled: true },
+                          })
                           .eq("id", r.id);
                         if (error) toast({ title: "Failed to cancel", description: error.message, variant: "destructive" });
-                        else toast({ title: "Run cancelled" });
+                        else {
+                          toast({ title: "Run cancelled" });
+                          queryClient.invalidateQueries({ queryKey: ["all-runs"] });
+                        }
                       }}
                       title="Cancel run"
                       className="text-destructive hover:text-destructive/80"
                     >
                       <XCircle className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => deleteRun(r.id, e)}
+                      title="Delete run"
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </Link>

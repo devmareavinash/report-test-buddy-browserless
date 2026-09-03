@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
         JSON.stringify({
           ok: false,
           error: "Incomplete Snowflake configuration. Account, warehouse, role, and username are required. " +
-            "Password needs a password; SSO needs username; key-pair needs username + private key path.",
+            "Password needs a password; SSO needs username; key-pair needs username + private key path or PEM.",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -193,12 +193,13 @@ Deno.serve(async (req) => {
           error: interpretSnowflakeError(raw, authMode),
           hints: authMode === "sso"
             ? [
-              "SSO opens a browser on the machine running the Snowflake SSO service (your VDI/backend), not in this browser tab.",
-              "Complete IdP login within ~2 minutes, then retry.",
+              "SSO only works on your VDI desktop, not on AWS Fargate.",
+              "On AWS: switch this warehouse to Key pair (paste PEM) or Password + a Snowflake Programmatic Access Token.",
             ]
             : authMode === "keypair"
             ? [
-              "Private key path must be readable on the Snowflake SSO host (VDI), not only on your laptop.",
+              "Test locally first with scripts/dev-sso.ps1 (sidecar on http://127.0.0.1:8002).",
+              "On this VDI a Windows .p8 path works; paste the PEM if the same connector will run on AWS.",
               "Public key must be set on the Snowflake user (ALTER USER … SET RSA_PUBLIC_KEY).",
             ]
             : [],

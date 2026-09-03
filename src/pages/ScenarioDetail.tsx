@@ -105,6 +105,13 @@ export default function ScenarioDetail() {
   const [kpiEditorOpen, setKpiEditorOpen] = useState(false);
   const [kpiDraft, setKpiDraft] = useState<string[]>([]);
   const [kpiNew, setKpiNew] = useState("");
+  const [applyCredDialog, setApplyCredDialog] = useState<null | {
+    field: "credential_profile_id" | "reference_credential_profile_id";
+    value: string | null;
+  }>(null);
+  const [applyCredBusy, setApplyCredBusy] = useState(false);
+  const [deletingHistoryId, setDeletingHistoryId] = useState<string | null>(null);
+  const [historyDays, setHistoryDays] = useState<7 | 14 | 30>(7);
 
   const scenarioType: string = (scenario as any)?.type || "warehouse_match";
   const isReferenceMatch = scenarioType === "reference_match";
@@ -218,10 +225,81 @@ export default function ScenarioDetail() {
     toast.success("Credentials updated");
   };
 
+  const credProfileLabel = (value: string | null, field: string) => {
+    if (!value) return field === "reference_credential_profile_id" ? "report default (reference)" : "report default";
+    const match = (credProfiles || []).find((c: any) => c.id === value);
+    return match?.name ? `${match.name}${match.username ? ` · ${match.username}` : ""}` : "selected profile";
+  };
+
+  const applyCredToAllInReport = async () => {
+    if (!applyCredDialog || !reportId) return;
+    setApplyCredBusy(true);
+    try {
+      const { field, value } = applyCredDialog;
+      const { error: reportErr } = await supabase.from("reports").update({ [field]: value }).eq("id", reportId);
+      if (reportErr) throw reportErr;
+      const { data: scenarios, error: scenErr } = await supabase.from("scenarios").select("id").eq("report_id", reportId);
+      if (scenErr) throw scenErr;
+      const scenarioIds = (scenarios || []).map((s) => s.id);
+      if (scenarioIds.length) {
+        const { error: scriptErr } = await supabase.from("scripts").update({ [field]: value } as any).in("scenario_id", scenarioIds);
+        if (scriptErr) throw scriptErr;
+      }
+      qc.invalidateQueries({ queryKey: ["scenario", id] });
+      qc.invalidateQueries({ queryKey: ["script", id] });
+      toast.success(
+        value
+          ? `Applied "${credProfileLabel(value, field)}" to this report and ${scenarioIds.length} scenario(s)`
+          : `Cleared credentials on this report and ${scenarioIds.length} scenario(s)`,
+      );
+      setApplyCredDialog(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to apply credentials");
+    } finally {
+      setApplyCredBusy(false);
+    }
+  };
+
+  const deleteHistoryRow = async (row: any) => {
+    if (!row?.id) return;
+    if (!confirm("Delete this execution log? This cannot be undone.")) return;
+    setDeletingHistoryId(row.id);
+    try {
+      const { error } = await supabase.from("test_results").delete().eq("id", row.id);
+      if (error) throw error;
+      if (row.run_id) {
+        const { count } = await supabase
+          .from("test_results")
+          .select("id", { count: "exact", head: true })
+          .eq("run_id", row.run_id);
+        if ((count ?? 0) === 0) {
+          await supabase.from("runs").delete().eq("id", row.run_id);
+        }
+      }
+      toast.success("Execution log deleted");
+      qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+      qc.invalidateQueries({ queryKey: ["runs"] });
+      qc.invalidateQueries({ queryKey: ["all-runs"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to delete log");
+    } finally {
+      setDeletingHistoryId(null);
+    }
+  };
+
+  const hasMainCode = Boolean(code?.trim());
+  const hasRefCode = Boolean(refCode?.trim());
+  const genMainLabel = isReferenceMatch
+    ? (hasMainCode ? "Regenerate main script" : "Generate main script")
+    : (hasMainCode ? "Regenerate" : "Generate");
+  const genMainPending = isReferenceMatch
+    ? (hasMainCode ? "Regenerating main script…" : "Generating main script…")
+    : (hasMainCode ? "Regenerating…" : "Generating…");
+
   const genScript = useMutation({
     mutationFn: async () => (await invokeFunction("agent-scripts", { scenario_id: id })).data,
     onSuccess: async () => {
-      toast.success(script ? "Script regenerated" : "Script generated");
+      toast.success(hasMainCode ? "Script regenerated" : "Script generated");
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Generation failed"),
@@ -237,7 +315,7 @@ export default function ScenarioDetail() {
     onSuccess: async (data: any) => {
       const genCode = data?.script?.assertion_spec?.__reference_playwright_code || "";
       if (genCode) setRefCode(genCode);
-      toast.success("Reference script generated from description");
+      toast.success(hasRefCode ? "Reference script regenerated from description" : "Reference script generated from description");
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Reference script generation failed"),
@@ -535,8 +613,19 @@ export default function ScenarioDetail() {
       const { data, error } = await invokeFunction("run-warehouse-sql", { sql_template_id: tplId || null, scenario_id: id, limit: 5 });
       if (error) throw error;
       setSqlResult(data);
-      if (data?.ok) toast.success(`${data.source === "snowflake" ? "Snowflake" : "Mock"}: ${data.row_count} row(s)`);
-      else toast.error(data?.error || "SQL failed");
+      if (data?.ok) {
+        toast.success(`${data.source === "snowflake" ? "Snowflake" : "Mock"}: ${data.row_count} row(s)`);
+        void persistWarehouseExpected({
+          scenarioId: id!,
+          reportId: (scenario as any)?.reports?.id,
+          combos: combos || [],
+          sqlByCombo: comboResults,
+          sqlResult: data,
+          tolerances: kpiTolerances,
+        }).then((ok) => {
+          if (ok) qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+        });
+      } else toast.error(data?.error || "SQL failed");
     } catch (e: any) {
       setSqlResult({ ok: false, error: e?.message || "SQL run failed" });
       toast.error(e?.message || "SQL run failed");
@@ -611,9 +700,21 @@ export default function ScenarioDetail() {
         limit: 5,
       });
       if (error) throw error;
-      setComboResults((prev) => ({ ...prev, [combo.id]: { ...data, where_clause: where, pairs, missing } }));
-      if (data?.ok) toast.success(`${combo.label || "Combination"}: ${data.row_count} row(s)`);
-      else toast.error(data?.error || "SQL failed");
+      const nextCombo = { ...comboResults, [combo.id]: { ...data, where_clause: where, pairs, missing } };
+      setComboResults(nextCombo);
+      if (data?.ok) {
+        toast.success(`${combo.label || "Combination"}: ${data.row_count} row(s)`);
+        void persistWarehouseExpected({
+          scenarioId: id!,
+          reportId: (scenario as any)?.reports?.id,
+          combos: combos || [],
+          sqlByCombo: nextCombo,
+          sqlResult: data,
+          tolerances: kpiTolerances,
+        }).then((ok) => {
+          if (ok) qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+        });
+      } else toast.error(data?.error || "SQL failed");
     } catch (e: any) {
       setComboResults((prev) => ({ ...prev, [combo.id]: { ok: false, error: e?.message || "SQL failed", where_clause: where } }));
       toast.error(e?.message || "SQL failed");
@@ -637,18 +738,23 @@ export default function ScenarioDetail() {
 
 
   const { data: latestResults } = useQuery({
-    queryKey: ["scenario-results", id],
-    queryFn: async () =>
-      (await supabase
+    queryKey: ["scenario-results", id, historyDays],
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - historyDays * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
         .from("test_results")
         .select("id, run_id, status, expected, actual, diff, analysis, screenshot_url, created_at")
         .eq("scenario_id", id!)
+        .gte("created_at", cutoff)
         .order("created_at", { ascending: false })
-        .limit(25)).data ?? [],
+        .limit(80);
+      return data ?? [];
+    },
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
   });
+  const historyRows = (latestResults || []).slice(0, 20);
   const { data: lastPwJob } = useQuery({
     queryKey: ["playwright-job-latest", id],
     queryFn: async () =>
@@ -809,7 +915,7 @@ export default function ScenarioDetail() {
     const pwRoot = _rootOf(runResult);
     const refRoot = _rootOf(refRunResult);
     return combos.map((c: any, idx: number) => {
-      const label = c.label || `Filter #${idx + 1}`;
+      const label = comboPersistLabel(c, idx);
       const pwBlock = _blockFor(pwRoot, label, idx, c.id);
       const refBlock = _blockFor(refRoot, label, idx, c.id);
       const actualMap = extractKpisFromBlock(pwBlock);
@@ -944,8 +1050,8 @@ export default function ScenarioDetail() {
       if (manualPerCombo && hasLiveManualPerCombo) {
         const byLabel = new Map<string, any>();
         (runRows || []).forEach((r: any) => {
-          const lbl = r.actual?.filter || r.expected?.filter || r.actual?.filters_applied?.__label;
-          if (lbl) byLabel.set(String(lbl), r);
+          const lbl = storedRowFilterLabel(r);
+          if (lbl) byLabel.set(lbl, r);
         });
         // If the stored rows for this run don't carry combo labels (typical for
         // synthetic error rows written by the orchestrator when script generation
@@ -972,22 +1078,29 @@ export default function ScenarioDetail() {
             });
           }
         } else {
-          for (const p of manualPerCombo) {
-            const existing = byLabel.get(p.label);
+          let matched = 0;
+          for (let i = 0; i < manualPerCombo.length; i++) {
+            const p = manualPerCombo[i];
+            const existing = matchStoredComboRow(runRows || [], p.combo, i, p.label) || byLabel.get(p.label);
             if (!existing) continue;
+            matched += 1;
             const prevActual = (existing.actual && typeof existing.actual === "object") ? existing.actual : {};
             const prevExpected = (existing.expected && typeof existing.expected === "object") ? existing.expected : {};
             const prevActualValues = valuesFromStoredBlock(prevActual);
             const prevExpectedValues = valuesFromStoredBlock(prevExpected);
             const nextActualValues = hasKpiValues(p.actualMap) ? mergeKpiValues(prevActualValues, p.actualMap) : prevActualValues;
             const nextExpectedValues = hasKpiValues(p.expectedMap) ? mergeKpiValues(prevExpectedValues, p.expectedMap) : prevExpectedValues;
-            await supabase.from("test_results").update({
+            const { error: updErr } = await supabase.from("test_results").update({
               status: statusForValues(nextActualValues, nextExpectedValues),
               actual: { ...prevActual, filter: p.label, values: nextActualValues, filters_applied: p.filters ?? prevActual.filters_applied ?? null, tolerances_snapshot: snapshot },
-              expected: { ...prevExpected, filter: p.label, values: nextExpectedValues },
+              expected: { ...prevExpected, filter: p.label, values: nextExpectedValues, source: "warehouse_sql" },
               diff: null,
               analysis: "Updated from manual scenario run",
             }).eq("id", existing.id);
+            if (updErr) throw updErr;
+          }
+          if (matched === 0) {
+            throw new Error("Could not match this session's results to the last run. Run the test script again, then Sync.");
           }
         }
       } else {
@@ -1200,10 +1313,19 @@ export default function ScenarioDetail() {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 text-xs"
+                    disabled={!reportId}
+                    onClick={() => setApplyCredDialog({ field: "credential_profile_id", value: credId || null })}
+                  >
+                    Apply to all in report
+                  </Button>
                   <ScriptHistory scenarioId={id!} scriptId={script?.id} onRestore={(v) => { setCode(v.playwright_code || ""); setSpec(JSON.stringify(v.assertion_spec || {}, null, 2)); setTplId(v.sql_template_id || ""); toast.success(`Loaded v${v.version} — click Save to apply`); }} />
                   <Button size="sm" variant="outline" disabled={genScript.isPending} onClick={() => genScript.mutate()}>
-                    {script ? <RotateCcw className="h-3 w-3 mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
-                    {genScript.isPending ? (script ? "Regenerating…" : "Generating…") : (script ? "Regenerate" : "Generate")}
+                    {hasMainCode ? <RotateCcw className="h-3 w-3 mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                    {genScript.isPending ? genMainPending : genMainLabel}
                   </Button>
                   <Button size="sm" onClick={saveScript}>Save</Button>
                 </div>
@@ -1273,7 +1395,9 @@ export default function ScenarioDetail() {
                       title={!(scenario as any)?.description?.trim() ? "Add a scenario description first" : "Generate a dedicated reference script from the scenario description (use for two-screen comparisons)"}
                     >
                       <Sparkles className="h-3 w-3 mr-1" />
-                      {genReferenceScript.isPending ? "Generating…" : (refCode ? "Regenerate from description" : "Generate reference script")}
+                      {genReferenceScript.isPending
+                        ? (hasRefCode ? "Regenerating from description…" : "Generating…")
+                        : (hasRefCode ? "Regenerate from description" : "Generate reference script")}
                     </Button>
                     <Button
                       size="sm"
@@ -1298,26 +1422,37 @@ export default function ScenarioDetail() {
                   </div>
                   <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-muted-foreground whitespace-nowrap">Reference login credentials:</span>
-                    <Select
-                      value={refCredId || "__none__"}
-                      onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }}
-                      onValueChange={(v) => {
-                        if (v === "__add_new__") { window.open(`/settings?tab=creds`, "_blank"); return; }
-                        setRefCredId(v === "__none__" ? "" : v);
-                        persistCredField("reference_credential_profile_id", v === "__none__" ? null : v);
-                      }}
-                    >
-                      <SelectTrigger className="h-8 flex-1"><SelectValue placeholder="— Select credentials —" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— None —</SelectItem>
-                        {(credProfiles || []).map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}{c.username ? ` · ${c.username}` : ""}</SelectItem>
-                        ))}
-                        <SelectItem value="__add_new__" className="text-primary">
-                          <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Add New Credentials<ExternalLink className="h-3 w-3 ml-1" /></span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex flex-1 items-center gap-2 min-w-0">
+                      <Select
+                        value={refCredId || "__none__"}
+                        onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }}
+                        onValueChange={(v) => {
+                          if (v === "__add_new__") { window.open(`/settings?tab=creds`, "_blank"); return; }
+                          setRefCredId(v === "__none__" ? "" : v);
+                          persistCredField("reference_credential_profile_id", v === "__none__" ? null : v);
+                        }}
+                      >
+                        <SelectTrigger className="h-8 flex-1"><SelectValue placeholder="— Select credentials —" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">— None —</SelectItem>
+                          {(credProfiles || []).map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}{c.username ? ` · ${c.username}` : ""}</SelectItem>
+                          ))}
+                          <SelectItem value="__add_new__" className="text-primary">
+                            <span className="inline-flex items-center gap-1"><Plus className="h-3 w-3" />Add New Credentials<ExternalLink className="h-3 w-3 ml-1" /></span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-[11px] shrink-0"
+                        disabled={!reportId}
+                        onClick={() => setApplyCredDialog({ field: "reference_credential_profile_id", value: refCredId || null })}
+                      >
+                        Apply to all
+                      </Button>
+                    </div>
                   </div>
                   <Textarea className="mono text-xs min-h-[260px]" value={refCode} onChange={(e) => setRefCode(e.target.value)} placeholder="// Playwright code for reference report…" />
                   <div className="text-[11px] text-muted-foreground">
@@ -1664,11 +1799,31 @@ export default function ScenarioDetail() {
 
         {/* Bottom — execution history log */}
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Execution history</CardTitle></CardHeader>
+          <CardHeader className="pb-2 flex-row items-center justify-between gap-2">
+            <CardTitle className="text-sm">Execution history</CardTitle>
+            <div className="flex items-center gap-1 text-[11px]">
+              <span className="text-muted-foreground mr-1">Last</span>
+              {([7, 14, 30] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setHistoryDays(d)}
+                  className={`px-2 py-0.5 rounded border ${historyDays === d ? "border-accent text-accent" : "border-border text-muted-foreground"}`}
+                >
+                  {d}d
+                </button>
+              ))}
+            </div>
+          </CardHeader>
           <CardContent>
-            {!latestResults?.length && <div className="text-xs text-muted-foreground">No previous executions.</div>}
+            {!historyRows.length && <div className="text-xs text-muted-foreground">No executions in the last {historyDays} days.</div>}
+            {(latestResults || []).length > historyRows.length && (
+              <div className="text-[11px] text-muted-foreground mb-2">
+                Showing {historyRows.length} of {(latestResults || []).length} rows in this window.
+              </div>
+            )}
             <div className="divide-y divide-border">
-              {(latestResults || []).map((r: any) => {
+              {historyRows.map((r: any) => {
                 const actualVals = kpiMapFromStored(r.actual) || r.actual?.values || {};
                 const expectedVals = expectedValuesFromStoredRow(r);
                 const fallbackExpected = isReferenceMatch
@@ -1681,12 +1836,23 @@ export default function ScenarioDetail() {
                 );
                 const shown = compared !== "pending" ? compared : r.status;
                 return (
-                <Link key={r.id} to={r.run_id ? `/runs/${r.run_id}` : "#"} className="flex items-center gap-3 py-2 text-xs hover:bg-secondary/30 px-2 rounded">
-                  <span className={`mono uppercase text-[10px] px-1.5 py-0.5 rounded ${shown === "pass" ? "bg-emerald-500/15 text-emerald-500" : shown === "fail" ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>{shown}</span>
-                  <span className="mono text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
-                  <span className="flex-1 truncate text-muted-foreground">{r.analysis || (r.actual ? JSON.stringify(r.actual).slice(0, 120) : "—")}</span>
-                  {r.run_id && <span className="mono text-muted-foreground">run {r.run_id.slice(0, 8)}</span>}
-                </Link>
+                <div key={r.id} className="flex items-center gap-3 py-2 text-xs hover:bg-secondary/30 px-2 rounded">
+                  <Link to={r.run_id ? `/runs/${r.run_id}` : "#"} className="flex items-center gap-3 flex-1 min-w-0">
+                    <span className={`mono uppercase text-[10px] px-1.5 py-0.5 rounded ${shown === "pass" ? "bg-emerald-500/15 text-emerald-500" : shown === "fail" ? "bg-destructive/15 text-destructive" : "bg-secondary text-muted-foreground"}`}>{shown}</span>
+                    <span className="mono text-muted-foreground">{new Date(r.created_at).toLocaleString()}</span>
+                    <span className="flex-1 truncate text-muted-foreground">{r.analysis || (r.actual ? JSON.stringify(r.actual).slice(0, 120) : "—")}</span>
+                    {r.run_id && <span className="mono text-muted-foreground">run {r.run_id.slice(0, 8)}</span>}
+                  </Link>
+                  <button
+                    type="button"
+                    title="Delete this log"
+                    disabled={deletingHistoryId === r.id}
+                    onClick={() => void deleteHistoryRow(r)}
+                    className="text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
                 );
               })}
             </div>
@@ -1716,6 +1882,30 @@ export default function ScenarioDetail() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={!!applyCredDialog} onOpenChange={(open) => { if (!open && !applyCredBusy) setApplyCredDialog(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Apply credentials to entire report?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {applyCredDialog && (
+                  <>
+                    Set <b>{credProfileLabel(applyCredDialog.value, applyCredDialog.field)}</b> as the{" "}
+                    {applyCredDialog.field === "credential_profile_id" ? "main login" : "reference login"} credentials
+                    on <b>{(scenario as any)?.reports?.name || "this report"}</b> and every scenario in it.
+                    Existing per-scenario overrides will be replaced.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={applyCredBusy}>Cancel</AlertDialogCancel>
+              <AlertDialogAction disabled={applyCredBusy} onClick={(e) => { e.preventDefault(); void applyCredToAllInReport(); }}>
+                {applyCredBusy ? "Applying…" : "Apply to all"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
@@ -1905,6 +2095,24 @@ const KPI_SKIP_KEYS = new Set([
   "screenshot", "screenshot_b64", "screenshot_url", "error", "ok", "note",
   "title", "url", "result", "extracted", "report_url", "debug", "page_snapshot",
 ]);
+
+/** Same label persist + sync must use. Empty combo.label used to become Filter #N in the UI and combo_N in history. */
+function comboPersistLabel(combo: any, idx: number): string {
+  return String(combo?.label || `combo_${idx + 1}`);
+}
+
+function storedRowFilterLabel(row: any): string {
+  return String(row?.actual?.filter || row?.expected?.filter || row?.actual?.filters_applied?.__label || "");
+}
+
+function matchStoredComboRow(runRows: any[], combo: any, idx: number, liveLabel: string) {
+  const aliases = new Set(
+    [liveLabel, comboPersistLabel(combo, idx), combo?.id, `combo_${idx + 1}`, `Filter #${idx + 1}`]
+      .filter(Boolean)
+      .map(String),
+  );
+  return (runRows || []).find((r) => aliases.has(storedRowFilterLabel(r))) || runRows?.[idx] || null;
+}
 
 function extractKpisFromBlock(block: any): Record<string, any> {
   if (!block || typeof block !== "object") return {};
@@ -2113,7 +2321,10 @@ function resolveExpectedValues(opts: {
     return findStoredExpected(storedRows, label);
   }
   const sqlRes = (comboId && sqlByCombo?.[comboId]) || sqlResult;
-  return expectedFromSql(sqlRes, actualKeys);
+  const fromSql = expectedFromSql(sqlRes, actualKeys);
+  if (Object.keys(fromSql).length) return fromSql;
+  // Warehouse SQL ran first and was already saved — reuse those expected values.
+  return findStoredExpected(storedRows, label);
 }
 
 function lookupKpi(obj: any, k: string): any {
@@ -2177,7 +2388,7 @@ async function persistManualHeadlessRun(opts: {
   if (combos?.length) {
     for (let i = 0; i < combos.length; i++) {
       const c = combos[i];
-      const label = c.label || `combo_${i + 1}`;
+      const label = comboPersistLabel(c, i);
       const block = pickComboBlock(root, label, i, c.id);
       let values = extractKpisFromBlock(block);
       if (!Object.keys(values).length) values = extractKpisFromRun(payload) || {};
@@ -2246,6 +2457,120 @@ async function persistManualHeadlessRun(opts: {
     },
   }).eq("id", run.id);
   return true;
+}
+
+async function persistWarehouseExpected(opts: {
+  scenarioId: string;
+  reportId?: string;
+  combos: any[];
+  sqlByCombo?: Record<string, any>;
+  sqlResult?: any;
+  tolerances?: Record<string, Tolerance>;
+}): Promise<boolean> {
+  const { scenarioId, reportId, combos, sqlByCombo, sqlResult, tolerances } = opts;
+  if (!scenarioId) return false;
+  const { data: recent } = await supabase
+    .from("test_results")
+    .select("id, run_id, expected, actual, status")
+    .eq("scenario_id", scenarioId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+  const latestRunId = recent?.[0]?.run_id;
+  let runRows = latestRunId ? (recent || []).filter((r: any) => r.run_id === latestRunId) : [];
+
+  if (!runRows.length) {
+    if (!reportId) return false;
+    const { data: run, error: runErr } = await supabase.from("runs").insert({
+      scope_type: "report",
+      scope_id: reportId,
+      trigger_source: "manual",
+      status: "completed",
+      finished_at: new Date().toISOString(),
+      summary: { source: "warehouse_sql", total: 0 },
+    }).select("id").single();
+    if (runErr || !run) return false;
+    const inserts: any[] = [];
+    if (combos?.length) {
+      for (let i = 0; i < combos.length; i++) {
+        const c = combos[i];
+        const label = comboPersistLabel(c, i);
+        const sqlRes = sqlByCombo?.[c.id] || (sqlResult?.ok ? sqlResult : null);
+        const expectedValues = expectedFromSql(sqlRes, Object.keys(sqlRes?.rows?.[0] || {}));
+        if (!Object.keys(expectedValues).length && sqlRes?.ok && sqlRes.scalar != null) {
+          const col = sqlRes.columns?.[0] || "value";
+          expectedValues[col] = sqlRes.scalar;
+        }
+        inserts.push({
+          run_id: run.id,
+          scenario_id: scenarioId,
+          status: "pending",
+          expected: { source: "warehouse_sql", filter: label, values: expectedValues },
+          actual: { filter: label, values: {}, source: "manual_headless" },
+          diff: null,
+        });
+      }
+    } else {
+      const sqlRes = sqlResult?.ok ? sqlResult : null;
+      const expectedValues = expectedFromSql(sqlRes, Object.keys(sqlRes?.rows?.[0] || {}));
+      if (!Object.keys(expectedValues).length && sqlRes?.ok && sqlRes.scalar != null) {
+        const col = sqlRes.columns?.[0] || "value";
+        expectedValues[col] = sqlRes.scalar;
+      }
+      inserts.push({
+        run_id: run.id,
+        scenario_id: scenarioId,
+        status: "pending",
+        expected: { source: "warehouse_sql", values: expectedValues },
+        actual: { values: {}, source: "manual_headless" },
+        diff: null,
+      });
+    }
+    if (!inserts.length) return false;
+    const { error: insErr } = await supabase.from("test_results").insert(inserts);
+    return !insErr;
+  }
+
+  let updated = 0;
+  const targets = combos?.length ? combos : [null];
+  for (let i = 0; i < targets.length; i++) {
+    const c = targets[i];
+    const label = c ? comboPersistLabel(c, i) : storedRowFilterLabel(runRows[0]);
+    const sqlRes = (c && sqlByCombo?.[c.id]) || (sqlResult?.ok ? sqlResult : null);
+    if (!sqlRes?.ok) continue;
+    const existing = c ? matchStoredComboRow(runRows, c, i, label) : runRows[0];
+    if (!existing) continue;
+    const prevActual = (existing.actual && typeof existing.actual === "object") ? existing.actual : {};
+    const prevExpected = (existing.expected && typeof existing.expected === "object") ? existing.expected : {};
+    const actualValues = (prevActual.values && typeof prevActual.values === "object")
+      ? prevActual.values
+      : extractKpisFromBlock(prevActual);
+    const actualKeys = Object.keys(actualValues || {}).filter((k) => !k.startsWith("__"));
+    const expectedValues = expectedFromSql(sqlRes, actualKeys.length ? actualKeys : Object.keys(sqlRes.rows?.[0] || {}));
+    if (!Object.keys(expectedValues).length && sqlRes.scalar != null && actualKeys.length === 1) {
+      expectedValues[actualKeys[0]] = sqlRes.scalar;
+    }
+    if (!Object.keys(expectedValues).length) continue;
+    const status = statusFromKpis(actualValues, expectedValues, tolerances);
+    const { error } = await supabase.from("test_results").update({
+      status,
+      expected: { ...prevExpected, source: "warehouse_sql", filter: label || prevExpected.filter, values: expectedValues },
+      analysis: "Updated from warehouse SQL",
+    }).eq("id", existing.id);
+    if (!error) updated += 1;
+  }
+  if (updated && latestRunId) {
+    const { data: allRows } = await supabase.from("test_results").select("status").eq("run_id", latestRunId);
+    await supabase.from("runs").update({
+      summary: {
+        source: "warehouse_sql",
+        pass: (allRows || []).filter((r: any) => r.status === "pass").length,
+        fail: (allRows || []).filter((r: any) => r.status === "fail").length,
+        pending: (allRows || []).filter((r: any) => r.status === "pending").length,
+        total: (allRows || []).length,
+      },
+    }).eq("id", latestRunId);
+  }
+  return updated > 0;
 }
 
 async function persistReferenceHeadlessRun(opts: {

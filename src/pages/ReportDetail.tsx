@@ -146,15 +146,37 @@ export default function ReportDetail() {
 
           <TabsContent value="runs" className="space-y-2 mt-4">
             {(runs || []).map((r) => (
-              <Link key={r.id} to={`/runs/${r.id}`} className="flex items-center justify-between border border-border rounded-md p-3 hover:bg-secondary/40">
-                <span className="mono text-xs">{r.id.slice(0, 8)}</span>
-                <span className="text-[10px] uppercase mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
-                  {r.scope_type === "workstream" ? "report" : "screen"}
-                </span>
-                <span className="text-xs">{(r.summary as any)?.pass ?? 0}✓ / {(r.summary as any)?.fail ?? 0}✗</span>
-                <span className="text-xs text-muted-foreground">{new Date(r.started_at!).toLocaleString()}</span>
-                <StatusChip status={r.status} />
-              </Link>
+              <div key={r.id} className="flex items-center justify-between border border-border rounded-md p-3 hover:bg-secondary/40 gap-2">
+                <Link to={`/runs/${r.id}`} className="flex items-center justify-between flex-1 min-w-0 gap-3">
+                  <span className="mono text-xs">{r.id.slice(0, 8)}</span>
+                  <span className="text-[10px] uppercase mono px-1.5 py-0.5 rounded bg-secondary text-muted-foreground">
+                    {r.scope_type === "workstream" ? "report" : "screen"}
+                  </span>
+                  <span className="text-xs">{(r.summary as any)?.pass ?? 0}✓ / {(r.summary as any)?.fail ?? 0}✗</span>
+                  <span className="text-xs text-muted-foreground">{new Date(r.started_at!).toLocaleString()}</span>
+                  <StatusChip status={r.status} />
+                </Link>
+                {r.status !== "running" && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive shrink-0"
+                    onClick={async () => {
+                      if (!confirm(`Delete run ${r.id.slice(0, 8)} and all its results?`)) return;
+                      const { error } = await supabase.from("runs").delete().eq("id", r.id);
+                      if (error) toast.error(error.message);
+                      else {
+                        toast.success("Run deleted");
+                        qc.invalidateQueries({ queryKey: ["runs-report", id] });
+                        qc.invalidateQueries({ queryKey: ["all-runs"] });
+                        qc.invalidateQueries({ queryKey: ["scenario-results"] });
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
             ))}
             {!runs?.length && <div className="text-sm text-muted-foreground">No runs yet.</div>}
           </TabsContent>

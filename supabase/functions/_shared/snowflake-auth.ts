@@ -144,6 +144,13 @@ export function interpretSnowflakeError(raw: string, authMode: SnowflakeAuthMode
         "confirm account/warehouse/role, and retry within the login timeout (~2 minutes)."
       );
     }
+    if (lower.includes("eof when reading a line") || lower.includes("eoferror") || lower.includes("not a tty")) {
+      return (
+        "Snowflake SSO (external browser) cannot run on AWS Fargate — there is no desktop to complete Bayer login. " +
+        "Use Key pair (paste the .p8 PEM in Settings) or a Programmatic Access Token as Password. " +
+        "SSO still works on your VDI via scripts/dev-sso.ps1."
+      );
+    }
     if (lower.includes("login timeout") || lower.includes("timeout")) {
       return (
         "Snowflake SSO login timed out. A browser window should open on the backend host — sign in there and retry."
@@ -151,9 +158,29 @@ export function interpretSnowflakeError(raw: string, authMode: SnowflakeAuthMode
     }
   }
   if (authMode === "keypair") {
-    if (lower.includes("jwt") || lower.includes("private key") || lower.includes("390144") || lower.includes("390143")) {
+    if (lower.includes("invalid symbol 92") || lower.includes("unable to load pem")) {
       return (
-        "Key-pair auth failed. Confirm the private key path is readable on the Snowflake SSO host, " +
+        "The pasted PEM still has JSON escape characters (literal \\n). " +
+        "Either use the VDI file path C:\\Users\\EASXP\\.snowflake\\rsa_key.p8 and leave the PEM box empty, " +
+        "or paste the key with real line breaks (not the characters backslash-n)."
+      );
+    }
+    if (lower.includes("password was not given") || (lower.includes("encrypted") && lower.includes("password"))) {
+      return (
+        "This private key is encrypted. Enter the private key passphrase in Settings → Warehouses " +
+        "(the field is required for a .p8 that starts with BEGIN ENCRYPTED PRIVATE KEY)."
+      );
+    }
+    if (lower.includes("jwt token is invalid") || lower.includes("390144") || lower.includes("390143")) {
+      return (
+        "Snowflake rejected the JWT (390144). The .p8 and passphrase are fine. " +
+        "User/public-key mismatch: the Username in Settings must be the Snowflake user that has this key's public half " +
+        "(ALTER USER <user> SET RSA_PUBLIC_KEY='…'). Ask the admin who issued the key which USER it was registered on."
+      );
+    }
+    if (lower.includes("jwt") || lower.includes("private key")) {
+      return (
+        "Key-pair auth failed. Confirm the private key (VDI file path or pasted PEM) is valid, " +
         "the public key is registered on the Snowflake user (ALTER USER … SET RSA_PUBLIC_KEY), " +
         "and the username matches that user."
       );

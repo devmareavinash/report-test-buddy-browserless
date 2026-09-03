@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RunScenarioCard } from "@/components/RunScenarioCard";
 import { StatusChip } from "@/components/StatusChip";
 import { Button } from "@/components/ui/button";
-import { XCircle } from "lucide-react";
+import { XCircle, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 
 export default function RunDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [wsId, setWsId] = useState("all");
@@ -163,24 +165,55 @@ export default function RunDetail() {
               {counts.pass} passed · {counts.fail} failed · {counts.pending} pending · trigger {run?.trigger_source}
             </div>
           </div>
-          {isRunning && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={async () => {
-                if (!confirm("Cancel this run?")) return;
-                const { error } = await supabase
-                  .from("runs")
-                  .update({ status: "cancelled", finished_at: new Date().toISOString() })
-                  .eq("id", id!);
-                if (error) toast({ title: "Failed to cancel", description: error.message, variant: "destructive" });
-                else toast({ title: "Run cancelled" });
-              }}
-              className="text-destructive border-destructive/40 hover:bg-destructive/10"
-            >
-              <XCircle className="h-4 w-4 mr-1" /> Cancel run
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {isRunning ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm("Cancel this run?")) return;
+                  const curSummary = (run as any)?.summary || {};
+                  const { error } = await supabase
+                    .from("runs")
+                    .update({
+                      status: "cancelled",
+                      finished_at: new Date().toISOString(),
+                      summary: { ...curSummary, in_progress: false, cancelled: true },
+                    })
+                    .eq("id", id!);
+                  if (error) toast({ title: "Failed to cancel", description: error.message, variant: "destructive" });
+                  else {
+                    toast({ title: "Run cancelled" });
+                    queryClient.invalidateQueries({ queryKey: ["run", id] });
+                  }
+                }}
+                className="text-destructive border-destructive/40 hover:bg-destructive/10"
+              >
+                <XCircle className="h-4 w-4 mr-1" /> Cancel run
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!confirm(`Delete run ${id?.slice(0, 8)} and all its results? This cannot be undone.`)) return;
+                  const { error } = await supabase.from("runs").delete().eq("id", id!);
+                  if (error) toast({ title: "Failed to delete run", description: error.message, variant: "destructive" });
+                  else {
+                    toast({ title: "Run deleted" });
+                    queryClient.invalidateQueries({ queryKey: ["all-runs"] });
+                    queryClient.invalidateQueries({ queryKey: ["run-meta"] });
+                    queryClient.invalidateQueries({ queryKey: ["scenario-results"] });
+                    queryClient.invalidateQueries({ queryKey: ["runs-report"] });
+                    navigate("/runs");
+                  }
+                }}
+                className="text-destructive border-destructive/40 hover:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Delete run
+              </Button>
+            )}
+          </div>
         </div>
 
 

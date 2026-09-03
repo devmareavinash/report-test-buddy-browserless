@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
@@ -174,6 +175,7 @@ function WarehouseTab() {
   const [sfAuthMethod, setSfAuthMethod] = useState<SfAuthMethod>("password");
   const [idpUrl, setIdpUrl] = useState("");
   const [privateKeyPath, setPrivateKeyPath] = useState("");
+  const [privateKeyPem, setPrivateKeyPem] = useState("");
   const [privateKeyPassphrase, setPrivateKeyPassphrase] = useState("");
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -181,14 +183,15 @@ function WarehouseTab() {
   const formFields = () => ({
     name, kind, account, host, database: db, schema, warehouse, role,
     username: user, password_secret_ref: pass, token_secret_ref: token,
-    private_key_path: privateKeyPath, private_key_passphrase: privateKeyPassphrase,
+    private_key_path: privateKeyPath, private_key_pem: privateKeyPem,
+    private_key_passphrase: privateKeyPassphrase,
   });
 
   const resetForm = () => {
     setEditingId(null);
     setName(""); setAccount(""); setHost(""); setDb(""); setSchema(""); setWarehouse("");
     setRole(""); setUser(""); setPass(""); setToken(""); setIdpUrl("");
-    setPrivateKeyPath(""); setPrivateKeyPassphrase(""); setSfAuthMethod("password");
+    setPrivateKeyPath(""); setPrivateKeyPem(""); setPrivateKeyPassphrase(""); setSfAuthMethod("password");
   };
 
   const validateForm = () => {
@@ -200,8 +203,8 @@ function WarehouseTab() {
       toast.error("Username is required for SSO and key-pair auth");
       return false;
     }
-    if (sfAuthMethod === "keypair" && !privateKeyPath.trim()) {
-      toast.error("Private key path is required for key-pair auth");
+    if (sfAuthMethod === "keypair" && !privateKeyPath.trim() && !privateKeyPem.trim()) {
+      toast.error("Paste the private key PEM or a key path for key-pair auth");
       return false;
     }
     return true;
@@ -229,6 +232,7 @@ function WarehouseTab() {
     const authenticator = typeof extra.authenticator === "string" ? extra.authenticator : "";
     setIdpUrl(authenticator.toLowerCase().startsWith("http") ? authenticator : "");
     setPrivateKeyPath(typeof extra.private_key_path === "string" ? extra.private_key_path : "");
+    setPrivateKeyPem(typeof extra.private_key_pem === "string" ? extra.private_key_pem : "");
     setPrivateKeyPassphrase(typeof extra.private_key_passphrase === "string" ? extra.private_key_passphrase : "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -262,7 +266,9 @@ function WarehouseTab() {
     if (sfAuthMethod === "token" && !token) return toast.error("OAuth token secret name required");
     if (sfAuthMethod === "keypair") {
       if (!user.trim()) return toast.error("Username is required for key-pair auth");
-      if (!privateKeyPath.trim()) return toast.error("Private key path is required for key-pair auth");
+      if (!privateKeyPath.trim() && !privateKeyPem.trim()) {
+        return toast.error("Paste the private key PEM or a key path for key-pair auth");
+      }
     }
     setTesting(true);
     try {
@@ -351,34 +357,50 @@ function WarehouseTab() {
             <Input placeholder="IdP URL (optional — leave blank for default SSO)" value={idpUrl} onChange={(e) => setIdpUrl(e.target.value)} className="col-span-2" />
           )}
           {sfAuthMethod === "keypair" && (
-            <>
-              <Input
-                placeholder="Private key path on SSO host (e.g. C:\\keys\\rsa_key.p8)"
-                value={privateKeyPath}
-                onChange={(e) => setPrivateKeyPath(e.target.value)}
-                className="col-span-2"
-              />
-              <Input
-                placeholder="Private key passphrase (optional)"
-                type="password"
-                value={privateKeyPassphrase}
-                onChange={(e) => setPrivateKeyPassphrase(e.target.value)}
-                className="col-span-2"
-              />
-            </>
+            <div className="col-span-2 space-y-2 rounded-md border border-border p-3">
+              <div className="text-xs font-medium">Key pair credentials</div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Private key path (this VDI only)</Label>
+                <Input
+                  placeholder="C:\Users\EASXP\.snowflake\rsa_key.p8"
+                  value={privateKeyPath}
+                  onChange={(e) => setPrivateKeyPath(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Or paste PEM (local and AWS)</Label>
+                <Textarea
+                  className="mono text-xs min-h-[140px]"
+                  placeholder={"-----BEGIN ENCRYPTED PRIVATE KEY-----\n…\n-----END ENCRYPTED PRIVATE KEY-----"}
+                  value={privateKeyPem}
+                  onChange={(e) => setPrivateKeyPem(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Private key passphrase</Label>
+                <Input
+                  placeholder="Required if the .p8 is encrypted"
+                  type="password"
+                  value={privateKeyPassphrase}
+                  onChange={(e) => setPrivateKeyPassphrase(e.target.value)}
+                />
+              </div>
+            </div>
           )}
           {sfAuthMethod === "token" && (
             <Input placeholder="OAuth token secret name (e.g. SNOWFLAKE_OAUTH_TOKEN)" value={token} onChange={(e) => setToken(e.target.value)} className="col-span-2" />
           )}
           {sfAuthMethod === "sso" && (
             <p className="col-span-2 text-xs text-muted-foreground">
-              Username is required. SSO opens a browser on the machine running the Snowflake SSO backend service (your VDI), not in this tab.
-              Ensure <span className="mono">SNOWFLAKE_SSO_URL</span> is configured on the backend.
+              SSO (external browser) only works on your VDI, where a desktop can complete Bayer login.
+              It cannot run on AWS Fargate (that produces &quot;EOF when reading a line&quot;).
+              On AWS use Key pair (paste PEM) or Password with a Snowflake Programmatic Access Token.
             </p>
           )}
           {sfAuthMethod === "keypair" && (
             <p className="col-span-2 text-xs text-muted-foreground">
-              Uses <span className="mono">SNOWFLAKE_JWT</span> via the Snowflake sidecar. The private key file must be readable on that host (your VDI).
+              Uses <span className="mono">SNOWFLAKE_JWT</span>. Test locally first: start <span className="mono">scripts/dev-sso.ps1</span> so the sidecar is on <span className="mono">http://127.0.0.1:8002</span>, then use Test connection.
+              A Windows file path works on this VDI; paste the PEM if you will later run the same connector on AWS (Fargate cannot see a VDI path).
               Register the public key on the Snowflake user with <span className="mono">ALTER USER … SET RSA_PUBLIC_KEY=…</span>.
             </p>
           )}

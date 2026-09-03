@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import sys
 import tempfile
 import threading
 from typing import Any
@@ -47,6 +48,16 @@ def normalize_account(account: str | None, host: str | None) -> str:
     if raw.endswith(".snowflakecomputing.com"):
         raw = raw[: -len(".snowflakecomputing.com")]
     return raw
+
+
+def normalize_private_key_pem(raw: str) -> str:
+    """Accept real PEM or JSON-escaped PEM (literal \\n) pasted from a payload."""
+    text = (raw or "").strip()
+    if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+        text = text[1:-1].strip()
+    text = text.replace("\\r\\n", "\n").replace("\\r", "\n").replace("\\n", "\n")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    return text.strip() + "\n"
 
 
 def require_user(connector: dict[str, Any]) -> str:
@@ -104,10 +115,11 @@ def connect_params(connector: dict[str, Any]) -> dict[str, Any]:
                 params["private_key_file_pwd"] = passphrase
         elif key_pem:
             # Write PEM to a temp file — connector prefers file path for encrypted keys.
+            key_pem = normalize_private_key_pem(key_pem)
             fd, tmp = tempfile.mkstemp(suffix=".p8", prefix="sf_pk_")
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
-                    f.write(key_pem if "BEGIN" in key_pem else key_pem)
+                    f.write(key_pem)
                 params["private_key_file"] = tmp
                 params["_temp_private_key_file"] = tmp
                 if passphrase:
@@ -123,9 +135,20 @@ def connect_params(connector: dict[str, Any]) -> dict[str, Any]:
                 "Key-pair auth requires private_key_path (file on this host) or private_key_pem"
             )
     elif auth_lower in ("sso", "externalbrowser"):
+        if not sys.stdin.isatty():
+            raise ValueError(
+                "Snowflake SSO (externalbrowser) needs an interactive desktop. "
+                "This host is not a TTY (typical on AWS Fargate). "
+                "Use key-pair (private_key_pem) or a Programmatic Access Token instead."
+            )
         params["authenticator"] = "externalbrowser"
         params["login_timeout"] = DEFAULT_LOGIN_TIMEOUT
     elif auth_lower.startswith("http"):
+        if not sys.stdin.isatty():
+            raise ValueError(
+                "IdP SSO also needs an interactive desktop. "
+                "On AWS Fargate use key-pair (private_key_pem) or a Programmatic Access Token."
+            )
         params["authenticator"] = auth
         params["login_timeout"] = DEFAULT_LOGIN_TIMEOUT
     else:

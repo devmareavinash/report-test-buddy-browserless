@@ -81,9 +81,6 @@
         { "name": "TIMEOUT", "value": "300000" },
         { "name": "CORS", "value": "true" }
       ],
-      "linuxParameters": {
-        "sharedMemorySize": 2048
-      },
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

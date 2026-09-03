@@ -2,6 +2,18 @@ import { invokeFunction } from "@/lib/functions";
 
 export type SfAuthMethod = "password" | "sso" | "token" | "keypair";
 
+/** Real PEM, or JSON-escaped PEM with literal \n pasted from a payload. */
+export function normalizePrivateKeyPem(raw: string): string {
+  let text = raw.trim();
+  if (
+    (text.startsWith('"') && text.endsWith('"')) ||
+    (text.startsWith("'") && text.endsWith("'"))
+  ) {
+    text = text.slice(1, -1).trim();
+  }
+  return text.replace(/\\r\\n/g, "\n").replace(/\\n/g, "\n").replace(/\\r/g, "\n").trim() + "\n";
+}
+
 export function resolveSfAuthMethod(authenticator?: string | null, authMethod?: string | null): SfAuthMethod {
   if (authMethod === "token" || authMethod === "sso" || authMethod === "keypair") return authMethod;
   const a = (authenticator || authMethod || "password").toLowerCase();
@@ -26,6 +38,7 @@ export function snowflakePayload(
     password_secret_ref: string;
     token_secret_ref: string;
     private_key_path?: string;
+    private_key_pem?: string;
     private_key_passphrase?: string;
   },
   sfAuthMethod: SfAuthMethod,
@@ -42,6 +55,7 @@ export function snowflakePayload(
   const extra: Record<string, string> = { authenticator };
   if (sfAuthMethod === "keypair") {
     if (fields.private_key_path?.trim()) extra.private_key_path = fields.private_key_path.trim();
+    if (fields.private_key_pem?.trim()) extra.private_key_pem = normalizePrivateKeyPem(fields.private_key_pem);
     if (fields.private_key_passphrase?.trim()) extra.private_key_passphrase = fields.private_key_passphrase.trim();
   }
 
