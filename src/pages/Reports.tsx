@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link } from "react-router-dom";
 import React, { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2, Download } from "lucide-react";
+import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2, Download, Copy } from "lucide-react";
 import { ConcurrencySelect, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
 import { exportScreensToExcel } from "@/lib/exportScreensExcel";
+import { duplicateReport } from "@/lib/duplicateEntities";
 
 export default function Reports() {
   const qc = useQueryClient();
@@ -282,6 +283,7 @@ function WorkstreamEditDialog({
 function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: number; fail: number; pending: number; total: number }; onRun: () => void; running?: boolean }) {
   const qc = useQueryClient();
   const [edit, setEdit] = useState(false);
+  const [duping, setDuping] = useState(false);
   const { data: tree } = useQuery({
     queryKey: ["report-tree"],
     queryFn: async () => {
@@ -314,6 +316,19 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
     qc.invalidateQueries({ queryKey: ["report-tree"] });
     qc.invalidateQueries({ queryKey: ["report-status-map"] });
   };
+  const dup = async () => {
+    setDuping(true);
+    try {
+      const copy = await duplicateReport(r.id);
+      toast.success(`Duplicated as "${copy.name}"`);
+      qc.invalidateQueries({ queryKey: ["report-tree"] });
+      qc.invalidateQueries({ queryKey: ["report-status-map"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Duplicate failed");
+    } finally {
+      setDuping(false);
+    }
+  };
   return (
     <div className="flex items-center justify-between hover:bg-secondary/40 rounded px-2 py-1.5 gap-2">
       <Link to={`/reports/${r.id}`} className="text-sm flex-1 truncate">{r.name}</Link>
@@ -328,7 +343,10 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
       ) : (
         <span className="text-xs text-muted-foreground">no scenarios</span>
       )}
-      <Button size="sm" variant="ghost" onClick={() => setEdit(true)}><Pencil className="h-3 w-3" /></Button>
+      <Button size="sm" variant="ghost" onClick={() => setEdit(true)} title="Edit"><Pencil className="h-3 w-3" /></Button>
+      <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate screen">
+        {duping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3" />}
+      </Button>
       <Button size="sm" variant="ghost" onClick={onRun} disabled={running}>{running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}</Button>
       <Button size="sm" variant="ghost" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
       <ReportDialog tree={tree} report={r} open={edit} onOpenChange={setEdit} />

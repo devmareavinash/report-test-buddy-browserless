@@ -9,7 +9,14 @@ const localFunctions = new Set(
   (import.meta.env.VITE_LOCAL_FUNCTIONS as string | undefined)
     ?.split(",")
     .map((s) => s.trim())
-    .filter(Boolean) ?? ["run-warehouse-sql", "test-warehouse-connectivity", "agent-orchestrate", "playwright-runtime"],
+    .filter(Boolean) ?? [
+      "run-warehouse-sql",
+      "test-warehouse-connectivity",
+      "agent-orchestrate",
+      "agent-scripts",
+      "agent-heal",
+      "playwright-runtime",
+    ],
 );
 
 function shouldUseLocalBackend(name: string) {

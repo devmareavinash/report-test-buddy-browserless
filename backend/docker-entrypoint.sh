@@ -9,4 +9,4 @@ if [ -n "${HTTP_PROXY}${HTTPS_PROXY}${http_proxy}${https_proxy}" ]; then
   EXTRA_FLAGS="--unsafely-ignore-certificate-errors"
 fi
 
-exec deno run --cached-only $EXTRA_FLAGS --allow-net --allow-env --allow-read server.ts
+exec deno run --cached-only $EXTRA_FLAGS --allow-net --allow-env --allow-read --allow-write server.ts

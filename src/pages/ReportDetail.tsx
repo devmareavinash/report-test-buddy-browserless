@@ -11,12 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusChip } from "@/components/StatusChip";
 import { toast } from "sonner";
-import { Play, Sparkles, Pencil, Trash2, Plus, ChevronRight, Loader2 } from "lucide-react";
+import { Play, Sparkles, Pencil, Trash2, Plus, ChevronRight, Loader2, Copy } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ReportDialog } from "./Reports";
 import { ConcurrencySelect, readOrchestrateConcurrency, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
+import { duplicateReport, duplicateScenario } from "@/lib/duplicateEntities";
 
 const CRIT = ["low", "medium", "high", "critical"];
 
@@ -198,6 +199,7 @@ function ReportHeader({ report }: { report: any }) {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [edit, setEdit] = useState(false);
+  const [duping, setDuping] = useState(false);
   const { data: tree } = useQuery({
     queryKey: ["report-tree"],
     queryFn: async () => {
@@ -228,6 +230,20 @@ function ReportHeader({ report }: { report: any }) {
     toast.success("Screen deleted");
     navigate("/reports");
   };
+  const dup = async () => {
+    setDuping(true);
+    try {
+      const copy = await duplicateReport(report.id);
+      toast.success(`Duplicated screen as "${copy.name}"`);
+      qc.invalidateQueries({ queryKey: ["report-tree"] });
+      qc.invalidateQueries({ queryKey: ["report-status-map"] });
+      navigate(`/reports/${copy.id}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Duplicate failed");
+    } finally {
+      setDuping(false);
+    }
+  };
   return (
     <div className="flex items-start justify-between">
       <div className="space-y-1 flex-1">
@@ -238,6 +254,10 @@ function ReportHeader({ report }: { report: any }) {
       </div>
       <div className="flex flex-wrap gap-1 items-center justify-end">
         <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Pencil className="h-3 w-3 mr-1" /> Edit Screen Details</Button>
+        <Button size="sm" variant="outline" onClick={dup} disabled={duping} title="Duplicate this screen and all test cases">
+          {duping ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Copy className="h-3 w-3 mr-1" />}
+          Duplicate
+        </Button>
         <Button size="sm" variant="outline" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3 mr-1" /> Delete</Button>
       </div>
       <ReportDialog tree={tree} report={report} open={edit} onOpenChange={setEdit} />
@@ -325,6 +345,7 @@ function NewScenarioForm({ reportId }: { reportId: string }) {
 
 function ScenarioRow({ s, reportId }: { s: any; reportId: string }) {
   const qc = useQueryClient();
+  const [duping, setDuping] = useState(false);
   const update = async (patch: any) => {
     await supabase.from("scenarios").update(patch).eq("id", s.id);
     qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
@@ -333,6 +354,18 @@ function ScenarioRow({ s, reportId }: { s: any; reportId: string }) {
     if (!confirm(`Delete "${s.title}"?`)) return;
     await supabase.from("scenarios").delete().eq("id", s.id);
     qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
+  };
+  const dup = async () => {
+    setDuping(true);
+    try {
+      const copy = await duplicateScenario(s.id);
+      toast.success(`Duplicated as "${copy.title}"`);
+      qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Duplicate failed");
+    } finally {
+      setDuping(false);
+    }
   };
   return (
     <Card className={s.deferred ? "opacity-60" : ""}>
@@ -348,6 +381,9 @@ function ScenarioRow({ s, reportId }: { s: any; reportId: string }) {
           <SelectContent>{CRIT.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
         </Select>
         <Button size="sm" variant="ghost" onClick={() => update({ deferred: !s.deferred })}>{s.deferred ? "Restore" : "Defer"}</Button>
+        <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate this test case">
+          {duping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3" />}
+        </Button>
         <Button size="sm" variant="ghost" onClick={del}><Trash2 className="h-3 w-3" /></Button>
       </CardContent>
     </Card>

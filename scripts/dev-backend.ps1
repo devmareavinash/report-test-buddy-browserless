@@ -35,7 +35,7 @@ Write-Host "  TLS                 = $(if ($tlsFlags.Count) { $tlsFlags -join ' '
 
 Push-Location $backendDir
 try {
-  deno run @tlsFlags --allow-net --allow-env --allow-read server.ts
+  deno run @tlsFlags --allow-net --allow-env --allow-read --allow-write server.ts
 } finally {
   Pop-Location
 }

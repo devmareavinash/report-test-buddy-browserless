@@ -90,11 +90,22 @@ services:
       TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}
       CONCURRENT: ${BROWSERLESS_CONCURRENT:-10}
       QUEUED: ${BROWSERLESS_QUEUED:-10}
-      TIMEOUT: ${BROWSERLESS_TIMEOUT_MS:-300000}
+      TIMEOUT: ${BROWSERLESS_TIMEOUT_MS:-420000}
       CORS: "true"
-      # Corp VDI: Chromium cannot resolve Bayer intranet DNS from Docker.
-      # Route all browser traffic through Skyhigh; ignore MITM TLS certs.
-      # On AWS ECS leave CHROMIUM_PROXY empty (task networking reaches targets directly).
-      DEFAULT_LAUNCH_ARGS: ${BROWSERLESS_LAUNCH_ARGS:-["--proxy-server=http://10.185.190.10:8080","--ignore-certificate-errors","--ignore-certificate-errors-spki-list"]}
+      # Do not pass the VDI Skyhigh proxy into Chromium (ERR_PROXY_CONNECTION_FAILED
+      # inside Docker). Ignore MITM TLS certs for MSTR; keep a 1x 1920x1080 viewport.
+      DEFAULT_LAUNCH_ARGS: ${BROWSERLESS_LAUNCH_ARGS:-["--ignore-certificate-errors","--ignore-certificate-errors-spki-list","--window-size=1920,1080","--force-device-scale-factor=1"]}
+    # VDI: Bayer Ethernet DNS (10.30.189.4/6) returns NXDOMAIN for mstr-*.bayer.com
+    # so Chrome is forced through the PAC (Netskope). Public DNS has the real AWS
+    # ALB records, and this host can TCP :443 to those IPs without a proxy.
+    # Do not list Bayer DNS first — NXDOMAIN is authoritative and will not fall
+    # through. Do not set Chromium --proxy-server to Skyhigh (ERR_PROXY_CONNECTION_FAILED).
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "mstr-prod.bayer.com:54.84.130.141"
+      - "mstr-qa.bayer.com:54.84.103.229"
     shm_size: "2g"
     restart: unless-stopped

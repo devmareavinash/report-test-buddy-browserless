@@ -19,16 +19,22 @@ export async function callAgent(opts: {
   messages: Msg[];
   json?: boolean;
 }): Promise<string> {
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-
-  const { data: cfg } = await supabase
-    .from("agent_model_config")
-    .select("model, temperature, system_instruction")
-    .eq("agent_key", opts.agentKey)
-    .maybeSingle();
+  // Prefer service role; fall back to anon (same rules as getSupabase).
+  // Do not pass empty/placeholder keys into createClient — it throws "supabaseKey is required".
+  let cfg: { model?: string; temperature?: number; system_instruction?: string } | null = null;
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase
+      .from("agent_model_config")
+      .select("model, temperature, system_instruction")
+      .eq("agent_key", opts.agentKey)
+      .maybeSingle();
+    cfg = data as any;
+  } catch (e) {
+    console.warn(
+      `callAgent: agent_model_config lookup skipped (${String((e as Error)?.message || e)}) — using defaults`,
+    );
+  }
 
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
@@ -82,13 +88,15 @@ export async function callAgent(opts: {
 
 export function getSupabase() {
   const url = (Deno.env.get("SUPABASE_URL") || "").trim();
-  const key = (
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-    Deno.env.get("SUPABASE_ANON_KEY") ||
-    ""
-  ).trim();
+  const serviceRole = (Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  const anon = (Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
+  // JWTs are long; ignore placeholders like "" / "x" so we fall back to anon.
+  const key = (serviceRole.length > 40 ? serviceRole : "") || (anon.length > 40 ? anon : "") || serviceRole || anon;
   if (!url || !key) {
     throw new Error("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY) are required");
+  }
+  if (key.length <= 40) {
+    console.warn("getSupabase: Supabase key looks too short — check SUPABASE_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY in .env");
   }
   return createClient(url, key);
 }

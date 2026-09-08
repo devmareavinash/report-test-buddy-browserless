@@ -1,15 +1,41 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { requireAuth } from "../_shared/auth.ts";
-import { callAgent, getSupabase, tryParseJson } from "../_shared/llm.ts";
+import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
+import { callAgent, tryParseJson } from "../_shared/llm.ts";
 import {
   assembleOverviewScript,
+  isActivityKpiScenario,
   isOverviewScenario,
   normalizeReportUrl,
   parseKpiLabels,
+  parseKpiNavSteps,
 } from "../_shared/mstr-overview-template.ts";
+import {
+  assembleGridScript,
+  isGridScenario,
+  parseGridColumns,
+  parseGridNavSteps,
+  parseGridTimeGrain,
+  parseGridTitle,
+} from "../_shared/mstr-grid-template.ts";
+import {
+  assembleChartScript,
+  isChartScenario,
+  parseChartNavSteps,
+  parseChartTimeGrain,
+  parseChartTitle,
+  validateAssembledScript,
+} from "../_shared/mstr-chart-template.ts";
+import {
+  SCRIPT_GEN_SKILL_ID,
+  SCRIPT_GEN_SKILL_LLM_BLOCK,
+  SCRIPT_GEN_SKILL_VERSION,
+  skillGeneratedBy,
+} from "../_shared/script-gen-skill.ts";
+import { runGenerateValidationLoop } from "../_shared/script-gen-validate-loop.ts";
+import { ScriptAgentSessionLog } from "../_shared/script-agent-log.ts";
 
 async function persistGeneratedScript(
-  sb: ReturnType<typeof getSupabase>,
+  sb: ReturnType<typeof getSupabaseForRequest>,
   opts: {
     scenario_id: string;
     playwright_code: string;
@@ -32,12 +58,14 @@ async function persistGeneratedScript(
       __reference_generated_at: new Date().toISOString(),
     };
     if (existing) {
-      const { data } = await sb.from("scripts").update({ assertion_spec: nextSpec }).eq("id", existing.id).select().single();
+      const { data, error } = await sb.from("scripts").update({ assertion_spec: nextSpec }).eq("id", existing.id).select().single();
+      if (error) throw new Error(`Failed to save reference script: ${error.message}`);
       return data;
     }
-    const { data } = await sb.from("scripts").insert({
+    const { data, error } = await sb.from("scripts").insert({
       scenario_id, playwright_code: "", assertion_spec: nextSpec, debug_status: "draft",
     }).select().single();
+    if (error) throw new Error(`Failed to insert reference script: ${error.message}`);
     return data;
   }
   if (existing) {
@@ -50,7 +78,9 @@ async function persistGeneratedScript(
     };
     const update: any = { playwright_code, debug_status: "draft", assertion_spec: nextSpec };
     if (mainShouldUseReferenceSource && credId) update.credential_profile_id = credId;
-    const { data } = await sb.from("scripts").update(update).eq("id", existing.id).select().single();
+    const { data, error } = await sb.from("scripts").update(update).eq("id", existing.id).select().single();
+    if (error) throw new Error(`Failed to save generated script: ${error.message}`);
+    if (!data?.playwright_code) throw new Error("Script save returned empty playwright_code");
     return data;
   }
   const insertRow: any = {
@@ -63,7 +93,9 @@ async function persistGeneratedScript(
     },
   };
   if (mainShouldUseReferenceSource && credId) insertRow.credential_profile_id = credId;
-  const { data } = await sb.from("scripts").insert(insertRow).select().single();
+  const { data, error } = await sb.from("scripts").insert(insertRow).select().single();
+  if (error) throw new Error(`Failed to insert generated script: ${error.message}`);
+  if (!data?.playwright_code) throw new Error("Script insert returned empty playwright_code");
   return data;
 }
 
@@ -72,13 +104,36 @@ Deno.serve(async (req) => {
   const unauthorized = await requireAuth(req);
   if (unauthorized) return unauthorized;
   try {
+    let agentLog: ScriptAgentSessionLog | null = null;
     const body = await req.json();
     const scenario_id: string = body.scenario_id;
     const target: "main" | "reference" = body.target === "reference" ? "reference" : "main";
     const isReferenceTarget = target === "reference";
-    const sb = getSupabase();
-    const { data: scenario } = await sb.from("scenarios").select("*, reports(*)").eq("id", scenario_id).maybeSingle();
-    if (!scenario) throw new Error("scenario not found");
+    if (!scenario_id || typeof scenario_id !== "string") {
+      return new Response(JSON.stringify({ error: "scenario_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    // Use the caller's JWT (same project/RLS as the UI). Avoid broken service-role placeholders.
+    const sb = getSupabaseForRequest(req);
+    const { data: scenario, error: scenarioErr } = await sb
+      .from("scenarios")
+      .select("*, reports(*)")
+      .eq("id", scenario_id)
+      .maybeSingle();
+    if (scenarioErr) {
+      throw new Error(`scenario lookup failed: ${scenarioErr.message}`);
+    }
+    if (!scenario) throw new Error(`scenario not found: ${scenario_id}`);
+
+    const log = await ScriptAgentSessionLog.create({
+      scenario_id,
+      target,
+      title: String(scenario.title || ""),
+    });
+    agentLog = log;
+
     const { data: templates } = await sb.from("sql_templates").select("id,name,sql_text,parameters");
     const { data: filterCombos } = await sb
       .from("scenario_filter_matrix")
@@ -125,34 +180,216 @@ Deno.serve(async (req) => {
     const referenceUrl: string = (scenario.reports as any)?.reference_url || "";
     const targetUrl: string = useReferenceSource ? (referenceUrl || primaryUrl) : primaryUrl;
 
-    // Overview page: fill the proven template (URL + KPI names only). Other screens stay on LLM.
-    if (isOverviewScenario(scenario, existingScript, isReferenceTarget)) {
-      const kpiLabels = parseKpiLabels(scenario, existingScript);
-      const playwright_code = assembleOverviewScript({
+    // ── Skill-first: description picks KPI | chart | grid template.
+    // Fixed: login, nav mechanics, filter application. Filled from UI/description:
+    // URL, NAV_STEPS, KPI/chart/grid labels, TIME_GRAIN. Filter values = __filterCombinations.
+    // Order: geography_grid → chart_show_data → overview_kpi → activity_kpi → LLM
+    type TemplateHit = {
+      playwright_code: string;
+      generatedBy: string;
+      meta?: Record<string, unknown>;
+    };
+
+    const tryWorkingTemplates = async (): Promise<TemplateHit | null> => {
+      await log.log("script-gen", "classify", "Matching working template from scenario description", {
+        report_name: scenario.reports?.name || null,
+        filter_combo_count: (filterCombos || []).length,
+      });
+
+      if (isGridScenario(scenario, existingScript)) {
+        await log.log("script-gen", "template_try", "Trying geography_grid template");
+        const gridTitle = parseGridTitle(scenario);
+        const timeGrain = parseGridTimeGrain(scenario, isReferenceTarget ? "reference" : "main");
+        const tolKeys = Object.keys(existingScript?.assertion_spec?.kpi_tolerances || {}).filter(Boolean);
+        const kpiFromSpec = Array.isArray(existingScript?.assertion_spec?.kpis)
+          ? existingScript.assertion_spec.kpis.map((k: any) => String(k?.label || k?.name || k || "").trim()).find(Boolean)
+          : "";
+        // KPI container label from UI config / title — never invent a screen-specific default.
+        const fromTitle = String(scenario?.title || "").replace(/\s+[–—-].*$/, "").trim();
+        const kpiLabel = tolKeys[0] || kpiFromSpec || fromTitle || gridTitle || "Grid";
+        const navSteps = parseGridNavSteps(scenario);
+        const playwright_code = assembleGridScript({
+          reportUrl: normalizeReportUrl(targetUrl),
+          gridTitle,
+          navSteps,
+          expectedColumns: parseGridColumns(scenario, existingScript),
+          timeGrain,
+          kpiLabel,
+        });
+        const v = validateAssembledScript(playwright_code);
+        if (v.ok) {
+          await log.log("script-gen", "template_hit", "Assembled geography_grid", {
+            grid_title: gridTitle,
+            time_grain: timeGrain,
+            nav_steps: navSteps,
+            code_bytes: playwright_code.length,
+          });
+          return {
+            playwright_code,
+            generatedBy: skillGeneratedBy("geography_grid"),
+            meta: {
+              grid_title: gridTitle,
+              time_grain: timeGrain,
+              nav_steps: navSteps,
+              skill: SCRIPT_GEN_SKILL_ID,
+              skill_version: SCRIPT_GEN_SKILL_VERSION,
+            },
+          };
+        }
+        await log.log("script-gen", "template_reject", "geography_grid assemble invalid", { reason: v.reason }, "warn");
+      }
+
+      if (isChartScenario(scenario, existingScript)) {
+        await log.log("script-gen", "template_try", "Trying chart_show_data template");
+        try {
+          const chartTitle = parseChartTitle(scenario);
+          const timeGrain = parseChartTimeGrain(scenario, isReferenceTarget ? "reference" : "main");
+          const navSteps = parseChartNavSteps(scenario);
+          const playwright_code = await assembleChartScript({
+            reportUrl: normalizeReportUrl(targetUrl),
+            chartTitle,
+            timeGrain,
+            navSteps,
+          });
+          const v = validateAssembledScript(playwright_code);
+          if (v.ok) {
+            await log.log("script-gen", "template_hit", "Assembled chart_show_data", {
+              chart_title: chartTitle,
+              time_grain: timeGrain,
+              nav_steps: navSteps,
+              code_bytes: playwright_code.length,
+            });
+            return {
+              playwright_code,
+              generatedBy: skillGeneratedBy("chart_show_data"),
+              meta: {
+                chart_title: chartTitle,
+                time_grain: timeGrain,
+                nav_steps: navSteps,
+                skill: SCRIPT_GEN_SKILL_ID,
+                skill_version: SCRIPT_GEN_SKILL_VERSION,
+              },
+            };
+          }
+          await log.log("script-gen", "template_reject", "chart_show_data assemble invalid", { reason: v.reason }, "warn");
+        } catch (e) {
+          await log.log(
+            "script-gen",
+            "template_error",
+            "chart_show_data assemble failed",
+            { error: String((e as Error)?.message || e) },
+            "error",
+          );
+        }
+      }
+
+      if (isOverviewScenario(scenario, existingScript, isReferenceTarget)) {
+        await log.log("script-gen", "template_try", "Trying overview_kpi template");
+        const kpiLabels = parseKpiLabels(scenario, existingScript);
+        const playwright_code = assembleOverviewScript({
+          reportUrl: normalizeReportUrl(targetUrl),
+          kpiLabels,
+          navSteps: [],
+        });
+        const v = validateAssembledScript(playwright_code);
+        if (v.ok) {
+          await log.log("script-gen", "template_hit", "Assembled overview_kpi", {
+            kpi_labels: kpiLabels,
+            code_bytes: playwright_code.length,
+          });
+          return {
+            playwright_code,
+            generatedBy: skillGeneratedBy("overview_kpi"),
+            meta: { kpi_labels: kpiLabels, skill: SCRIPT_GEN_SKILL_ID, skill_version: SCRIPT_GEN_SKILL_VERSION },
+          };
+        }
+        await log.log("script-gen", "template_reject", "overview_kpi assemble invalid", { reason: v.reason }, "warn");
+      }
+
+      if (isActivityKpiScenario(scenario, existingScript)) {
+        await log.log("script-gen", "template_try", "Trying activity_kpi template");
+        const kpiLabels = parseKpiLabels(scenario, existingScript);
+        const navSteps = parseKpiNavSteps(scenario, []);
+        const playwright_code = assembleOverviewScript({
+          reportUrl: normalizeReportUrl(targetUrl),
+          kpiLabels,
+          navSteps,
+        });
+        const v = validateAssembledScript(playwright_code);
+        if (v.ok) {
+          await log.log("script-gen", "template_hit", "Assembled activity_kpi", {
+            kpi_labels: kpiLabels,
+            nav_steps: navSteps,
+            code_bytes: playwright_code.length,
+          });
+          return {
+            playwright_code,
+            generatedBy: skillGeneratedBy("activity_kpi"),
+            meta: { kpi_labels: kpiLabels, nav_steps: navSteps, skill: SCRIPT_GEN_SKILL_ID, skill_version: SCRIPT_GEN_SKILL_VERSION },
+          };
+        }
+        await log.log("script-gen", "template_reject", "activity_kpi assemble invalid", { reason: v.reason }, "warn");
+      }
+
+      await log.log("script-gen", "template_miss", "No working template matched — falling back to LLM");
+      return null;
+    };
+
+    const templated = await tryWorkingTemplates();
+    if (templated) {
+      const validated = await runGenerateValidationLoop({
+        req,
+        scenarioId: scenario_id,
+        scenario,
+        target,
         reportUrl: normalizeReportUrl(targetUrl),
-        kpiLabels,
+        initialCode: templated.playwright_code,
+        generatedBy: templated.generatedBy,
+        meta: templated.meta,
+        filterCombos: (filterCombos || []).map((c: any) => ({
+          label: c.label,
+          filters: c.filters || {},
+        })),
+        log,
       });
       const inserted = await persistGeneratedScript(sb, {
         scenario_id,
-        playwright_code,
+        playwright_code: validated.playwright_code,
         isReferenceTarget,
         mainShouldUseReferenceSource,
         credId,
-        generatedBy: "overview_template",
+        generatedBy: validated.generatedBy,
+      });
+      await log.finish(validated.validation.passed || !validated.validation.enabled ? "ok" : "failed", {
+        path: "template",
+        generated_by: validated.generatedBy,
+        validation: {
+          enabled: validated.validation.enabled,
+          passed: validated.validation.passed,
+          attempts: validated.validation.attempts,
+          skipped_reason: validated.validation.skipped_reason || null,
+        },
+        log_file: log.getLogFile(),
+        json_log_file: log.getJsonLogFile(),
       });
       return new Response(
         JSON.stringify({
           script: inserted,
           target,
-          generated_by: "overview_template",
-          kpi_labels: kpiLabels,
+          generated_by: validated.generatedBy,
           report_url: normalizeReportUrl(targetUrl),
+          validation: validated.validation,
+          log_file: log.getLogFile(),
+          json_log_file: log.getJsonLogFile(),
+          ...(validated.meta || templated.meta || {}),
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const sys = `You generate Playwright scripts for Browserless.io /function endpoint that scrape BI report KPIs.
+
+${SCRIPT_GEN_SKILL_LLM_BLOCK}
 
 ═══════════════════════════════════════════════════════
 CRITICAL RULES — NEVER VIOLATE THESE
@@ -167,16 +404,55 @@ CRITICAL RULES — NEVER VIOLATE THESE
 8. Do NOT hardcode filter values — always read from __filterCombinations at runtime.
 
 ═══════════════════════════════════════════════════════
-VIEWPORT (mandatory — set BEFORE anything else)
+TEMPLATE-FIRST TRAINING (when you must generate — no matching working template)
 ═══════════════════════════════════════════════════════
-page.setViewport works in this sandbox. Set it before navigation so the
-login page and dashboard both render at full size (no truncated labels /
-values). Try both setViewport and setViewportSize since Browserless exposes
-one or the other depending on the underlying Playwright build:
+You are the FALLBACK after proven templates (Overview KPI, Activity KPI, Geography grid,
+chart Show Data). Mimic those working scripts — do NOT invent new filter cadence or waits.
+
+MUST KEEP IDENTICAL TO WORKING SCRIPTS:
+1. Geography filter cadence — apply in this order only:
+     GEO_ORDER = ['Area', 'Region', 'Territory', 'Time Bucket']
+   (or omit Time Bucket only when the Overview KPI template style is clearly required:
+     ['Area', 'Region', 'Territory']). Never invent a different geo order.
+2. After EVERY successful filter pick AND before extraction:
+     await waitForLoadingToFinish();
+     await waitForDashboard();
+3. KPI pass-value extraction: use extractKPI(label) that prefers the LARGEST font-size
+   numeric leaf under the label (headline pass value), NOT the small "vs. Previous" delta.
+4. Charts / trends: NEVER scrape canvas/SVG. Use Show Data popup only:
+     clickChartTimeGrain(grain, chartTitle) → openShowData → waitForShowDataPopup →
+     extractShowDataTable → closeShowDataPopup.
+   Weekly/Monthly/Quarterly are chart radios — NEVER put them in NAV_STEPS.
+5. Filters come ONLY from __filterCombinations at runtime — never hardcode Area/Region values.
+
+═══════════════════════════════════════════════════════
+CRITICAL RULES — NEVER VIOLATE THESE
+═══════════════════════════════════════════════════════
+1. JavaScript ONLY. No Python syntax (no import/from/def/async def).
+2. Exact function signature: export default async ({ page }) => { ... };
+3. NEVER use page.waitForTimeout() — use: const sleep = ms => new Promise(r => setTimeout(r, ms));
+4. NEVER use .locator(), .first(), .nth(), .all(), .filter() — Browserless does not support locator chaining.
+5. ALL DOM interaction must go through page.evaluate(), page.click(), page.type(), page.waitForSelector(), page.waitForFunction().
+6. NEVER use { waitUntil: 'networkidle' } — use 'domcontentloaded' only.
+7. Do NOT hardcode credentials — always use __creds.username / __creds.password.
+8. Do NOT hardcode filter values — always read from __filterCombinations at runtime.
+
+═══════════════════════════════════════════════════════
+VIEWPORT + PAGE ZOOM (mandatory — set BEFORE anything else)
+═══════════════════════════════════════════════════════
+page.setViewport works in this sandbox. Set it before navigation, then
+ALWAYS set Chrome-style page zoom to 100% (full size, not 67%). Try both
+setViewport and setViewportSize since Browserless exposes one or the other:
 
   const tryWidenViewport = async () => {
-    try { if (typeof page.setViewport === 'function') await page.setViewport({ width: 1440, height: 900 }); } catch (_) {}
-    try { if (typeof page.setViewportSize === 'function') await page.setViewportSize({ width: 1440, height: 900 }); } catch (_) {}
+    try { if (typeof page.setViewport === 'function') await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 }); } catch (_) {}
+    try { if (typeof page.setViewportSize === 'function') await page.setViewportSize({ width: 1920, height: 1080 }); } catch (_) {}
+    try {
+      await page.evaluate(() => {
+        document.documentElement.style.zoom = '100%';
+        if (document.body) document.body.style.zoom = '100%';
+      });
+    } catch (_) {}
   };
   await tryWidenViewport();
 
@@ -337,8 +613,11 @@ numbers from the previous filter state.
     // Final guard — a cascaded refresh can re-trigger the spinner.
     await waitForLoadingToFinish(maxMs);
   };
-Replace YOUR_STABLE_LABEL with a known text label always present in the report after load
-(e.g. a section heading, KPI label, or tile title visible in the KPI config).
+Replace YOUR_STABLE_LABEL with a label that exists on the TARGET tab AFTER NAV_STEPS
+(e.g. the first KPI on that screen, or the grid/chart title). Do NOT use "NBRx Total"
+if that tile only exists on Overview and you are going to Performance / Geography / Activity.
+Call waitForDashboard AFTER tab navigation, never before. Before nav, only
+waitForLoadingToFinish (and/or wait until the filter bar / Area / footer tabs are visible).
 
 ═══════════════════════════════════════════════════════
 FILTER APPLICATION (MicroStrategy classic + new Library / Athena UI)
@@ -703,7 +982,6 @@ if-block; drive the click sequence purely from the parsed step list.
       }
     }
     await waitForLoadingToFinish();
-    await waitForDashboard().catch(() => {});
     return res;
   };
 
@@ -719,11 +997,14 @@ if-block; drive the click sequence purely from the parsed step list.
     navDebug.push({ step, ...r });
     if (r && r.error) break;
   }
+  await waitForDashboard();
 
 The generated script MUST include a NAV_STEPS array built from the
-description (in order) and execute the loop above immediately AFTER the
-auth/dashboard-ready block and BEFORE the filter-combinations loop. Include
-\`navigation\` (= navDebug) in the returned result object alongside the KPI
+description (in order) and execute the loop above immediately AFTER
+waitForLoadingToFinish (page load / dossier chrome), BEFORE waitForDashboard
+(target-tab KPI/grid/chart labels) and BEFORE the filter-combinations loop.
+Do not wait for expected columns or KPI labels until the required tab is open.
+Include \`navigation\` (= navDebug) in the returned result object alongside the KPI
 values so the run can show which tab clicks succeeded.
 
 ═══════════════════════════════════════════════════════
@@ -839,6 +1120,7 @@ FILTER COMBINATIONS LOOP (mandatory structure)
 
   const filterCombinations = (typeof __filterCombinations !== 'undefined' && Array.isArray(__filterCombinations) && __filterCombinations.length > 0)
     ? __filterCombinations : [];
+  // NAV_STEPS already ran above. waitForDashboard (target labels) is AFTER nav.
   if (filterCombinations.length === 0) {
     await waitForDashboard();
     const out = {};
@@ -853,6 +1135,10 @@ FILTER COMBINATIONS LOOP (mandatory structure)
     const { label = String(i), filters = {} } = filterCombinations[i];
     if (i > 0) {
       await page.goto(reportUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await waitForLoadingToFinish();
+      for (const step of NAV_STEPS) {
+        await clickByText(step, { openers: NAV_OPENERS });
+      }
       await waitForDashboard();
     }
     const debug = {};
@@ -951,8 +1237,16 @@ KPI labels to scrape from the UI: ${JSON.stringify(scenario.reports.kpi_config)}
 Credentials available: ${cred ? `yes (profile "${cred.name}", username "${cred.username}", loginUrl "${cred.login_url || "(none — use report URL)"}") — use __creds in the script` : "no — skip login block"}
 Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCombos || [])}`;
 
+    await log.log("script-gen", "llm_start", "Calling scripts LLM agent", {
+      target,
+      report_url: targetUrl,
+    });
     const raw = await callAgent({ agentKey: "scripts", messages: [{ role: "system", content: sys }, { role: "user", content: user }], json: true });
     const parsed = tryParseJson(raw) || {};
+    await log.log("script-gen", "llm_response", "LLM agent returned", {
+      raw_bytes: String(raw || "").length,
+      has_playwright_code: !!(parsed as any)?.playwright_code,
+    });
 
     // Fallback recovery: when the JSON envelope is truncated or the model
     // wrapped the script in markdown / prose, pull the Playwright code out by
@@ -1017,8 +1311,14 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
   const __sleep = ms => new Promise(r => setTimeout(r, ms));
   const __reportUrl = ${JSON.stringify(reportUrl)};
   const __tryWidenViewport = async () => {
-    try { if (typeof page.setViewport === 'function') await page.setViewport({ width: 1440, height: 900 }); } catch (_) {}
-    try { if (typeof page.setViewportSize === 'function') await page.setViewportSize({ width: 1440, height: 900 }); } catch (_) {}
+    try { if (typeof page.setViewport === 'function') await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 }); } catch (_) {}
+    try { if (typeof page.setViewportSize === 'function') await page.setViewportSize({ width: 1920, height: 1080 }); } catch (_) {}
+    try {
+      await page.evaluate(() => {
+        document.documentElement.style.zoom = '100%';
+        if (document.body) document.body.style.zoom = '100%';
+      });
+    } catch (_) {}
   };
   await __tryWidenViewport();
   const __detectLoginForm = () => page.evaluate(() => {
@@ -1089,17 +1389,75 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
       }
     }
 
+    const validated = await runGenerateValidationLoop({
+      req,
+      scenarioId: scenario_id,
+      scenario,
+      target,
+      reportUrl: normalizeReportUrl(targetUrl),
+      initialCode: playwright_code,
+      generatedBy: "skill:llm",
+      meta: { skill: SCRIPT_GEN_SKILL_ID, skill_version: SCRIPT_GEN_SKILL_VERSION },
+      filterCombos: (filterCombos || []).map((c: any) => ({
+        label: c.label,
+        filters: c.filters || {},
+      })),
+      log,
+    });
+
     const inserted = await persistGeneratedScript(sb, {
       scenario_id,
-      playwright_code,
+      playwright_code: validated.playwright_code,
       isReferenceTarget,
       mainShouldUseReferenceSource,
       credId,
-      generatedBy: "agent",
+      generatedBy: validated.generatedBy,
     });
 
-    return new Response(JSON.stringify({ script: inserted, target, generated_by: "agent" }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    await log.finish(validated.validation.passed || !validated.validation.enabled ? "ok" : "failed", {
+      path: "llm",
+      generated_by: validated.generatedBy,
+      validation: {
+        enabled: validated.validation.enabled,
+        passed: validated.validation.passed,
+        attempts: validated.validation.attempts,
+        skipped_reason: validated.validation.skipped_reason || null,
+      },
+      log_file: log.getLogFile(),
+      json_log_file: log.getJsonLogFile(),
+    });
+
+    return new Response(JSON.stringify({
+      script: inserted,
+      target,
+      generated_by: validated.generatedBy,
+      skill: SCRIPT_GEN_SKILL_ID,
+      skill_version: SCRIPT_GEN_SKILL_VERSION,
+      validation: validated.validation,
+      log_file: log.getLogFile(),
+      json_log_file: log.getJsonLogFile(),
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    try {
+      await agentLog?.log(
+        "script-gen",
+        "error",
+        String((e as Error)?.message || e),
+        { error: String(e) },
+        "error",
+      );
+      await agentLog?.finish("failed", {
+        error: String(e),
+        log_file: agentLog?.getLogFile() ?? null,
+        json_log_file: agentLog?.getJsonLogFile() ?? null,
+      });
+    } catch (_) {
+      /* ignore logging failures */
+    }
+    return new Response(JSON.stringify({
+      error: String(e),
+      log_file: agentLog?.getLogFile() || null,
+      json_log_file: agentLog?.getJsonLogFile() || null,
+    }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

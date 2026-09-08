@@ -35,10 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, sess) => {
+      // TOKEN_REFRESHED can briefly report a null session on this VDI. Keep
+      // the current user so ProtectedRoute does not bounce to /auth.
+      if (event === "TOKEN_REFRESHED" && !sess) return;
       setSession(sess);
       setUser(sess?.user ?? null);
-      // defer role load to avoid deadlock
       setTimeout(() => loadRoles(sess?.user?.id ?? null), 0);
     });
     supabase.auth.getSession().then(({ data: { session } }) => {

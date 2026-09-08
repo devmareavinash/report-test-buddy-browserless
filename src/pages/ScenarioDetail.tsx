@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeFunction } from "@/lib/functions";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Play, Wand2, Plus, Trash2, ArrowLeft, History, RotateCcw, Sparkles, Check, X, Pencil, ExternalLink, Save, ChevronDown } from "lucide-react";
+import { Play, Wand2, Plus, Trash2, ArrowLeft, History, RotateCcw, Sparkles, Check, X, Pencil, ExternalLink, Save, ChevronDown, Undo2, Copy, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -19,11 +19,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { extractFirstTableAlias, qualifyColumn } from "@/lib/sqlFilter";
+import { duplicateScenario } from "@/lib/duplicateEntities";
 
 const canonFilters = (f: Record<string, string>) => {
   const keys = Object.keys(f || {}).map((k) => k.trim()).filter(Boolean).sort();
   return JSON.stringify(keys.map((k) => [k, String((f as any)[k] ?? "").trim()]));
 };
+
+function invalidateLatestStatusViews(qc: QueryClient, scenarioId: string, reportId?: string) {
+  qc.invalidateQueries({ queryKey: ["scenario-results", scenarioId] });
+  qc.invalidateQueries({ queryKey: ["tests-overview"] });
+  qc.invalidateQueries({ queryKey: ["dashboard-scenarios"] });
+  qc.invalidateQueries({ queryKey: ["scenarios-pivot"] });
+  qc.invalidateQueries({ queryKey: ["report-status-map"] });
+  qc.invalidateQueries({ queryKey: ["runs"] });
+  if (reportId) qc.invalidateQueries({ queryKey: ["runs-report", reportId] });
+}
 
 export default function ScenarioDetail() {
   const { id } = useParams();
@@ -102,6 +113,8 @@ export default function ScenarioDetail() {
   const [kpiTolerances, setKpiTolerances] = useState<Record<string, Tolerance>>({});
   const [savingTolerances, setSavingTolerances] = useState(false);
   const [updatingRunResult, setUpdatingRunResult] = useState(false);
+  /** Overall status as shown in the Latest result table (grids/KPIs) — used by Sync. */
+  const [tableLiveOverall, setTableLiveOverall] = useState<"pass" | "fail" | "pending" | null>(null);
   const [kpiEditorOpen, setKpiEditorOpen] = useState(false);
   const [kpiDraft, setKpiDraft] = useState<string[]>([]);
   const [kpiNew, setKpiNew] = useState("");
@@ -193,12 +206,21 @@ export default function ScenarioDetail() {
 
   const saveKpiTolerances = async (next: Record<string, Tolerance>) => {
     setKpiTolerances(next);
-    if (!script) return;
+    if (!script) {
+      toast.error("Save a test script first, then configure KPIs");
+      return;
+    }
     setSavingTolerances(true);
     try {
       const as: any = script.assertion_spec || {};
-      const updated = { ...as, kpi_tolerances: next };
-      await supabase.from("scripts").update({ assertion_spec: updated }).eq("id", script.id);
+      // Keep assertion_spec.kpis in sync so Add/Remove is the source of truth
+      // (otherwise old kpis / last-run keys reappear in the tolerances list).
+      const updated = { ...as, kpi_tolerances: next, kpis: Object.keys(next) };
+      const { error } = await supabase.from("scripts").update({ assertion_spec: updated }).eq("id", script.id);
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
       setSpec(JSON.stringify(updated, null, 2));
       qc.invalidateQueries({ queryKey: ["script", id] });
     } finally {
@@ -297,9 +319,38 @@ export default function ScenarioDetail() {
     : (hasMainCode ? "Regenerating…" : "Generating…");
 
   const genScript = useMutation({
-    mutationFn: async () => (await invokeFunction("agent-scripts", { scenario_id: id })).data,
-    onSuccess: async () => {
-      toast.success(hasMainCode ? "Script regenerated" : "Script generated");
+    mutationFn: async () => {
+      toast.info("Generating script… validation will run after generate (up to 5 attempts)");
+      const { data, error } = await invokeFunction("agent-scripts", { scenario_id: id });
+      if (error) throw error;
+      if ((data as any)?.error) {
+        throw new Error((data as any).message || (data as any).error || "Generation failed");
+      }
+      const codeOut = String((data as any)?.script?.playwright_code || "").trim();
+      if (!codeOut) {
+        throw new Error("Generator returned no playwright_code. Check that local agent-scripts is running and the skill template matched.");
+      }
+      return data;
+    },
+    onSuccess: async (data: any) => {
+      const codeOut = String(data?.script?.playwright_code || "");
+      if (codeOut) setCode(codeOut);
+      const by = data?.generated_by ? ` (${data.generated_by})` : "";
+      const v = data?.validation;
+      if (v?.enabled && v?.passed) {
+        toast.success(
+          `${hasMainCode ? "Script regenerated" : "Script generated"}${by} — validation passed in ${v.attempts}/${v.max_attempts} attempt(s)`,
+        );
+      } else if (v?.enabled && !v?.passed) {
+        const last = Array.isArray(v.reports) ? v.reports[v.reports.length - 1] : null;
+        toast.error(
+          `Script saved but validation failed after ${v.attempts} attempt(s): ${last?.summary || "nav/filters/extract"}`,
+        );
+      } else if (v?.skipped_reason) {
+        toast.success(`${hasMainCode ? "Script regenerated" : "Script generated"}${by} (validation skipped: ${v.skipped_reason})`);
+      } else {
+        toast.success((hasMainCode ? "Script regenerated" : "Script generated") + by);
+      }
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Generation failed"),
@@ -307,6 +358,7 @@ export default function ScenarioDetail() {
 
   const genReferenceScript = useMutation({
     mutationFn: async () => {
+      toast.info("Generating reference script… validation will run after generate (up to 5 attempts)");
       const { data, error } = await invokeFunction("agent-scripts", { scenario_id: id, target: "reference" });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -315,7 +367,19 @@ export default function ScenarioDetail() {
     onSuccess: async (data: any) => {
       const genCode = data?.script?.assertion_spec?.__reference_playwright_code || "";
       if (genCode) setRefCode(genCode);
-      toast.success(hasRefCode ? "Reference script regenerated from description" : "Reference script generated from description");
+      const v = data?.validation;
+      if (v?.enabled && v?.passed) {
+        toast.success(
+          `${hasRefCode ? "Reference regenerated" : "Reference generated"} — validation passed in ${v.attempts}/${v.max_attempts} attempt(s)`,
+        );
+      } else if (v?.enabled && !v?.passed) {
+        const last = Array.isArray(v.reports) ? v.reports[v.reports.length - 1] : null;
+        toast.error(
+          `Reference script saved but validation failed after ${v.attempts} attempt(s): ${last?.summary || "checks failed"}`,
+        );
+      } else {
+        toast.success(hasRefCode ? "Reference script regenerated from description" : "Reference script generated from description");
+      }
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Reference script generation failed"),
@@ -358,11 +422,8 @@ export default function ScenarioDetail() {
             sqlResult,
             isReferenceMatch,
           }).then((ok) => {
-            if (ok) {
-              qc.invalidateQueries({ queryKey: ["scenario-results", id] });
-              qc.invalidateQueries({ queryKey: ["tests-overview"] });
-              qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
-            }
+            if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
+            else toast.error("Run finished but latest status was not saved");
           });
         }
         else setRunError("Runtime did not return a live_url");
@@ -385,11 +446,8 @@ export default function ScenarioDetail() {
           sqlResult,
           isReferenceMatch,
         }).then((ok) => {
-          if (ok) {
-            qc.invalidateQueries({ queryKey: ["scenario-results", id] });
-            qc.invalidateQueries({ queryKey: ["tests-overview"] });
-            qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
-          }
+          if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
+          else toast.error("Run finished but latest status was not saved");
         });
       }
     } catch (e: any) {
@@ -478,11 +536,8 @@ export default function ScenarioDetail() {
             sqlResult,
             isReferenceMatch,
           }).then((ok) => {
-            if (ok) {
-              qc.invalidateQueries({ queryKey: ["scenario-results", id] });
-              qc.invalidateQueries({ queryKey: ["tests-overview"] });
-              qc.invalidateQueries({ queryKey: ["runs-report", (scenario as any)?.reports?.id] });
-            }
+            if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
+            else toast.error("Run finished but latest status was not saved");
           });
           return;
         }
@@ -594,10 +649,7 @@ export default function ScenarioDetail() {
           combos: combos || [],
           tolerances: kpiTolerances,
         }).then((ok) => {
-          if (ok) {
-            qc.invalidateQueries({ queryKey: ["scenario-results", id] });
-            qc.invalidateQueries({ queryKey: ["tests-overview"] });
-          }
+          if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
         });
       }
     } catch (e: any) {
@@ -623,7 +675,7 @@ export default function ScenarioDetail() {
           sqlResult: data,
           tolerances: kpiTolerances,
         }).then((ok) => {
-          if (ok) qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+          if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
         });
       } else toast.error(data?.error || "SQL failed");
     } catch (e: any) {
@@ -712,7 +764,7 @@ export default function ScenarioDetail() {
           sqlResult: data,
           tolerances: kpiTolerances,
         }).then((ok) => {
-          if (ok) qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+          if (ok) invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
         });
       } else toast.error(data?.error || "SQL failed");
     } catch (e: any) {
@@ -808,8 +860,15 @@ export default function ScenarioDetail() {
   // Build "manual" latest from in-memory run results: Test Script (Run headless/headed)
   // populates the Actual column; Warehouse SQL (Run) populates the Expected column
   // (or the Reference Script output when this is a reference_match scenario).
-  const manualActual = extractKpisFromRun(runResult);
-  const manualReference = isReferenceMatch ? extractKpisFromRun(refRunResult) : null;
+  const manualActual = (() => {
+    const raw = extractKpisFromRun(runResult);
+    return raw ? aliasConfiguredKpis(raw, kpiTolerances) : null;
+  })();
+  const manualReference = (() => {
+    if (!isReferenceMatch) return null;
+    const raw = extractKpisFromRun(refRunResult);
+    return raw ? aliasConfiguredKpis(raw, kpiTolerances) : null;
+  })();
   const manualExpected = (() => {
     if (isReferenceMatch) return manualReference;
     if (!sqlResult?.ok) return null;
@@ -870,13 +929,19 @@ export default function ScenarioDetail() {
       const label = c.label || row?.actual?.filter || `combo_${idx + 1}`;
       const fromStored = row ? kpiMapFromStored(row.actual) : null;
       const fromJob = jobRoot ? extractKpisFromBlock(pickComboBlock(jobRoot, label, idx, c.id)) : null;
-      const actualValues = (fromStored && Object.keys(fromStored).length)
-        ? fromStored
-        : (fromJob && Object.keys(fromJob).length ? fromJob : null);
-      const expectedValues = row ? kpiMapFromStored(row.expected) : null;
+      const actualValues = aliasConfiguredKpis(
+        (fromStored && Object.keys(fromStored).length)
+          ? fromStored
+          : (fromJob && Object.keys(fromJob).length ? fromJob : {}),
+        kpiTolerances,
+      );
+      const hasActual = Object.keys(actualValues).length > 0;
+      const expectedValues = row
+        ? aliasConfiguredKpis(kpiMapFromStored(row.expected) || {}, kpiTolerances)
+        : null;
       const filtersApplied = row?.actual?.filters_applied || null;
-      if (actualValues) pwResult[label] = { ...actualValues, filters_applied: filtersApplied };
-      if (expectedValues) {
+      if (hasActual) pwResult[label] = { ...actualValues, filters_applied: filtersApplied };
+      if (expectedValues && Object.keys(expectedValues).length) {
         if (isReferenceMatch) {
           refResult[label] = { ...expectedValues };
         } else {
@@ -901,14 +966,6 @@ export default function ScenarioDetail() {
   const _rootOf = (rr: any) => pickResultRoot(rr);
   const _blockFor = (root: any, label: string, idx: number, comboId?: string) =>
     pickComboBlock(root, label, idx, comboId);
-  const _normKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const _lookupKpi = (obj: any, k: string): any => {
-    if (!obj || typeof obj !== "object") return null;
-    if (obj[k] !== undefined) return obj[k];
-    const t = _normKey(k);
-    const f = Object.keys(obj).find((rk) => _normKey(rk) === t);
-    return f ? obj[f] : null;
-  };
 
   const manualPerCombo = (() => {
     if (!combos?.length) return null;
@@ -918,44 +975,57 @@ export default function ScenarioDetail() {
       const label = comboPersistLabel(c, idx);
       const pwBlock = _blockFor(pwRoot, label, idx, c.id);
       const refBlock = _blockFor(refRoot, label, idx, c.id);
-      const actualMap = extractKpisFromBlock(pwBlock);
-      const refKpis = refBlock ? extractKpisFromBlock(refBlock) : null;
+      const actualMap = aliasConfiguredKpis(extractKpisFromBlock(pwBlock), kpiTolerances);
+      const refKpis = refBlock ? aliasConfiguredKpis(extractKpisFromBlock(refBlock), kpiTolerances) : null;
       const sqlRes = comboResults[c.id] || (sqlResult?.ok ? sqlResult : null);
       const expectedMap: Record<string, any> = {};
       const passes: (boolean | null)[] = [];
-      for (const [k, v] of Object.entries(actualMap)) {
+      const configuredNames = Object.keys(kpiTolerances || {}).filter((k) => !isKpiNoiseKey(k));
+      const names = configuredNames.length ? configuredNames : Object.keys(actualMap);
+      for (const k of names) {
+        const v = resolveKpiValue(k, actualMap, pwBlock, runResult);
         const exp = isReferenceMatch
-          ? (_lookupKpi(refKpis, k) ?? _lookupKpi(manualReference, k))
+          ? resolveKpiValue(k, refKpis, manualReference, refBlock, refRunResult)
           : expectedForKpi(sqlRes, k);
         expectedMap[k] = exp;
         passes.push(evalPass(v, exp, getTol(kpiTolerances, k)));
       }
-      const valid = passes.filter((p) => p !== null);
-      const status: "pass" | "fail" | "pending" =
-        valid.length === 0 ? "pending" : valid.every(Boolean) ? "pass" : "fail";
+          const status = overallFromPassResults(passes);
       return { combo: c, label, actualMap, expectedMap, status, filters: c.filters || {} };
     });
   })();
 
-  const displayedStatus: "pass" | "fail" | "pending" = (() => {
+  const computedStatus: "pass" | "fail" | "pending" = (() => {
     if (manualPerCombo && manualPerCombo.length) {
-      if (manualPerCombo.every((p) => p.status === "pass")) return "pass";
       if (manualPerCombo.some((p) => p.status === "fail")) return "fail";
+      if (manualPerCombo.some((p) => p.status === "pending")) return "pending";
+      if (manualPerCombo.every((p) => p.status === "pass")) return "pass";
       return "pending";
     }
-    const kpis = displayActual && typeof displayActual === "object" ? displayActual : {};
-    const keys = Object.keys(kpis).filter((k) => !k.startsWith("__"));
-    if (!keys.length) return "pending";
-    const passes = keys.map((k) => {
-      let exp = sqlResult?.ok ? expectedForKpi(sqlResult, k) : null;
-      if ((exp === null || exp === undefined) && displayExpected && typeof displayExpected === "object") {
-        exp = (displayExpected as any)[k] ?? null;
-      }
-      return evalPass(kpis[k], exp, getTol(kpiTolerances, k));
-    }).filter((p) => p !== null);
-    if (!passes.length) return "pending";
-    return passes.every(Boolean) ? "pass" : "fail";
+    return statusFromKpis(displayActual, displayExpected, kpiTolerances);
   })();
+  const persistedStatus: "pass" | "fail" | "pending" | undefined =
+    latest?.status === "pass" || latest?.status === "fail" || latest?.status === "pending"
+      ? latest.status
+      : undefined;
+  // Live KPI/grid comparison wins when available (including pending); saved DB is fallback.
+  const tableOverall =
+    tableLiveOverall === "pass" || tableLiveOverall === "fail" || tableLiveOverall === "pending"
+      ? tableLiveOverall
+      : null;
+  const displayedStatus: "pass" | "fail" | "pending" = (() => {
+    if (tableOverall) return tableOverall;
+    if (hasManual) return computedStatus;
+    if (computedStatus !== "pending") return computedStatus;
+    return persistedStatus || computedStatus;
+  })();
+  const syncLiveOverall: "pass" | "fail" | "pending" =
+    tableOverall && tableOverall !== "pending"
+      ? tableOverall
+      : computedStatus !== "pending"
+        ? computedStatus
+        : displayedStatus;
+  const storedSource = latest?.expected?.source || latest?.actual?.source;
 
   // Tolerances that were stored alongside the latest run (per-run snapshot).
   // Used both to detect "has the user changed tolerances since the last run?"
@@ -996,8 +1066,25 @@ export default function ScenarioDetail() {
     (
       tolerancesChanged ||
       hasManual ||
+      (syncLiveOverall !== "pending" && syncLiveOverall !== latest?.status) ||
+      (computedStatus !== "pending" && computedStatus !== latest?.status) ||
       (displayedStatus !== "pending" && displayedStatus !== latest?.status)
     );
+
+  // Repair stale fail when live comparison (including grids) already passes.
+  useEffect(() => {
+    if (!id || !latest?.run_id) return;
+    if (latest.status === "pass") return;
+    if (syncLiveOverall !== "pass") return;
+    void supabase
+      .from("test_results")
+      .update({ status: "pass", analysis: "Auto-synced: live comparison passed" })
+      .eq("scenario_id", id)
+      .eq("run_id", latest.run_id)
+      .then(({ error }) => {
+        if (!error) invalidateLatestStatusViews(qc, id, reportId);
+      });
+  }, [id, latest?.run_id, latest?.status, syncLiveOverall, qc, reportId]);
 
   const resetTolerancesToLastRun = () => {
     if (!Object.keys(lastRunTolerances).length) {
@@ -1009,7 +1096,10 @@ export default function ScenarioDetail() {
   };
 
   const updateRunResult = async () => {
-    if (!latest?.run_id || !canUpdateRunResult) return;
+    if (!latest?.run_id || !canUpdateRunResult) {
+      toast.info("Nothing to sync — run the scenario again, or change KPI tolerances first.");
+      return;
+    }
     setUpdatingRunResult(true);
     try {
       // Build a serializable snapshot of the tolerances the user just committed.
@@ -1031,13 +1121,16 @@ export default function ScenarioDetail() {
         if (block.values && typeof block.values === "object" && !Array.isArray(block.values)) return block.values;
         return extractKpisFromBlock(block);
       };
-      const statusForValues = (actualValues: Record<string, any>, expectedValues: Record<string, any>): "pass" | "fail" | "pending" => {
-        const passes = Object.keys(actualValues || {})
-          .map((k) => evalPass(actualValues[k], _lookupKpi(expectedValues, k), getTol(kpiTolerances, k)))
-          .filter((p) => p !== null);
-        if (!passes.length) return "pending";
-        return passes.every(Boolean) ? "pass" : "fail";
-      };
+      const statusForValues = (actualValues: Record<string, any>, expectedValues: Record<string, any>): "pass" | "fail" | "pending" =>
+        statusFromKpis(actualValues, expectedValues, kpiTolerances);
+      // Live overall from the Latest result table (grids/KPIs) — not parent-only KPI maps.
+      const liveOverall: "pass" | "fail" | "pending" =
+        syncLiveOverall !== "pending" ? syncLiveOverall
+          : computedStatus !== "pending" ? computedStatus
+          : displayedStatus !== "pending" ? displayedStatus
+          : "pending";
+      const preferLiveStatus = (fallback: "pass" | "fail" | "pending") =>
+        liveOverall === "pass" || liveOverall === "fail" ? liveOverall : fallback;
       // Always fetch existing rows so we can MERGE tolerances_snapshot without
       // wiping the recorded actual/expected values from that run.
       const { data: runRows } = await supabase
@@ -1070,9 +1163,13 @@ export default function ScenarioDetail() {
             await supabase.from("test_results").insert({
               run_id: latest.run_id,
               scenario_id: id!,
-              status: statusForValues(nextActualValues, nextExpectedValues),
+              status: preferLiveStatus(statusForValues(nextActualValues, nextExpectedValues)),
               actual: { filter: p.label, values: nextActualValues, filters_applied: p.filters ?? null, tolerances_snapshot: snapshot },
-              expected: { filter: p.label, values: nextExpectedValues },
+              expected: {
+                filter: p.label,
+                values: nextExpectedValues,
+                source: isReferenceMatch ? "reference_script" : "warehouse_sql",
+              },
               diff: null,
               analysis: "Updated from manual scenario run",
             });
@@ -1091,16 +1188,24 @@ export default function ScenarioDetail() {
             const nextActualValues = hasKpiValues(p.actualMap) ? mergeKpiValues(prevActualValues, p.actualMap) : prevActualValues;
             const nextExpectedValues = hasKpiValues(p.expectedMap) ? mergeKpiValues(prevExpectedValues, p.expectedMap) : prevExpectedValues;
             const { error: updErr } = await supabase.from("test_results").update({
-              status: statusForValues(nextActualValues, nextExpectedValues),
+              status: preferLiveStatus(p.status === "pending" ? statusForValues(nextActualValues, nextExpectedValues) : p.status),
               actual: { ...prevActual, filter: p.label, values: nextActualValues, filters_applied: p.filters ?? prevActual.filters_applied ?? null, tolerances_snapshot: snapshot },
-              expected: { ...prevExpected, filter: p.label, values: nextExpectedValues, source: "warehouse_sql" },
+              expected: {
+                ...prevExpected,
+                filter: p.label,
+                values: nextExpectedValues,
+                source: isReferenceMatch ? "reference_script" : (prevExpected.source || "warehouse_sql"),
+              },
               diff: null,
               analysis: "Updated from manual scenario run",
             }).eq("id", existing.id);
             if (updErr) throw updErr;
           }
           if (matched === 0) {
-            throw new Error("Could not match this session's results to the last run. Run the test script again, then Sync.");
+            // Fall through: still force live overall onto all rows for this run.
+            if (liveOverall !== "pass" && liveOverall !== "fail") {
+              throw new Error("Could not match this session's results to the last run. Run the test script again, then Sync.");
+            }
           }
         }
       } else {
@@ -1121,7 +1226,7 @@ export default function ScenarioDetail() {
           if (hasKpiValues(liveActual) || prevActual.values) nextActual.values = nextActualValues;
           if (hasKpiValues(liveExpected) || prevExpected.values) nextExpected.values = nextExpectedValues;
           await supabase.from("test_results").update({
-            status: statusForValues(nextActualValues, nextExpectedValues),
+            status: preferLiveStatus(statusForValues(nextActualValues, nextExpectedValues)),
             actual: nextActual,
             expected: nextExpected,
             diff: null,
@@ -1129,15 +1234,28 @@ export default function ScenarioDetail() {
           }).eq("id", row.id);
         }
       }
+
+      // Always stamp live overall when the table already shows pass/fail (grid cases).
+      if (liveOverall === "pass" || liveOverall === "fail") {
+        const { error: forceErr } = await supabase
+          .from("test_results")
+          .update({ status: liveOverall, analysis: "Updated from manual scenario run" })
+          .eq("scenario_id", id!)
+          .eq("run_id", latest.run_id);
+        if (forceErr) throw forceErr;
+      }
+
       // Roll up to the run row so the Runs list/badge reflect the corrected status.
       const { data: allRows } = await supabase.from("test_results").select("status").eq("run_id", latest.run_id);
       const pass = (allRows || []).filter((r: any) => r.status === "pass").length;
       const fail = (allRows || []).filter((r: any) => r.status === "fail").length;
-      await supabase.from("runs").update({ summary: { pass, fail, total: (allRows || []).length } }).eq("id", latest.run_id);
-      toast.success("Synced to last run");
-      qc.invalidateQueries({ queryKey: ["scenario-results", id] });
+      await supabase.from("runs").update({
+        status: fail > 0 ? "failed" : "completed",
+        summary: { pass, fail, total: (allRows || []).length },
+      }).eq("id", latest.run_id);
+      toast.success(liveOverall === "pass" ? "Synced — overall status set to PASS" : "Synced to last run");
+      invalidateLatestStatusViews(qc, id!, (scenario as any)?.reports?.id);
       qc.invalidateQueries({ queryKey: ["run", latest.run_id] });
-      qc.invalidateQueries({ queryKey: ["runs"] });
     } catch (e: any) {
       toast.error(e?.message || "Failed to update");
     } finally {
@@ -1157,17 +1275,28 @@ export default function ScenarioDetail() {
         <ScenarioMeta s={scenario} />
 
         {(() => {
-          const extracted = new Set<string>();
-          for (const k of Object.keys(kpiTolerances || {})) extracted.add(k);
-          for (const k of Object.keys(displayActual || {})) if (!k.startsWith("__")) extracted.add(k);
-          for (const k of Object.keys(displayExpected || {})) if (!k.startsWith("__")) extracted.add(k);
-          const scriptKpis = (script as any)?.assertion_spec?.kpis;
-          if (Array.isArray(scriptKpis)) {
-            for (const k of scriptKpis) if (typeof k === "string" && k.trim()) extracted.add(k);
-          } else if (scriptKpis && typeof scriptKpis === "object") {
-            for (const k of Object.keys(scriptKpis)) extracted.add(k);
-          }
-          const kpiKeys = Array.from(extracted).sort();
+          // Tolerances / Add-Remove must use configured KPIs only.
+          // Merging last-run actual/expected keys made removals appear to fail
+          // (deleted KPIs immediately reappeared from the latest result).
+          const kpiKeys = Object.keys(kpiTolerances || {})
+            .filter((k) => k && !k.startsWith("__") && !isKpiNoiseKey(k))
+            .sort();
+          const seedFromRunOrScript = () => {
+            const extracted = new Set<string>();
+            for (const k of Object.keys(displayActual || {})) {
+              if (!k.startsWith("__") && !isKpiNoiseKey(k)) extracted.add(k);
+            }
+            for (const k of Object.keys(displayExpected || {})) {
+              if (!k.startsWith("__") && !isKpiNoiseKey(k)) extracted.add(k);
+            }
+            const scriptKpis = (script as any)?.assertion_spec?.kpis;
+            if (Array.isArray(scriptKpis)) {
+              for (const k of scriptKpis) if (typeof k === "string" && k.trim() && !isKpiNoiseKey(k)) extracted.add(k.trim());
+            } else if (scriptKpis && typeof scriptKpis === "object") {
+              for (const k of Object.keys(scriptKpis)) if (!isKpiNoiseKey(k)) extracted.add(k);
+            }
+            return Array.from(extracted).sort();
+          };
           return (
             <TolerancesEditor
               kpiKeys={kpiKeys}
@@ -1178,7 +1307,7 @@ export default function ScenarioDetail() {
               onReset={resetTolerancesToLastRun}
               canReset={tolerancesChanged && Object.keys(lastRunTolerances).length > 0}
               onAddRemove={() => {
-                setKpiDraft(kpiKeys);
+                setKpiDraft(kpiKeys.length ? kpiKeys : seedFromRunOrScript());
                 setKpiNew("");
                 setKpiEditorOpen(true);
               }}
@@ -1286,7 +1415,7 @@ export default function ScenarioDetail() {
             <Card>
               <CardHeader className="pb-2 flex-row items-center justify-between">
                 <CardTitle className="text-sm">Playwright code · {((script as any)?.assertion_spec?.__main_uses_reference_source) ? "reference report" : "main report"}</CardTitle>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-wrap justify-end">
                   <span className="text-xs text-muted-foreground">Credentials:</span>
                   <Select value={credId || "__none__"} onOpenChange={(o) => { if (o) qc.invalidateQueries({ queryKey: ["cred-profiles"] }); }} onValueChange={(v) => {
                     if (v === "__add_new__") {
@@ -1322,7 +1451,17 @@ export default function ScenarioDetail() {
                   >
                     Apply to all in report
                   </Button>
-                  <ScriptHistory scenarioId={id!} scriptId={script?.id} onRestore={(v) => { setCode(v.playwright_code || ""); setSpec(JSON.stringify(v.assertion_spec || {}, null, 2)); setTplId(v.sql_template_id || ""); toast.success(`Loaded v${v.version} — click Save to apply`); }} />
+                  <ScriptHistory
+                    scenarioId={id!}
+                    scriptId={script?.id}
+                    kind="main"
+                    onRestore={(v) => {
+                      setCode(v.playwright_code || "");
+                      setSpec(JSON.stringify(v.assertion_spec || {}, null, 2));
+                      setTplId(v.sql_template_id || "");
+                      toast.success(`Loaded v${v.version} — click Save to persist`);
+                    }}
+                  />
                   <Button size="sm" variant="outline" disabled={genScript.isPending} onClick={() => genScript.mutate()}>
                     {hasMainCode ? <RotateCcw className="h-3 w-3 mr-1" /> : <Wand2 className="h-3 w-3 mr-1" />}
                     {genScript.isPending ? genMainPending : genMainLabel}
@@ -1387,7 +1526,17 @@ export default function ScenarioDetail() {
               <Card>
                 <CardHeader className="pb-2 flex-row items-center justify-between">
                   <CardTitle className="text-sm">Playwright code · reference report</CardTitle>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <ScriptHistory
+                      scenarioId={id!}
+                      scriptId={script?.id}
+                      kind="reference"
+                      onRestore={(v) => {
+                        const as: any = v.assertion_spec || {};
+                        setRefCode(as.__reference_playwright_code || "");
+                        toast.success(`Loaded v${v.version} — click Save to persist`);
+                      }}
+                    />
                     <Button
                       size="sm"
                       onClick={() => genReferenceScript.mutate()}
@@ -1747,7 +1896,7 @@ export default function ScenarioDetail() {
                 {(latest || hasManual) && (
                   <>
                     <div className="flex gap-4 items-center">
-                      <div><span className="text-muted-foreground">Source:</span> <span className="mono font-semibold">{hasManual ? `${manualActual ? "Test script" : "—"} + ${manualExpected ? (isReferenceMatch ? "Reference script" : "Warehouse SQL") : "—"}` : latest?.status}</span></div>
+                      <div><span className="text-muted-foreground">Source:</span> <span className="mono font-semibold">{hasManual ? `${manualActual ? "Test script" : "—"} + ${manualExpected ? (isReferenceMatch ? "Reference script" : "Warehouse SQL") : "—"}` : (storedSource || "stored")}</span></div>
                       <div><span className="text-muted-foreground">Check:</span> <span className="mono">{isReferenceMatch ? "main vs reference report" : `main vs ${scenarioType.replace("_match","")}`}</span></div>
                       {!hasManual && latest?.run_id && <Link to={`/runs/${latest.run_id}`} className="text-accent hover:underline ml-auto">open run →</Link>}
                     </div>
@@ -1768,6 +1917,8 @@ export default function ScenarioDetail() {
                         onRunCombo={runSingleCombo}
                         runningComboId={comboScriptRunning}
                         comboBlockOverrides={comboScriptBlocks}
+                        persistedStatus={!hasManual ? persistedStatus : undefined}
+                        onLiveOverallChange={setTableLiveOverall}
                       />
                     ) : (
                       <KpiRowsTable
@@ -1780,6 +1931,8 @@ export default function ScenarioDetail() {
                         isReferenceMatch={isReferenceMatch}
                         onResetTolerances={resetTolerancesToLastRun}
                         canResetTolerances={tolerancesChanged && Object.keys(lastRunTolerances).length > 0}
+                        persistedStatus={!hasManual ? persistedStatus : undefined}
+                        onLiveOverallChange={setTableLiveOverall}
                       />
                     )}
                     {/* Stale RCA/analysis from prior runs intentionally hidden — only manual Test Script + Warehouse SQL output should drive Latest Result. */}
@@ -1824,17 +1977,7 @@ export default function ScenarioDetail() {
             )}
             <div className="divide-y divide-border">
               {historyRows.map((r: any) => {
-                const actualVals = kpiMapFromStored(r.actual) || r.actual?.values || {};
-                const expectedVals = expectedValuesFromStoredRow(r);
-                const fallbackExpected = isReferenceMatch
-                  ? (extractKpisFromRun(refRunResult) || findStoredExpected(latestResults, r.actual?.filter || r.expected?.filter))
-                  : expectedVals;
-                const compared = statusFromKpis(
-                  actualVals,
-                  Object.keys(expectedVals).length ? expectedVals : fallbackExpected,
-                  kpiTolerances,
-                );
-                const shown = compared !== "pending" ? compared : r.status;
+                const shown = r.status;
                 return (
                 <div key={r.id} className="flex items-center gap-3 py-2 text-xs hover:bg-secondary/30 px-2 rounded">
                   <Link to={r.run_id ? `/runs/${r.run_id}` : "#"} className="flex items-center gap-3 flex-1 min-w-0">
@@ -1987,7 +2130,153 @@ function fmt(v: any): string {
   if (v === null || v === undefined) return "—";
   if (typeof v === "number") return v.toLocaleString();
   if (typeof v === "string") return v;
+  if (Array.isArray(v) || (v && typeof v === "object")) {
+    const n = structuredSize(v);
+    const json = JSON.stringify(v);
+    if (json.length <= 140) return json;
+    const kind = Array.isArray(v) ? "rows" : (v.rows || v.data || v.series) ? "rows" : "keys";
+    return `${json.slice(0, 120)}… (${n} ${kind})`;
+  }
   return JSON.stringify(v);
+}
+
+function recordsToTable(records: any[]): { columns: string[]; rows: any[][] } | null {
+  if (!records?.length || typeof records[0] !== "object" || Array.isArray(records[0])) return null;
+  const columns: string[] = [];
+  for (const rec of records) {
+    for (const k of Object.keys(rec || {})) {
+      if (!isKpiNoiseKey(k) && !columns.includes(k)) columns.push(k);
+    }
+  }
+  if (!columns.length) return null;
+  return { columns, rows: records.map((rec) => columns.map((c) => rec?.[c] ?? "")) };
+}
+
+function columnLabel(c: any, i: number) {
+  if (c == null) return `Col ${i + 1}`;
+  if (typeof c === "string" || typeof c === "number") return String(c);
+  return String(c.name || c.label || c.title || c.key || `Col ${i + 1}`);
+}
+
+function toTableModel(v: any): { columns: string[]; rows: any[][] } | null {
+  if (v == null || typeof v === "boolean" || typeof v === "number" || typeof v === "string") return null;
+  if (Array.isArray(v)) {
+    if (!v.length) return null;
+    if (typeof v[0] === "object" && v[0] && !Array.isArray(v[0])) return recordsToTable(v);
+    if (Array.isArray(v[0])) {
+      const first = v[0].map((c: any, i: number) => columnLabel(c, i));
+      const restLooksLikeHeader = v[0].every((c: any) => typeof c === "string" && Number.isNaN(toNum(c)));
+      if (restLooksLikeHeader && v.length > 1) {
+        return { columns: first, rows: v.slice(1) };
+      }
+      return { columns: first.map((_, i) => `Col ${i + 1}`), rows: v };
+    }
+    return { columns: ["Value"], rows: v.map((cell) => [cell]) };
+  }
+  if (typeof v !== "object") return null;
+
+  const nested = [v.data, v.grid, v.graph, v.table, v.tableData, v.dataset]
+    .find((x) => x && (Array.isArray(x) || typeof x === "object"));
+  if (nested && nested !== v) {
+    const inner = toTableModel(nested);
+    if (inner) return inner;
+  }
+
+  if (Array.isArray(v.rows)) {
+    const cols = Array.isArray(v.columns) ? v.columns.map(columnLabel) : null;
+    if (v.rows[0] && typeof v.rows[0] === "object" && !Array.isArray(v.rows[0])) {
+      return recordsToTable(v.rows);
+    }
+    if (Array.isArray(v.rows[0])) {
+      if (cols) return { columns: cols, rows: v.rows };
+      return toTableModel(v.rows);
+    }
+  }
+
+  if (Array.isArray(v.series)) {
+    const cats = v.categories || v.labels || v.x || [];
+    const columns = ["Label", ...v.series.map((s: any, i: number) => s?.name || s?.label || `Series ${i + 1}`)];
+    const len = Math.max(
+      cats.length,
+      ...v.series.map((s: any) => (s?.data || s?.values || s?.points || []).length),
+    );
+    const rows = Array.from({ length: len }, (_, i) => [
+      cats[i] ?? i + 1,
+      ...v.series.map((s: any) => (s?.data || s?.values || s?.points || [])[i] ?? ""),
+    ]);
+    return rows.length ? { columns, rows } : null;
+  }
+
+  if (Array.isArray(v.labels) && Array.isArray(v.values)) {
+    return { columns: ["Label", "Value"], rows: v.labels.map((l: any, i: number) => [l, v.values[i]]) };
+  }
+
+  const primitiveEntries = Object.entries(v).filter(([k, val]) => {
+    if (isKpiNoiseKey(k) || STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, ""))) return false;
+    return val !== null && val !== undefined && typeof val !== "object";
+  });
+  if (primitiveEntries.length >= 2) {
+    return { columns: ["Key", "Value"], rows: primitiveEntries.map(([k, val]) => [k, val]) };
+  }
+  return null;
+}
+
+function MiniDataTable({ columns, rows, large }: { columns: string[]; rows: any[][]; large?: boolean }) {
+  return (
+    <div className={`${large ? "max-h-96" : "max-h-64"} max-w-full overflow-auto rounded border border-border bg-background`}>
+      <table className="w-max min-w-full text-[11px] leading-tight">
+        <thead className="sticky top-0 bg-secondary/80 text-muted-foreground">
+          <tr>
+            {columns.map((c) => (
+              <th key={c} className="text-left px-2 py-1 font-medium whitespace-nowrap">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, i) => (
+            <tr key={i} className="border-t border-border/70">
+              {columns.map((_, j) => (
+                <td key={j} className="px-2 py-0.5 mono whitespace-nowrap">{fmt(row?.[j] ?? "")}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/** Side-by-side Actual vs Reference grids (Geography / Performance Trend style). */
+function GridComparePanels({ actual, expected, leftLabel, rightLabel }: {
+  actual: any; expected: any; leftLabel: string; rightLabel: string;
+}) {
+  const a = toTableModel(actual);
+  const e = toTableModel(expected);
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 w-full min-w-0">
+      <div className="min-w-0 space-y-1">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{leftLabel}</div>
+        {a ? <MiniDataTable columns={a.columns} rows={a.rows} large /> : (
+          <div className="text-muted-foreground text-[11px] border border-dashed border-border rounded p-2">No grid data</div>
+        )}
+      </div>
+      <div className="min-w-0 space-y-1">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{rightLabel}</div>
+        {e ? <MiniDataTable columns={e.columns} rows={e.rows} large /> : (
+          <div className="text-muted-foreground text-[11px] border border-dashed border-border rounded p-2">No grid data</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function KpiValue({ value, large }: { value: any; large?: boolean }) {
+  if (value === null || value === undefined) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const table = toTableModel(value);
+  if (table) return <MiniDataTable columns={table.columns} rows={table.rows} large={large} />;
+  return <span className="mono font-semibold">{fmt(value)}</span>;
 }
 
 function ComparisonTable({ expected, actual, diff, leftLabel, rightLabel, scenarioTitle }: { expected: any; actual: any; diff: any; leftLabel: string; rightLabel: string; scenarioTitle?: string }) {
@@ -2096,6 +2385,31 @@ const KPI_SKIP_KEYS = new Set([
   "title", "url", "result", "extracted", "report_url", "debug", "page_snapshot",
 ]);
 
+/** Playwright / a11y locator fields — not KPI numbers. */
+const KPI_META_KEYS = new Set([
+  "via", "role", "nth", "selector", "locator", "snapshot", "clicked", "opened",
+  "option", "clickedText", "job_id", "source", "filter", "filters",
+  // Filter / scrape bookkeeping — not the grid or graph payload.
+  "metric", "time_bucket", "timebucket", "navigation", "area", "region", "territory",
+  "time_grain", "time_grain_retry", "chart_title", "show_data_error", "mstr_error_dismissed",
+  "tabledata_rejected", "filters_applied", "dossier_ready",
+]);
+
+const STRUCTURED_KPI_KEYS = new Set([
+  "grid", "graph", "data", "table", "tabledata", "series", "chart", "rows",
+  "heatmap", "viz", "dataset",
+]);
+
+function isKpiNoiseKey(k: string) {
+  return KPI_SKIP_KEYS.has(k) || KPI_META_KEYS.has(k) || k.startsWith("__");
+}
+
+function looksLikeLocatorJunk(v: any): boolean {
+  if (typeof v !== "string") return false;
+  const s = v.trim().toLowerCase();
+  return s.startsWith("aria-") || s === "via" || s.includes("locator") || s.includes("row-grid");
+}
+
 /** Same label persist + sync must use. Empty combo.label used to become Filter #N in the UI and combo_N in history. */
 function comboPersistLabel(combo: any, idx: number): string {
   return String(combo?.label || `combo_${idx + 1}`);
@@ -2114,30 +2428,173 @@ function matchStoredComboRow(runRows: any[], combo: any, idx: number, liveLabel:
   return (runRows || []).find((r) => aliases.has(storedRowFilterLabel(r))) || runRows?.[idx] || null;
 }
 
+function looksLikeComboLabel(k: string) {
+  return / \/ /.test(k) || /^combo[_ ]?\d+/i.test(k) || /^filter #\d+/i.test(k);
+}
+
+/** Primitive, array, or graph-series object. Not a Playwright locator. */
+function unwrapKpiLeaf(v: any): any {
+  if (v === null || v === undefined || typeof v === "boolean") return undefined;
+  if (looksLikeLocatorJunk(v)) return undefined;
+  if (typeof v === "number" || typeof v === "string") return v;
+  if (Array.isArray(v)) return v.length ? v : undefined;
+  if (typeof v !== "object") return undefined;
+  if (v.value !== undefined) {
+    const inner = unwrapKpiLeaf(v.value);
+    if (inner !== undefined) return inner;
+  }
+  const keys = Object.keys(v).filter((k) => !isKpiNoiseKey(k));
+  if (!keys.length) return undefined;
+  if (keys.some((k) => looksLikeComboLabel(k))) return undefined;
+  const cleaned: Record<string, any> = {};
+  for (const k of keys) {
+    const u = unwrapKpiLeaf(v[k]);
+    if (u !== undefined) cleaned[k] = u;
+  }
+  return Object.keys(cleaned).length ? cleaned : undefined;
+}
+
+function findNamedKpi(node: any, name: string, depth = 0): any {
+  if (!node || typeof node !== "object" || depth > 8) return undefined;
+  if (Array.isArray(node)) return undefined;
+  const want = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  for (const [k, v] of Object.entries(node)) {
+    if (String(k).toLowerCase().replace(/[^a-z0-9]+/g, "") === want) {
+      const u = unwrapKpiLeaf(v);
+      if (u !== undefined) return u;
+    }
+  }
+  for (const [k, v] of Object.entries(node)) {
+    if (isKpiNoiseKey(k) && k !== "extracted" && k !== "result" && k !== "results") continue;
+    if (v && typeof v === "object") {
+      const found = findNamedKpi(v, name, depth + 1);
+      if (found !== undefined) return found;
+    }
+  }
+  return undefined;
+}
+
+function isStructuredKpiValue(v: any): boolean {
+  if (v == null || typeof v === "boolean") return false;
+  if (Array.isArray(v)) {
+    if (!v.length) return false;
+    const first = v[0];
+    return Array.isArray(first) || (first && typeof first === "object") || v.length > 1;
+  }
+  if (typeof v !== "object") return false;
+  const keys = Object.keys(v).filter((k) => !isKpiNoiseKey(k));
+  return keys.some((k) => STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, "")))
+    || keys.length >= 2;
+}
+
+function looksLikeStructuredKpiName(name: string) {
+  return /segment|summary|grid|graph|table|chart|series|heatmap|viz|dataset|geography|performance|overall/.test(String(name).toLowerCase());
+}
+
+function isStructuredKeyName(k: string) {
+  return STRUCTURED_KPI_KEYS.has(String(k).toLowerCase().replace(/[^a-z0-9]/g, ""));
+}
+
+function collectStructuredKeys(...maps: Array<Record<string, any> | null | undefined>): string[] {
+  const keys = new Set<string>();
+  for (const map of maps) {
+    if (!map || typeof map !== "object") continue;
+    for (const [k, v] of Object.entries(map)) {
+      if (isKpiNoiseKey(k)) continue;
+      if (isStructuredKeyName(k) || isStructuredKpiValue(v)) keys.add(k);
+    }
+  }
+  return Array.from(keys);
+}
+
+function structuredSize(v: any): number {
+  if (Array.isArray(v)) return v.length;
+  if (v && typeof v === "object") {
+    if (Array.isArray(v.rows)) return v.rows.length;
+    if (Array.isArray(v.data)) return v.data.length;
+    if (Array.isArray(v.series)) return v.series.length;
+    return Object.keys(v).length;
+  }
+  return 0;
+}
+
+/** Script output uses keys like grid/data/graph; the scenario KPI is often "Segment Summary". */
+function pickStructuredKpi(map: any): any {
+  if (!map || typeof map !== "object" || Array.isArray(map)) return undefined;
+  const entries = Object.entries(map).filter(([k, v]) => !isKpiNoiseKey(k) && isStructuredKpiValue(v));
+  if (!entries.length) return undefined;
+  const preferred = entries.find(([k]) => STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, "")));
+  if (preferred) return preferred[1];
+  if (entries.length === 1) return entries[0][1];
+  return entries.slice().sort((a, b) => structuredSize(b[1]) - structuredSize(a[1]))[0][1];
+}
+
+function lookupKpiExact(obj: any, k: string): any {
+  if (!obj || typeof obj !== "object") return undefined;
+  if (obj[k] !== undefined) return obj[k];
+  const t = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "");
+  const f = Object.keys(obj).find((rk) => String(rk).toLowerCase().replace(/[^a-z0-9]+/g, "") === t);
+  return f ? obj[f] : undefined;
+}
+
+function resolveKpiValue(name: string, ...sources: any[]): any {
+  for (const src of sources) {
+    if (!src || typeof src !== "object") continue;
+    const direct = lookupKpiExact(src, name);
+    if (direct !== undefined && direct !== null) return direct;
+    const named = findNamedKpi(src, name);
+    if (named !== undefined) return named;
+  }
+  const allowFallback = looksLikeStructuredKpiName(name);
+  for (const src of sources) {
+    if (!src || typeof src !== "object" || Array.isArray(src)) continue;
+    const map = src.values && typeof src.values === "object" && !Array.isArray(src.values)
+      ? { ...extractKpisFromBlock(src.values), ...src }
+      : src;
+    const structured = pickStructuredKpi(map) ?? pickStructuredKpi(extractKpisFromBlock(map));
+    if (structured === undefined) continue;
+    const structuredCount = Object.entries(map).filter(([k, v]) => !isKpiNoiseKey(k) && isStructuredKpiValue(v)).length;
+    const scalarCount = Object.entries(map).filter(([k, v]) => !isKpiNoiseKey(k) && !isStructuredKpiValue(v) && v != null).length;
+    // Only treat the lone grid/table as this KPI when the name itself is a
+    // table-like label. Do not alias every configured column onto the grid.
+    if (allowFallback || (structuredCount === 1 && scalarCount === 0 && looksLikeStructuredKpiName(name))) return structured;
+  }
+  return undefined;
+}
+
+function aliasConfiguredKpis(values: Record<string, any>, tolerances?: Record<string, Tolerance>): Record<string, any> {
+  const out = { ...(values || {}) };
+  for (const name of Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k))) {
+    if (out[name] !== undefined) continue;
+    const resolved = resolveKpiValue(name, out, values);
+    if (resolved !== undefined) out[name] = resolved;
+  }
+  return out;
+}
+
 function extractKpisFromBlock(block: any): Record<string, any> {
-  if (!block || typeof block !== "object") return {};
+  if (!block || typeof block !== "object" || Array.isArray(block)) return {};
   const out: Record<string, any> = {};
   for (const [k, v] of Object.entries(block)) {
     if (k.startsWith("__")) continue;
-    if (KPI_SKIP_KEYS.has(k)) continue;
-    if (v === null || v === undefined || typeof v === "boolean") continue;
-    if (typeof v === "object") {
-      // Unwrap common shapes: { value, raw_value, ... } or { metric, value }
-      const anyV: any = v;
-      if (Array.isArray(anyV)) continue;
-      if (anyV.value !== undefined && (typeof anyV.value !== "object" || anyV.value === null)) {
-        out[k] = anyV.value;
-      }
+    if ((k === "extracted" || k === "result" || k === "results") && v && typeof v === "object" && !Array.isArray(v)) {
+      Object.assign(out, extractKpisFromBlock(v));
       continue;
     }
-    out[k] = v;
+    if (isKpiNoiseKey(k)) continue;
+    if (v && typeof v === "object" && !Array.isArray(v) && (looksLikeComboLabel(k) || Object.keys(extractKpisFromBlock(v)).length)) {
+      const nested = extractKpisFromBlock(v);
+      if (looksLikeComboLabel(k) && Object.keys(nested).length) {
+        Object.assign(out, nested);
+        continue;
+      }
+    }
+    const leaf = unwrapKpiLeaf(v);
+    if (leaf !== undefined && !looksLikeComboLabel(k)) out[k] = leaf;
   }
   if (Object.keys(out).length) return out;
-  if (block.results && typeof block.results === "object" && !Array.isArray(block.results)) {
-    return extractKpisFromBlock(block.results);
-  }
   const nested = Object.entries(block).filter(([k, v]) => {
-    if (KPI_SKIP_KEYS.has(k) || k.startsWith("__")) return false;
+    if (isKpiNoiseKey(k) && k !== "extracted" && k !== "result" && k !== "results") return false;
     return !!v && typeof v === "object" && !Array.isArray(v);
   });
   if (nested.length === 1) return extractKpisFromBlock(nested[0][1]);
@@ -2169,11 +2626,14 @@ function pickResultRoot(rr: any): any {
     rr?.extracted,
     rr,
   ];
+  let fallback: any = null;
   for (const c of candidates) {
     const flat = flattenResultRoot(c);
-    if (flat) return flat;
+    if (!flat || typeof flat !== "object") continue;
+    if (!fallback) fallback = flat;
+    if (Object.keys(extractKpisFromBlock(flat)).length) return flat;
   }
-  return null;
+  return fallback;
 }
 
 function normComboLabel(s: string) {
@@ -2251,7 +2711,7 @@ function extractKpisFromRun(rr: any): Record<string, any> | null {
     }
     const flat = extractKpisFromBlock(ex);
     if (Object.keys(flat).length) return flat;
-    const comboKeys = Object.keys(ex).filter((k) => !k.startsWith("__") && !KPI_SKIP_KEYS.has(k));
+    const comboKeys = Object.keys(ex).filter((k) => !k.startsWith("__") && !isKpiNoiseKey(k));
     const comboBlocks = comboKeys.filter((k) => ex[k] && typeof ex[k] === "object" && !Array.isArray(ex[k]));
     if (comboBlocks.length && comboBlocks.length === comboKeys.length) {
       const merged: Record<string, any> = {};
@@ -2328,11 +2788,17 @@ function resolveExpectedValues(opts: {
 }
 
 function lookupKpi(obj: any, k: string): any {
-  if (!obj || typeof obj !== "object") return null;
-  if (obj[k] !== undefined) return obj[k];
-  const t = String(k).toLowerCase().replace(/[^a-z0-9]+/g, "");
-  const f = Object.keys(obj).find((rk) => String(rk).toLowerCase().replace(/[^a-z0-9]+/g, "") === t);
-  return f ? obj[f] : null;
+  const exact = lookupKpiExact(obj, k);
+  if (exact !== undefined && exact !== null) return exact;
+  return resolveKpiValue(k, obj) ?? null;
+}
+
+/** Aggregate many KPI comparisons: any fail → fail; any pending → pending; else pass. */
+function overallFromPassResults(passes: Array<boolean | null | undefined>): "pass" | "fail" | "pending" {
+  if (!passes.length) return "pending";
+  if (passes.some((p) => p === false)) return "fail";
+  if (passes.some((p) => p !== true)) return "pending";
+  return "pass";
 }
 
 function statusFromKpis(
@@ -2343,14 +2809,23 @@ function statusFromKpis(
 ): "pass" | "fail" | "pending" {
   if (scrapeFailed) return "fail";
   const actual = actualValues && typeof actualValues === "object" ? actualValues : {};
-  const keys = Object.keys(actual).filter((k) => !k.startsWith("__"));
-  if (!keys.length) return "pending";
   const expected = expectedValues && typeof expectedValues === "object" ? expectedValues : {};
-  const passes = keys
-    .map((k) => evalPass(actual[k], lookupKpi(expected, k), getTol(tolerances || {}, k)))
-    .filter((p) => p !== null);
-  if (!passes.length) return "pending";
-  return passes.every(Boolean) ? "pass" : "fail";
+  const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k));
+  const structured = collectStructuredKeys(actual, expected);
+  const scalarKeys = configured.length
+    ? configured.filter((k) => !isStructuredKeyName(k))
+    : Object.keys(actual).filter((k) => !isKpiNoiseKey(k) && !isStructuredKeyName(k) && !isStructuredKpiValue(actual[k]));
+  const keys = Array.from(new Set([...structured, ...scalarKeys]));
+  if (!keys.length) return "pending";
+  const passes = keys.map((k) => {
+    const a = resolveKpiValue(k, actual);
+    const e = resolveKpiValue(k, expected);
+    // Grid/table vs a leftover named scalar is not a real KPI miss — skip it.
+    if ((isStructuredKpiValue(a) || isStructuredKeyName(k)) && e != null && !isStructuredKpiValue(e) && !isStructuredKeyName(k)) return null;
+    if ((isStructuredKpiValue(e) || isStructuredKeyName(k)) && a != null && !isStructuredKpiValue(a) && !isStructuredKeyName(k)) return null;
+    return evalPass(a, e, getTol(tolerances || {}, k));
+  });
+  return overallFromPassResults(passes);
 }
 
 async function persistManualHeadlessRun(opts: {
@@ -2371,7 +2846,11 @@ async function persistManualHeadlessRun(opts: {
     referencePayload, storedRows, tolerances, sqlByCombo, sqlResult, isReferenceMatch,
   } = opts;
   if (!scenarioId || !reportId || !payload) return false;
-  const scrapeFailed = payload?.extracted?.ok === false || !!payload?.extracted?.error || !!payload?.error;
+  const extractedValues = extractKpisFromRun(payload) || {};
+  const rawScrapeError = payload?.extracted?.ok === false || !!payload?.extracted?.error || !!payload?.error;
+  // Wrapper payloads always carry `error: null` / leftover notes. Only treat the
+  // scrape as failed when nothing usable (including values.grid) was extracted.
+  const scrapeFailed = rawScrapeError && !Object.keys(extractedValues).length;
   const crit = criticality || "medium";
   const { data: run, error: runErr } = await supabase.from("runs").insert({
     scope_type: "report",
@@ -2392,6 +2871,7 @@ async function persistManualHeadlessRun(opts: {
       const block = pickComboBlock(root, label, i, c.id);
       let values = extractKpisFromBlock(block);
       if (!Object.keys(values).length) values = extractKpisFromRun(payload) || {};
+      values = aliasConfiguredKpis(values, tolerances);
       const expectedValues = resolveExpectedValues({
         label, idx: i, comboId: c.id, actualKeys: Object.keys(values),
         isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult,
@@ -2420,7 +2900,7 @@ async function persistManualHeadlessRun(opts: {
       });
     }
   } else {
-    const values = extractKpisFromRun(payload) || {};
+    const values = aliasConfiguredKpis(extractKpisFromRun(payload) || {}, tolerances);
     const expectedValues = resolveExpectedValues({
       label: "", idx: 0, actualKeys: Object.keys(values),
       isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult,
@@ -2436,7 +2916,7 @@ async function persistManualHeadlessRun(opts: {
           : "manual_headless",
         values: expectedValues,
       },
-      actual: { values, source: "manual_headless" },
+      actual: { values, source: "manual_headless", extracted: payload?.extracted ?? null },
       diff: null,
       criticality: crit,
       severity: crit,
@@ -2597,6 +3077,7 @@ async function persistReferenceHeadlessRun(opts: {
       const block = pickComboBlock(root, lbl, i, combos[i].id);
       let vals = extractKpisFromBlock(block);
       if (!Object.keys(vals).length) vals = extractKpisFromRun(payload) || {};
+      vals = aliasConfiguredKpis(vals, tolerances);
       if (Object.keys(vals).length) expectedByLabel.set(String(lbl), vals);
     }
   }
@@ -2620,9 +3101,22 @@ async function persistReferenceHeadlessRun(opts: {
         values,
         extracted: payload?.extracted ?? null,
       },
-      ...(status !== "pending" ? { status } : {}),
+      status,
     }).eq("id", row.id);
     if (!error) updated += 1;
+  }
+  if (updated && recent[0]?.run_id) {
+    const runId = recent[0].run_id;
+    const { data: allRows } = await supabase.from("test_results").select("status").eq("run_id", runId);
+    await supabase.from("runs").update({
+      summary: {
+        source: "reference_script",
+        pass: (allRows || []).filter((r: any) => r.status === "pass").length,
+        fail: (allRows || []).filter((r: any) => r.status === "fail").length,
+        pending: (allRows || []).filter((r: any) => r.status === "pending").length,
+        total: (allRows || []).length,
+      },
+    }).eq("id", runId);
   }
   return updated > 0;
 }
@@ -2697,8 +3191,37 @@ function getTol(tolerances: Record<string, Tolerance>, k: string): Tolerance {
   return { value: base.value, unit: base.unit ?? "pct", op: globalOp };
 }
 
+function canonicalizeForCompare(v: any): any {
+  if (v == null) return v;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") {
+    const n = toNum(v);
+    return Number.isFinite(n) && /[\d]/.test(v) && !/[a-z]/i.test(v.replace(/[,\s%$().-]/g, "")) ? n : v.trim();
+  }
+  if (Array.isArray(v)) return v.map(canonicalizeForCompare);
+  if (typeof v === "object") {
+    const out: Record<string, any> = {};
+    for (const [k, val] of Object.entries(v)) {
+      if (isKpiNoiseKey(k)) continue;
+      out[k] = canonicalizeForCompare(val);
+    }
+    return out;
+  }
+  return v;
+}
+
 function evalPass(actual: any, expected: any, tol: Tolerance): boolean | null {
   if (expected === null || expected === undefined || actual === null || actual === undefined) return null;
+  if (looksLikeLocatorJunk(actual) || looksLikeLocatorJunk(expected)) return null;
+  const tableA = toTableModel(actual);
+  const tableB = toTableModel(expected);
+  if (tableA && tableB) {
+    return JSON.stringify(canonicalizeForCompare(tableA)) === JSON.stringify(canonicalizeForCompare(tableB));
+  }
+  if (Array.isArray(actual) || Array.isArray(expected) ||
+      (typeof actual === "object") || (typeof expected === "object")) {
+    return JSON.stringify(canonicalizeForCompare(actual)) === JSON.stringify(canonicalizeForCompare(expected));
+  }
   const a = toNum(actual);
   const e = toNum(expected);
   const both = Number.isFinite(a) && Number.isFinite(e);
@@ -2852,7 +3375,7 @@ function TolerancesEditor({
 function FilterComparisonTable({
   combos, comboResults, runResult, tolerances, onTolerancesChange, savingTolerances,
   isReferenceMatch, referenceKpis, refRunResult, globalSqlResult, onResetTolerances, canResetTolerances,
-  onRunCombo, runningComboId, comboBlockOverrides,
+  onRunCombo, runningComboId, comboBlockOverrides, persistedStatus, onLiveOverallChange,
 }: {
   combos: any[];
   comboResults: Record<string, any>;
@@ -2869,6 +3392,8 @@ function FilterComparisonTable({
   onRunCombo?: (combo: any, idx: number) => void;
   runningComboId?: string | null;
   comboBlockOverrides?: Record<string, any>;
+  persistedStatus?: "pass" | "fail" | "pending";
+  onLiveOverallChange?: (status: "pass" | "fail" | "pending") => void;
 }) {
   const [openCombo, setOpenCombo] = useState<any>(null);
 
@@ -2901,9 +3426,12 @@ function FilterComparisonTable({
     let refKpis = refBlock ? extractKpisFromBlock(refBlock) : null;
     if (!refKpis || !Object.keys(refKpis).length) refKpis = extractKpisFromRun(refRunResult);
     const sqlRes = comboResults[c.id] || (globalSqlResult?.ok ? globalSqlResult : null);
-    const rows: Row[] = Object.entries(kpis).map(([k, v]) => {
+    const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k));
+    const kpiNames = configured.length ? configured : Object.keys(kpis);
+    const rows: Row[] = kpiNames.map((k) => {
+      const v = resolveKpiValue(k, kpis, pwBlock, runResult);
       const exp = isReferenceMatch
-        ? (lookupKpi(refKpis, k) ?? lookupKpi(referenceKpis, k))
+        ? resolveKpiValue(k, refKpis, referenceKpis, refBlock, refRunResult)
         : expectedForKpi(sqlRes, k);
       const a = toNum(v);
       const e = toNum(exp);
@@ -2933,17 +3461,21 @@ function FilterComparisonTable({
         });
       }
     }
-    const passes = rows.filter((r) => r.pass !== null).map((r) => r.pass);
-    const overall: "pass" | "fail" | "pending" =
-      passes.length === 0 ? "pending" : passes.every(Boolean) ? "pass" : "fail";
+    const overall = overallFromPassResults(rows.map((r) => r.pass));
     return { combo: c, idx, label, rows, overall };
   });
 
 
-  const overallStatus: "pass" | "fail" | "pending" =
-    perCombo.every((p) => p.overall === "pass") ? "pass"
-    : perCombo.some((p) => p.overall === "fail") ? "fail"
+  const computedOverall: "pass" | "fail" | "pending" =
+    perCombo.some((p) => p.overall === "fail") ? "fail"
+    : perCombo.some((p) => p.overall === "pending") ? "pending"
+    : perCombo.every((p) => p.overall === "pass") ? "pass"
     : "pending";
+  const overallStatus = computedOverall;
+
+  useEffect(() => {
+    onLiveOverallChange?.(computedOverall);
+  }, [computedOverall, onLiveOverallChange]);
 
   const badge = (s: "pass" | "fail" | "pending") => {
     const cls = s === "pass"
@@ -3001,9 +3533,22 @@ function FilterComparisonTable({
                       </div>
                     </td>
                   )}
-                  <td className="p-2 mono">{r.kpi}</td>
-                  <td className="p-2 mono font-semibold">{fmt(r.actual)}</td>
-                  <td className="p-2 mono font-semibold">{fmt(r.expected)}</td>
+                  <td className="p-2 mono align-top">{r.kpi}</td>
+                  {isStructuredKpiValue(r.actual) || isStructuredKpiValue(r.expected) ? (
+                    <td className="p-2 align-top" colSpan={2}>
+                      <GridComparePanels
+                        actual={r.actual}
+                        expected={r.expected}
+                        leftLabel="Actual (UI main report)"
+                        rightLabel={isReferenceMatch ? "Reference URL" : "Expected (BE / SQL)"}
+                      />
+                    </td>
+                  ) : (
+                    <>
+                      <td className="p-2 align-top"><KpiValue value={r.actual} /></td>
+                      <td className="p-2 align-top"><KpiValue value={r.expected} /></td>
+                    </>
+                  )}
                   <td className="p-2 mono">
                     {r.diff !== null ? (
                       <span className={r.pass === false ? "text-destructive" : "text-muted-foreground"}>
@@ -3054,7 +3599,7 @@ function FilterComparisonTable({
 }
 
 function KpiRowsTable({
-  actual, sqlRes, fallbackExpected, tolerances, onTolerancesChange, savingTolerances, isReferenceMatch, onResetTolerances, canResetTolerances,
+  actual, sqlRes, fallbackExpected, tolerances, onTolerancesChange, savingTolerances, isReferenceMatch, onResetTolerances, canResetTolerances, persistedStatus, onLiveOverallChange,
 }: {
   actual: any;
   sqlRes: any;
@@ -3065,6 +3610,8 @@ function KpiRowsTable({
   isReferenceMatch?: boolean;
   onResetTolerances?: () => void;
   canResetTolerances?: boolean;
+  persistedStatus?: "pass" | "fail" | "pending";
+  onLiveOverallChange?: (status: "pass" | "fail" | "pending") => void;
 }) {
   const badge = (s: "pass" | "fail" | "pending") => {
     const cls = s === "pass"
@@ -3076,14 +3623,17 @@ function KpiRowsTable({
   };
 
   const kpis = actual && typeof actual === "object" ? actual : {};
-  const keys = Object.keys(kpis).filter((k) => !k.startsWith("__"));
+  const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k) && !k.startsWith("__"));
+  const keys = configured.length
+    ? configured
+    : Object.keys(kpis).filter((k) => !k.startsWith("__") && !isKpiNoiseKey(k));
 
   const rows = keys.map((k) => {
-    const a = kpis[k];
+    const a = resolveKpiValue(k, kpis);
     let exp: any = null;
     if (sqlRes?.ok) exp = expectedForKpi(sqlRes, k);
     if ((exp === null || exp === undefined) && fallbackExpected && typeof fallbackExpected === "object") {
-      exp = fallbackExpected[k] ?? null;
+      exp = resolveKpiValue(k, fallbackExpected) ?? null;
     }
     const aN = toNum(a);
     const eN = toNum(exp);
@@ -3094,9 +3644,12 @@ function KpiRowsTable({
     return { k, a, exp, diff, deltaPct, pass };
   });
 
-  const passes = rows.filter((r) => r.pass !== null).map((r) => r.pass);
-  const overall: "pass" | "fail" | "pending" =
-    passes.length === 0 ? "pending" : passes.every(Boolean) ? "pass" : "fail";
+  const computedOverall = overallFromPassResults(rows.map((r) => r.pass));
+  const overall = computedOverall;
+
+  useEffect(() => {
+    onLiveOverallChange?.(computedOverall);
+  }, [computedOverall, onLiveOverallChange]);
 
   if (!keys.length) {
     return <div className="text-muted-foreground text-xs">No KPI values extracted yet.</div>;
@@ -3122,9 +3675,9 @@ function KpiRowsTable({
           <tbody>
             {rows.map((r) => (
               <tr key={r.k} className={`border-t border-border ${r.pass === false ? "bg-destructive/5" : ""}`}>
-                <td className="p-2 mono">{r.k}</td>
-                <td className="p-2 mono font-semibold">{fmt(r.a)}</td>
-                <td className="p-2 mono font-semibold">{fmt(r.exp)}</td>
+                <td className="p-2 mono align-top">{r.k}</td>
+                <td className="p-2 align-top"><KpiValue value={r.a} /></td>
+                <td className="p-2 align-top"><KpiValue value={r.exp} /></td>
                 <td className="p-2 mono">
                   {r.diff !== null ? (
                     <span className={r.pass === false ? "text-destructive" : "text-muted-foreground"}>
@@ -3153,9 +3706,24 @@ function KpiRowsTable({
 
 function ScenarioMeta({ s }: { s: any }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const [duping, setDuping] = useState(false);
   const update = async (patch: any) => {
     await supabase.from("scenarios").update(patch).eq("id", s.id);
     qc.invalidateQueries({ queryKey: ["scenario", s.id] });
+  };
+  const dup = async () => {
+    setDuping(true);
+    try {
+      const copy = await duplicateScenario(s.id);
+      toast.success(`Duplicated as "${copy.title}"`);
+      qc.invalidateQueries({ queryKey: ["scenarios", s.report_id] });
+      navigate(`/scenarios/${copy.id}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Duplicate failed");
+    } finally {
+      setDuping(false);
+    }
   };
   return (
     <div className="flex items-start justify-between gap-3">
@@ -3186,6 +3754,10 @@ function ScenarioMeta({ s }: { s: any }) {
         </div>
         <Button variant="outline" size="sm" className="w-full" onClick={() => update({ deferred: !s.deferred })}>
           {s.deferred ? "Restore" : "Defer"}
+        </Button>
+        <Button variant="outline" size="sm" className="w-full" onClick={dup} disabled={duping} title="Duplicate this test case">
+          {duping ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Copy className="h-3 w-3 mr-1" />}
+          Duplicate
         </Button>
         <ScenarioHistory scenarioId={s.id} onRestore={(v) => update({ title: v.title, description: v.description, criticality: v.criticality, type: v.type, status: v.status, deferred: v.deferred })} />
       </div>
@@ -3228,37 +3800,73 @@ function ScenarioHistory({ scenarioId, onRestore }: { scenarioId: string; onRest
   );
 }
 
-function ScriptHistory({ scenarioId, scriptId, onRestore }: { scenarioId: string; scriptId?: string; onRestore: (v: any) => void }) {
+function scriptVersionCode(v: any, kind: "main" | "reference") {
+  if (kind === "reference") return v?.assertion_spec?.__reference_playwright_code || "";
+  return v?.playwright_code || "";
+}
+
+function ScriptHistory({
+  scenarioId,
+  scriptId,
+  kind = "main",
+  onRestore,
+}: {
+  scenarioId: string;
+  scriptId?: string;
+  kind?: "main" | "reference";
+  onRestore: (v: any) => void;
+}) {
   const [open, setOpen] = useState(false);
   const { data: versions } = useQuery({
-    queryKey: ["script-versions", scenarioId, scriptId, open],
+    queryKey: ["script-versions", scenarioId, scriptId, kind, open],
     queryFn: async () => {
-      const q = supabase.from("script_versions").select("*").eq("scenario_id", scenarioId).order("version", { ascending: false });
-      return (await q).data ?? [];
+      const q = supabase.from("script_versions").select("*").eq("scenario_id", scenarioId);
+      const filtered = scriptId ? q.eq("script_id", scriptId) : q;
+      return (await filtered.order("version", { ascending: false })).data ?? [];
     },
     enabled: open,
   });
+  const title = kind === "reference" ? "Reference script version history" : "Test script version history";
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline"><History className="h-3 w-3 mr-1" /> History</Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl">
-        <DialogHeader><DialogTitle>Script version history</DialogTitle></DialogHeader>
-        <ScrollArea className="max-h-[70vh]">
-          <div className="space-y-2">
-            {(versions || []).map((v: any) => (
-              <div key={v.id} className="border border-border rounded p-3 text-xs space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="font-semibold">v{v.version} <span className="text-muted-foreground font-normal">· {new Date(v.created_at).toLocaleString()}</span></div>
-                  <Button size="sm" variant="ghost" onClick={() => { onRestore(v); setOpen(false); }}>Load</Button>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl min-w-0 overflow-x-hidden">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground">Load a version into the editor to review it, then click Save to persist.</p>
+        <div className="max-h-[65vh] min-w-0 space-y-3 overflow-x-hidden overflow-y-auto pr-1">
+          {(versions || []).map((v: any) => {
+            const preview = scriptVersionCode(v, kind);
+            return (
+              <div key={v.id} className="min-w-0 max-w-full space-y-2 rounded border border-border p-3 text-xs">
+                <div className="flex min-w-0 flex-nowrap items-center justify-between gap-3">
+                  <div className="min-w-0 truncate font-semibold">
+                    v{v.version}{" "}
+                    <span className="font-normal text-muted-foreground">· {new Date(v.created_at).toLocaleString()}</span>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 shrink-0 px-3 text-xs"
+                    onClick={() => { onRestore(v); setOpen(false); }}
+                  >
+                    <Undo2 className="h-3.5 w-3.5" />
+                    Use this version
+                  </Button>
                 </div>
-                <pre className="mono text-[10px] p-2 rounded bg-secondary/40 overflow-auto max-h-40">{v.playwright_code || "(empty)"}</pre>
+                <div className="min-w-0 max-w-full overflow-x-auto rounded bg-secondary/40">
+                  <pre className="mono max-h-40 overflow-y-auto p-2 text-[10px] whitespace-pre">
+                    {preview || (kind === "reference" ? "(no reference script in this version)" : "(empty)")}
+                  </pre>
+                </div>
               </div>
-            ))}
-            {!versions?.length && <div className="text-xs text-muted-foreground p-4 text-center">No history yet — save the script to create a version.</div>}
-          </div>
-        </ScrollArea>
+            );
+          })}
+          {!versions?.length && <div className="p-4 text-center text-xs text-muted-foreground">No history yet — save the script to create a version.</div>}
+        </div>
       </DialogContent>
     </Dialog>
   );

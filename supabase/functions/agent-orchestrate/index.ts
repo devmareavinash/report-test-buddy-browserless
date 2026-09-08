@@ -92,6 +92,36 @@ function toNum(v: any): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const STRUCTURED_KPI_KEYS = new Set(["grid", "graph", "data", "table", "tabledata", "series", "chart", "rows", "heatmap", "viz", "dataset"]);
+
+function isStructuredVal(v: any): boolean {
+  if (v == null || typeof v === "boolean") return false;
+  if (Array.isArray(v)) return v.length > 0;
+  if (typeof v !== "object") return false;
+  return Object.keys(v).some((k) => STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, "")));
+}
+
+function pickStructured(map: Record<string, any> | null | undefined): { k: string; v: any } | null {
+  if (!map || typeof map !== "object") return null;
+  for (const k of Object.keys(map)) {
+    if (STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, "")) && map[k] && typeof map[k] === "object") {
+      return { k, v: map[k] };
+    }
+  }
+  for (const [k, v] of Object.entries(map)) {
+    if (isStructuredVal(v)) return { k, v };
+  }
+  return null;
+}
+
+function structuredEqual(a: any, b: any): boolean {
+  try {
+    return JSON.stringify(a) === JSON.stringify(b);
+  } catch {
+    return false;
+  }
+}
+
 function evalAssertion(actual: number | null, expected: number | null, tol: number) {
   if (actual == null || expected == null) return { pass: false, diff: null as number | null };
   const diff = Math.abs(actual - expected) / Math.max(Math.abs(expected), 1e-9);
@@ -125,8 +155,11 @@ function pickComboKpis(payload: any, comboLabel: string | null): Record<string, 
     if (!comboLabel) {
       const flat: Record<string, any> = {};
       for (const [k, v] of Object.entries(root)) {
-        if (["filters_applied", "screenshot", "ok", "error", "url", "title", "note", "result", "extracted"].includes(k)) continue;
-        if (v && typeof v === "object") continue;
+        if (["filters_applied", "screenshot", "ok", "error", "url", "title", "note", "result", "extracted", "navigation"].includes(k)) continue;
+        if (v && typeof v === "object") {
+          if (isStructuredVal(v)) flat[k] = v;
+          continue;
+        }
         flat[k] = v;
       }
       if (Object.keys(flat).length) return flat;
@@ -136,8 +169,11 @@ function pickComboKpis(payload: any, comboLabel: string | null): Record<string, 
       if (node && typeof node === "object") {
         const flat: Record<string, any> = {};
         for (const [k, v] of Object.entries(node)) {
-          if (k === "filters_applied") continue;
-          if (v && typeof v === "object") continue;
+          if (k === "filters_applied" || k === "navigation") continue;
+          if (v && typeof v === "object") {
+            if (isStructuredVal(v)) flat[k] = v;
+            continue;
+          }
           flat[k] = v;
         }
         return flat;
@@ -338,20 +374,6 @@ Deno.serve(async (req) => {
               }
             }
 
-            const runResp = await callFn("playwright-runtime", {
-              mode: "headless", scenario_id: s.id, code: script.playwright_code,
-            });
-            if (runResp?.error || runResp?.ok === false) {
-              await sb.from("test_results").insert({
-                run_id: run.id, scenario_id: s.id, status: "fail",
-                expected: { source: "scrape" },
-                actual: { error: runResp?.error || runResp?.message || "scrape failed" },
-                diff: null, criticality: s.criticality || "medium", severity: s.criticality || "medium",
-                screenshot_url: runResp?.screenshot_url || null,
-              });
-              return { pass: 0, fail: 1 };
-            }
-
             const { data: matrix } = await sb.from("scenario_filter_matrix")
               .select("id, label, filters").eq("scenario_id", s.id)
               .order("created_at", { ascending: true });
@@ -363,25 +385,19 @@ Deno.serve(async (req) => {
             const isRef = s.type === "reference_match";
             let sqlTplId = isRef ? null : ((script as any)?.sql_template_id || (report as any)?.default_sql_template_id || null);
 
-            // Reference-match: ensure reference script exists and run it once.
-            let refResp: any = null;
+            // Prepare reference script first (no browser) so main + reference can scrape in parallel.
+            let refCode = "";
             let refError: string | null = null;
             if (isRef) {
               const refUrl: string = (report as any)?.reference_url || "";
               const primaryUrl: string = (report as any)?.url || "";
-              // Refetch assertion_spec so we pick up any freshly-generated ref code.
               const { data: freshScript } = await sb.from("scripts")
                 .select("id, assertion_spec")
                 .eq("id", (script as any)?.id).maybeSingle();
               const aspec: any = (freshScript as any)?.assertion_spec
                 || (script as any)?.assertion_spec || {};
-              let refCode: string = aspec.__reference_playwright_code || "";
+              refCode = aspec.__reference_playwright_code || "";
               if (!refCode || !refCode.trim()) {
-                // Strategy: if reference_url is set AND differs from primary
-                // URL, this is the "same screen, different env" case — swap
-                // URLs in the main script. Otherwise it's the "two-screen,
-                // same URL" case — ask agent-scripts to generate a dedicated
-                // reference script from the description.
                 const isEnvSwap = !!refUrl && !!primaryUrl && refUrl !== primaryUrl;
                 if (isEnvSwap) {
                   refCode = swapGotoUrl(script.playwright_code || "", refUrl, primaryUrl);
@@ -399,14 +415,32 @@ Deno.serve(async (req) => {
                   }
                 }
               }
-              if (!refError) {
-                refResp = await callFn("playwright-runtime", {
-                  mode: "headless", scenario_id: s.id, code: refCode, target: "reference",
-                });
-                if (refResp?.error || refResp?.ok === false) {
-                  refError = refResp?.error || refResp?.message || "reference scrape failed";
-                }
-              }
+            }
+
+            const [runResp, refRespRaw] = await Promise.all([
+              callFn("playwright-runtime", {
+                mode: "headless", scenario_id: s.id, code: script.playwright_code,
+              }),
+              (isRef && !refError && refCode)
+                ? callFn("playwright-runtime", {
+                    mode: "headless", scenario_id: s.id, code: refCode, target: "reference",
+                  })
+                : Promise.resolve(null),
+            ]);
+            if (runResp?.error || runResp?.ok === false) {
+              await sb.from("test_results").insert({
+                run_id: run.id, scenario_id: s.id, status: "fail",
+                expected: { source: "scrape" },
+                actual: { error: runResp?.error || runResp?.message || "scrape failed" },
+                diff: null, criticality: s.criticality || "medium", severity: s.criticality || "medium",
+                screenshot_url: runResp?.screenshot_url || null,
+              });
+              return { pass: 0, fail: 1 };
+            }
+
+            let refResp: any = refRespRaw;
+            if (isRef && !refError && refResp && (refResp.error || refResp.ok === false)) {
+              refError = refResp.error || refResp.message || "reference scrape failed";
             }
 
             const comboOutcomes = await mapPool(combos, Math.min(concurrency, 8), async (combo) => {
@@ -427,8 +461,11 @@ Deno.serve(async (req) => {
                 };
                 sqlRow = refError ? null : refScraped;
                 for (const lbl of kpiLabels.length ? kpiLabels : Object.keys(scraped)) {
-                  expectedMap[lbl] = toNum((refScraped as any)[lbl]);
+                  const raw = (refScraped as any)[lbl];
+                  expectedMap[lbl] = (raw != null && typeof raw === "object") ? raw : toNum(raw);
                 }
+                const refGrid = pickStructured(refScraped);
+                if (refGrid && expectedMap[refGrid.k] == null) expectedMap[refGrid.k] = refGrid.v;
               } else if (sqlTplId) {
                 const { where, pairs, missing } = hasCombos
                   ? buildWhere(combo.filters || {}, keyMap || [])
@@ -471,14 +508,30 @@ Deno.serve(async (req) => {
                 }
               }
 
-              const actualMap: Record<string, number | null> = {};
+              const actualMap: Record<string, any> = {};
               const diffMap: Record<string, any> = {};
               let comboPass = true;
               const labels = (kpiLabels.length ? kpiLabels : Object.keys(scraped));
               const kpiTol: Record<string, any> = ((script as any)?.assertion_spec || {}).kpi_tolerances || {};
-              
+              const mainGrid = pickStructured(scraped);
+              const expGrid = pickStructured(expectedMap);
+              if (mainGrid) actualMap[mainGrid.k] = mainGrid.v;
+              if (mainGrid && expGrid) {
+                const gridPass = structuredEqual(mainGrid.v, expGrid.v);
+                diffMap[mainGrid.k] = { structured: true, pass: gridPass };
+                if (!gridPass) comboPass = false;
+              } else if (mainGrid && (isRef || sqlTplId) && !expGrid) {
+                comboPass = false;
+                diffMap[mainGrid.k] = { structured: true, error: "no_expected_grid" };
+              }
+
               for (const lbl of labels) {
-                const a = toNum((scraped as any)[lbl]);
+                const rawA = (scraped as any)[lbl];
+                if (isStructuredVal(rawA) || STRUCTURED_KPI_KEYS.has(String(lbl).toLowerCase().replace(/[^a-z0-9]/g, ""))) {
+                  if (actualMap[lbl] === undefined) actualMap[lbl] = rawA;
+                  continue;
+                }
+                const a = toNum(rawA);
                 actualMap[lbl] = a;
                 const e = expectedMap[lbl] ?? null;
                 if (s.type === "range_check") {
@@ -525,7 +578,7 @@ Deno.serve(async (req) => {
               // rather than letting an empty loop default to pass.
               const actualVals = Object.values(actualMap);
               const allActualsNull = actualVals.length === 0 || actualVals.every((v) => v == null);
-              if (labels.length === 0 || allActualsNull) {
+              if (!mainGrid && (labels.length === 0 || allActualsNull)) {
                 comboPass = false;
                 if (labels.length === 0) {
                   diffMap["__no_kpi__"] = { error: "no_kpi_values_returned" };
