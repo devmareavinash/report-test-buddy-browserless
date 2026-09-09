@@ -1,0 +1,39 @@
+---
+description: Prefer working templates over runtime changes; never break prior scripts
+alwaysApply: true
+---
+
+# RTB: templates first — do not change runtime
+
+## Critical rule (hard stop)
+
+**Never change runtime** (`playwright-runtime` wrap/sanitize/syntax fallback, Browserless call shape, or anything that rewrites how saved scripts execute) to fix generation or new scenarios.
+
+Reason: shared DB + AWS users keep **previously generated working scripts**. A runtime change can break those overnight even when the script text never changed.
+
+Work only on **working templates** (assemble + references + detectors). New patterns = new/saved templates, not runtime patches.
+
+## Template strategy
+
+~80% of every script is the same: login, navigate, apply filters, waits. Only the **extract** part differs.
+
+| User / scenario intent | Use template |
+|------------------------|--------------|
+| KPI / Overview tiles | KPI / `overview_kpi` (or activity KPI) |
+| Graph / chart / Show Data | Chart / `chart_show_data` |
+| Grid / crosstab / Geography | Grid / `geography_grid` |
+
+When generating: pick the template from the scenario description; fill URL, `NAV_STEPS`, labels, time grain, filter keys from UI — do not invent screens.
+
+## Saving new working scripts as templates
+
+When the user provides a **working** Playwright script for a new scenario pattern:
+
+1. Capture it as a **reference / template** under the skill pipeline (`_shared/references/`, assemble helpers, detectors) — not as a one-off runtime hack.
+2. Wire classify → assemble so the **same pattern** reuses that template next time.
+3. Keep shared login/nav/filter mechanics stable across templates; only specialize extract.
+
+## Allowed vs forbidden
+
+- **Allowed:** template JS, assemblers, nav/title parse, generate-time validation expectations, skill docs.
+- **Forbidden without explicit ask:** changes to `playwright-runtime` wrap/sanitize/syntax fallback that alter how existing saved scripts run.

@@ -3061,6 +3061,9 @@ async function persistReferenceHeadlessRun(opts: {
 }): Promise<boolean> {
   const { scenarioId, payload, combos, tolerances } = opts;
   if (!scenarioId || !payload) return false;
+  // Only patch the latest run. Updating all recent rows rewrote past history
+  // statuses whenever a new reference run failed (e.g. FAIL badge on an older
+  // row whose analysis still said "live comparison passed").
   const { data: recent } = await supabase
     .from("test_results")
     .select("id, run_id, expected, actual, status")
@@ -3068,6 +3071,11 @@ async function persistReferenceHeadlessRun(opts: {
     .order("created_at", { ascending: false })
     .limit(25);
   if (!recent?.length) return false;
+  const latestRunId = recent[0]?.run_id;
+  const runRows = latestRunId
+    ? recent.filter((r: any) => r.run_id === latestRunId)
+    : [];
+  if (!runRows.length) return false;
 
   const root = pickResultRoot(payload);
   const expectedByLabel = new Map<string, Record<string, any>>();
@@ -3085,7 +3093,7 @@ async function persistReferenceHeadlessRun(opts: {
   if (!expectedByLabel.size && !Object.keys(fallbackValues).length) return false;
 
   let updated = 0;
-  for (const row of recent) {
+  for (const row of runRows) {
     const rowLabel = row.actual?.filter || row.expected?.filter || combos?.[0]?.label;
     const values = (rowLabel && expectedByLabel.get(String(rowLabel)))
       || (expectedByLabel.size === 1 ? [...expectedByLabel.values()][0] : fallbackValues);
@@ -3105,9 +3113,8 @@ async function persistReferenceHeadlessRun(opts: {
     }).eq("id", row.id);
     if (!error) updated += 1;
   }
-  if (updated && recent[0]?.run_id) {
-    const runId = recent[0].run_id;
-    const { data: allRows } = await supabase.from("test_results").select("status").eq("run_id", runId);
+  if (updated && latestRunId) {
+    const { data: allRows } = await supabase.from("test_results").select("status").eq("run_id", latestRunId);
     await supabase.from("runs").update({
       summary: {
         source: "reference_script",
@@ -3116,7 +3123,7 @@ async function persistReferenceHeadlessRun(opts: {
         pending: (allRows || []).filter((r: any) => r.status === "pending").length,
         total: (allRows || []).length,
       },
-    }).eq("id", runId);
+    }).eq("id", latestRunId);
   }
   return updated > 0;
 }

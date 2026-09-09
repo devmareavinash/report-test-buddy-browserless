@@ -23,7 +23,7 @@ import type { ScriptAgentSessionLog } from "./script-agent-log.ts";
 
 export const SCRIPT_VALIDATE_MAX_ATTEMPTS = 5;
 
-/** Browserless never started Chrome — Magentic cannot rewrite the script into a working container. */
+/** Browserless infra is down/crashed — Magentic cannot rewrite the script into a working container. */
 export function isBrowserlessLaunchCrash(report: ValidationReport, runPayload?: any): boolean {
   const parts = [
     report?.summary,
@@ -31,7 +31,7 @@ export function isBrowserlessLaunchCrash(report: ValidationReport, runPayload?: 
     runPayload?.error,
     runPayload?.message,
   ].filter(Boolean).join(" ");
-  return /browserless\s+500|chromium failed to launch|chromium[\s\S]{0,40}crashed|ws[- ]endpoint timeout/i.test(parts);
+  return /browserless\s+500|chromium failed to launch|chromium[\s\S]{0,40}crashed|ws[- ]endpoint timeout|actively refused|os error 10061|tcp connect error|connection refused|ECONNREFUSED/i.test(parts);
 }
 
 function functionsBase(): string {
@@ -390,17 +390,7 @@ export async function runGenerateValidationLoop(opts: {
 
     if (attempt >= maxAttempts) break;
 
-    if (/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy)) {
-      await log?.log(
-        "script-validate",
-        "skill_keep_template",
-        "Assembled skill template failed validation — keeping template (no repair LLM)",
-        { attempt, generated_by: generatedBy, summary: report.summary, stop_loop: true },
-        "warn",
-      );
-      break;
-    }
-
+    // Skill templates still get Magentic repair on nav/filter/extract fail (not kept forever).
     await log?.log("script-validate", "repair_start", `Repairing script after attempt ${attempt}`, {
       attempt,
       next_attempt: attempt + 1,
@@ -410,6 +400,13 @@ export async function runGenerateValidationLoop(opts: {
       code_bytes: code.length,
       has_anthropic_key: Boolean((Deno.env.get("ANTHROPIC_API_KEY") || "").trim()),
     });
+    // #region agent log
+    {
+      const payload = {sessionId:"a78821",runId:"post-fix",hypothesisId:"B",location:"script-gen-validate-loop.ts:repair_start",message:"about to call repair LLM",data:{attempt,generatedBy,isSkill:/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy),has_key:Boolean((Deno.env.get("ANTHROPIC_API_KEY")||"").trim()),summary:report.summary},timestamp:Date.now()};
+      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify(payload)}).catch(()=>{});
+      Deno.writeTextFile(new URL("../../../debug-a78821.log", import.meta.url), JSON.stringify(payload) + "\n", { append: true }).catch(()=>{});
+    }
+    // #endregion
     try {
       const repaired = await repairScriptFromValidation({
         previousCode: code,

@@ -221,6 +221,13 @@ export async function callAgent(opts: {
   console.log(
     `[llm] callAgent agent=${opts.agentKey} model=${model} url=${messagesUrl} has_key=true`,
   );
+  // #region agent log
+  {
+    const payload = {sessionId:"a78821",runId:"post-fix",hypothesisId:"D",location:"llm.ts:callAgent",message:"callAgent entered",data:{agentKey:opts.agentKey,model,url:messagesUrl,maxTokens:opts.maxTokens??null,msgCount:opts.messages?.length??0},timestamp:Date.now()};
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify(payload)}).catch(()=>{});
+    Deno.writeTextFile(new URL("../../../debug-a78821.log", import.meta.url), JSON.stringify(payload) + "\n", { append: true }).catch(()=>{});
+  }
+  // #endregion
 
   // Anthropic requires `system` at top-level and only user/assistant in messages.
   const systemParts: string[] = [];

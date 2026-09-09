@@ -58,7 +58,7 @@ BROWSERLESS_TOKEN unset?                  ──yes──► persist assembled c
         │ no
         ▼
 build expectations from generated_by + template meta
-(+ parseNavStepsFromScenario if nav_steps were empty)
+(+ parseNavStepsFromScenario only if nav_steps omitted; explicit [] = Overview stay on page)
         │
         ▼
 loop attempt 1 … max

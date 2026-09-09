@@ -308,7 +308,14 @@ Deno.serve(async (req) => {
           return {
             playwright_code,
             generatedBy: skillGeneratedBy("overview_kpi"),
-            meta: { kpi_labels: kpiLabels, skill: SCRIPT_GEN_SKILL_ID, skill_version: SCRIPT_GEN_SKILL_VERSION },
+            // Explicit [] = stay on landing page. Omitting nav_steps lets validation
+            // parse junk tabs from the description (e.g. "Values on preprod").
+            meta: {
+              kpi_labels: kpiLabels,
+              nav_steps: [],
+              skill: SCRIPT_GEN_SKILL_ID,
+              skill_version: SCRIPT_GEN_SKILL_VERSION,
+            },
           };
         }
         await log.log("script-gen", "template_reject", "overview_kpi assemble invalid", { reason: v.reason }, "warn");
@@ -347,6 +354,13 @@ Deno.serve(async (req) => {
     };
 
     const templated = await tryWorkingTemplates();
+    // #region agent log
+    {
+      const payload = {sessionId:"a78821",runId:"post-fix",hypothesisId:"A",location:"agent-scripts/index.ts:after_templates",message:templated?"template path — gen LLM skipped":"template miss — will call gen LLM",data:{hit:!!templated,generated_by:templated?.generatedBy||null,title:scenario?.title||null,report_name:scenario?.reports?.name||null,target},timestamp:Date.now()};
+      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify(payload)}).catch(()=>{});
+      Deno.writeTextFile(new URL("../../../../debug-a78821.log", import.meta.url), JSON.stringify(payload) + "\n", { append: true }).catch(()=>{});
+    }
+    // #endregion
     if (templated) {
       const validated = await runGenerateValidationLoop({
         req,
@@ -1254,6 +1268,9 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
       target,
       report_url: targetUrl,
     });
+    // #region agent log
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify({sessionId:"a78821",runId:"llm-call-check",hypothesisId:"A",location:"agent-scripts/index.ts:llm_start",message:"entering gen callAgent",data:{target,report_url:targetUrl,has_key:Boolean((Deno.env.get("ANTHROPIC_API_KEY")||"").trim())},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const raw = await callAgent({ agentKey: "scripts", messages: [{ role: "system", content: sys }, { role: "user", content: user }], json: true });
     const parsed = tryParseJson(raw) || {};
     await log.log("script-gen", "llm_response", "LLM agent returned", {
