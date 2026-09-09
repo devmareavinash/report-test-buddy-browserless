@@ -40,12 +40,14 @@ services:
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
       LOVABLE_API_KEY: ${LOVABLE_API_KEY:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_BASE_URL: ${ANTHROPIC_BASE_URL:-https://chat.int.bayer.com/anthropic}
+      CLAUDE_MODEL: ${CLAUDE_MODEL:-claude-sonnet-4.5}
       # Bypass Skyhigh for compose + host sidecar. Do not inherit .env NO_PROXY alone —
       # host.docker.internal must be listed or Deno proxies SSO and fails.
       HTTP_PROXY: ${HTTP_PROXY:-http://10.185.190.10:8080}
       HTTPS_PROXY: ${HTTPS_PROXY:-http://10.185.190.10:8080}
-      NO_PROXY: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal
-      no_proxy: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal
+      NO_PROXY: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal,chat.int.bayer.com
+      no_proxy: 127.0.0.1,localhost,browserless,snowflake-sso,backend,host.docker.internal,chat.int.bayer.com
       # Force compose-network hostnames (ignore Codespaces/local .env overrides)
       BROWSERLESS_HOST: http://browserless:3000
       BROWSERLESS_TOKEN: ${BROWSERLESS_TOKEN:-local-dev-token}

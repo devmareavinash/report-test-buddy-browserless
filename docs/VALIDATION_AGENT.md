@@ -65,17 +65,22 @@ loop attempt 1 … max
    1. playwright-runtime, first filter combo only
    2. analyzeScriptRun (runtime / nav / filters / extract)
    3. PASS → persist that code, stop
-   4. FAIL and attempts remain → repair LLM → next attempt
-   5. FAIL and no attempts left → persist last code anyway
+   4. FAIL Browserless 500 / Chromium launch crash → retry same code once (no LLM). Still crash → persist assembled, stop
+   5. FAIL (script/nav/extract) and attempts remain → repair LLM → next attempt
+   6. FAIL and no attempts left → persist last code anyway
 ```
 
 **One combo:** `executeScriptValidation` sends only `filterCombinations[0]` so Generate stays bounded. Full combo lists are for Run headless / orchestrate.
 
 **Repair:** `callAgent({ agentKey: "scripts" })` with `SCRIPT_GEN_SKILL_LLM_BLOCK` plus `formatValidationForAgent` (hints + previous script). Expects JSON `{ "playwright_code": "..." }`. Empty / no `export default` keeps the previous code.
 
+**Magentic fetch:** `_shared/llm.ts` uses a **240s** timeout (override `ANTHROPIC_FETCH_TIMEOUT_MS`, min 30s) and retries **twice** on timeout / fetch failed with backoff. Deno honors `HTTP_PROXY` / `HTTPS_PROXY` / `NO_PROXY` from `scripts/dev-backend.ps1` (corp Skyhigh + `DENO_TLS_CA_STORE=system` + `--unsafely-ignore-certificate-errors`). `load-env.ps1` puts Magentic (`chat.int.bayer.com`) in `NO_PROXY` so the repair POST matches Python hello (direct to the internal gateway). Assembled skill templates still call repair on extract/nav/filter fail — they are not skipped. The repair prompt sends a head+tail script excerpt (~16k chars), not the full ~60k file.
+
 **Tags after a successful repair:** `generated_by` becomes `skill:repair:<failedAttempt>` (for example attempt 1 fails, repair writes `skill:repair:1`).
 
-**Cap:** default **5** attempts (`SCRIPT_VALIDATE_MAX_ATTEMPTS` constant). Env override is clamped **1–10**. The loop stops early on pass.
+**Cap:** default **5** attempts (`SCRIPT_VALIDATE_MAX_ATTEMPTS` constant). Env override is clamped **1–10**. The loop stops early on pass, and also stops if the repair LLM throws (network `fetch failed`, missing `ANTHROPIC_API_KEY`, gateway timeout) so Generate does not re-run the same unfixed script on Browserless.
+
+**Launch crash is not a script bug.** If `analyzeScriptRun` reports `browserless 500` / `Chromium failed to launch` / WS-endpoint timeout, the loop retries Browserless **once** with the same assembled code and **does not** call Magentic/Claude. A second launch crash persists the template and ends. Repair cannot fix a crashed or stuck container.
 
 ---
 
@@ -94,7 +99,7 @@ Shared checks (all kinds):
 | Check | Pass when |
 |-------|-----------|
 | **runtime** | Payload is present, `ok !== false`, and `error` is not `BROWSERLESS_TIMEOUT` / other runtime error. Runtime fail skips nav/filter/extract and goes straight to repair hints (hangs, login, `NAV_STEPS`). |
-| **navigation** | Each expected `NAV_STEPS` item appears in `navigation` as clicked (`clicked === true`, or no `error` plus `via`/`clicked`). If a time grain is expected, it must be clicked in `navigation` **or** `time_grain.clicked` / `time_grain.grain` is set. Empty nav list → pass (“No nav steps required”), after optional parse from the scenario description. |
+| **navigation** | Each expected `NAV_STEPS` item appears in `navigation` as clicked (`clicked === true`, or no `error` plus `via`/`clicked`). If a time grain is expected, it must be clicked in `navigation` **or** `time_grain.clicked` / `time_grain.grain` is set. Explicit `meta.nav_steps: []` (Overview KPI landing page) → pass (“No nav steps required”). Parse from the scenario description only when `nav_steps` is omitted. Chart/grid scripts return `{ navigation, results: { combo } }` — `pickResultRoot` keeps that parent so `navigation` is not dropped when reading the first combo. |
 | **filters** | Each key from the **first** combo has `filters_applied[key].ok` or `.clicked`. Empty keys → pass. |
 
 Overall pass = every check in the report passes.

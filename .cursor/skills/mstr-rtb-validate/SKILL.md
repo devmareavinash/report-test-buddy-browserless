@@ -28,14 +28,16 @@ Runs only from `agent-scripts` after template assemble **or** LLM fallback. Not 
 ```
 assemble / LLM
   → skip if SCRIPT_VALIDATE_ON_GENERATE=false or BROWSERLESS_TOKEN unset
-  → buildExpectations (+ parseNavStepsFromScenario if nav empty)
+  → buildExpectations (+ parseNavStepsFromScenario only if meta.nav_steps omitted; explicit [] = stay on page)
   → loop: playwright-runtime (first combo only) → analyzeScriptRun
   → pass: persist that code
-  → fail: repair LLM → retry
+  → fail Browserless 500 / Chromium launch crash: retry Browserless once (same code, no LLM); if still crash, persist assembled and stop
+  → fail (script/nav/extract): repair LLM (240s fetch + 2 retries; not skipped for extract) → retry
+  → repair throw (fetch failed / missing key / gateway after retries): stop loop, keep last code
   → always persist last code (even if still failing)
 ```
 
-Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLOCK`** from `script-gen-skill.ts`, plus `formatValidationForAgent`. JSON `{ "playwright_code": "..." }`. Successful repair tags `generated_by` as `skill:repair:<attempt>`.
+Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLOCK`** from `script-gen-skill.ts`, plus `formatValidationForAgent` (head+tail excerpt, not the full 60k script). JSON `{ "playwright_code": "..." }`. Successful repair tags `generated_by` as `skill:repair:<attempt>`. Assembled `skill:overview_kpi` / `chart_show_data` / grid templates still call repair on extract fail — do not add a keep-template skip.
 
 ## Env knobs
 
@@ -45,6 +47,7 @@ Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLO
 | `SCRIPT_VALIDATE_MAX_ATTEMPTS` | Clamped 1–10; code default **5** |
 | `BROWSERLESS_TOKEN` | Unset → skip (script still saved) |
 | `LOCAL_FUNCTIONS_URL` | POST target for `/playwright-runtime` |
+| `ANTHROPIC_FETCH_TIMEOUT_MS` | Magentic/Anthropic fetch timeout. Default **240000**. Retries twice on timeout / fetch failed. |
 
 `.env.example` ships `true` / `5`. Deno reads `.env` at start — **restart `scripts/dev-backend.ps1`** after changes.
 
@@ -57,6 +60,8 @@ Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLO
 | grid (`grid` in kind) | `grid` | ≥2 cols + ≥1 row; reject KPI chrome / Line-copy |
 
 Also: runtime `ok`, each `NAV_STEPS` clicked, time grain if expected, each first-combo filter `ok` or `clicked`. Shape only — not main-vs-reference numbers.
+
+`analyzeScriptRun` must keep the parent `{ navigation, results }` object. Unwrapping `results` first drops `navDebug` and falsely fails navigation (`navDebug=[]`) even when tabs were clicked. Combo extract/filters still come from the first `results` entry.
 
 ## App wiring
 

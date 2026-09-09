@@ -1,9 +1,13 @@
 // Heal a Playwright script given the current code + runtime error + screenshot.
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/auth.ts";
-import { getSupabase, tryParseJson } from "../_shared/llm.ts";
-
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY")!;
+import {
+  anthropicMessagesUrl,
+  fetchAnthropicMessages,
+  getSupabase,
+  resolveClaudeModel,
+  tryParseJson,
+} from "../_shared/llm.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -12,6 +16,9 @@ Deno.serve(async (req) => {
   try {
     const { scenario_id, code = "", error = "", run_result = null, screenshot_b64 = null, screenshot_url = null, playwright_version = "1.47.0", prior_attempts = [] } = await req.json();
     if (!scenario_id) throw new Error("scenario_id required");
+
+    const apiKey = (Deno.env.get("ANTHROPIC_API_KEY") || "").trim();
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY");
 
     const sb = getSupabase();
     const { data: scenario } = await sb
@@ -78,17 +85,20 @@ ${code}
       imageBlock = { type: "image", source: { type: "url", url: screenshot_url } };
     }
     if (imageBlock) userContent.push(imageBlock);
-    const imageUrl = imageBlock ? true : false;
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const messagesUrl = anthropicMessagesUrl();
+    const model = resolveClaudeModel();
+    console.log(`[llm] agent-heal-script model=${model} url=${messagesUrl}`);
+
+    const resp = await fetchAnthropicMessages(messagesUrl, {
       method: "POST",
       headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
+        "x-api-key": apiKey,
         "anthropic-version": "2023-06-01",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
+        model,
         max_tokens: 4096,
         system: `${sys}\n\nRespond with a single valid JSON object only. No prose, no markdown fences.`,
         messages: [{ role: "user", content: userContent }],
@@ -96,7 +106,7 @@ ${code}
       }),
     });
 
-    if (!resp.ok) throw new Error(`Anthropic ${resp.status}: ${await resp.text()}`);
+    if (!resp.ok) throw new Error(`Anthropic ${resp.status} (${messagesUrl}): ${await resp.text()}`);
     const data = await resp.json();
     const raw = (data.content || []).map((c: any) => c?.text || "").join("") || "";
     const parsed = tryParseJson(raw) || {};
@@ -106,7 +116,7 @@ ${code}
         .replace(/\s*```\s*$/i, "");
     }
 
-    return new Response(JSON.stringify({ proposal: parsed, used_screenshot: !!imageUrl }), {
+    return new Response(JSON.stringify({ proposal: parsed, used_screenshot: !!imageBlock }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {

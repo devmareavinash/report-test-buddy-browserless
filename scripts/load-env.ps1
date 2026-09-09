@@ -20,14 +20,20 @@ Get-Content $EnvFile | ForEach-Object {
   }
 }
 
-# Keep local SSO sidecar calls off the corporate proxy (Bayer Skyhigh blocks localhost).
-$localNoProxy = "127.0.0.1,localhost"
+# Keep local SSO sidecar + Magentic off the corporate proxy.
+# Python hello reaches chat.int.bayer.com directly; Skyhigh was aborting large Deno repair POSTs.
+$requiredNoProxy = @("127.0.0.1", "localhost", "chat.int.bayer.com")
+$parts = @()
 if ($env:NO_PROXY) {
-  if ($env:NO_PROXY -notlike "*127.0.0.1*") {
-    $localNoProxy = "$env:NO_PROXY,$localNoProxy"
-  } else {
-    $localNoProxy = $env:NO_PROXY
-  }
+  $parts = @($env:NO_PROXY.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 }
+foreach ($hostName in $requiredNoProxy) {
+  $already = $false
+  foreach ($p in $parts) {
+    if ($p -ieq $hostName) { $already = $true; break }
+  }
+  if (-not $already) { $parts += $hostName }
+}
+$localNoProxy = ($parts -join ",")
 [Environment]::SetEnvironmentVariable("NO_PROXY", $localNoProxy, "Process")
 [Environment]::SetEnvironmentVariable("no_proxy", $localNoProxy, "Process")

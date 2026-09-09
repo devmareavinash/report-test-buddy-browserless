@@ -27,6 +27,7 @@ export default defineConfig(() => ({
         "**/dist/**",
         "**/__pycache__/**",
         "**/*.pyc",
+        "**/tmp-*.ts",
       ],
     },
     proxy: {

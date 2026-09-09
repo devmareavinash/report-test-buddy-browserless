@@ -32,12 +32,13 @@ function asObj(v: unknown): Record<string, any> | null {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, any>) : null;
 }
 
-function pickResultRoot(payload: any): any {
+export function pickResultRoot(payload: any): any {
   if (!payload || typeof payload !== "object") return null;
+  // Do not unwrap `.results` here — chart/grid scripts return
+  // `{ navigation: navDebug, results: { combo: {...} } }`. Dropping the parent
+  // makes analyzeScriptRun see navDebug=[] even when tabs were clicked.
   const candidates = [
-    payload?.extracted?.result?.results,
     payload?.extracted?.result,
-    payload?.result?.results,
     payload?.result,
     payload?.extracted,
     payload,
@@ -45,21 +46,24 @@ function pickResultRoot(payload: any): any {
   for (const c of candidates) {
     const o = asObj(c);
     if (!o) continue;
-    if (o.results && typeof o.results === "object") return o.results;
     if (o.navigation || o.filters_applied || o.tableData || o.grid || o.results) return o;
   }
   return asObj(payload?.extracted?.result) || asObj(payload?.extracted) || null;
 }
 
-function firstComboBlock(root: any): any {
+export function firstComboBlock(root: any): any {
   if (!root) return null;
-  if (root.filters_applied || root.tableData || root.grid || root.navigation) return root;
-  const results = asObj(root.results) || asObj(root);
-  if (!results) return null;
-  const keys = Object.keys(results).filter((k) => !k.startsWith("__") && k !== "navigation");
-  if (!keys.length) return results;
-  const first = results[keys[0]];
-  return asObj(first) || results;
+  // Combo row already (do not treat sibling `navigation` as the extract block).
+  if (root.filters_applied || root.tableData || root.grid) return root;
+  const nested = asObj(root.results);
+  if (nested) {
+    const keys = Object.keys(nested).filter((k) => !k.startsWith("__") && k !== "navigation");
+    if (keys.length) {
+      const first = asObj(nested[keys[0]]);
+      if (first) return first;
+    }
+  }
+  return root;
 }
 
 function norm(s: string) {
@@ -123,7 +127,7 @@ function hasGrid(block: any, gridTitle?: string, kpiLabel?: string): boolean {
 function hasKpis(block: any, labels: string[]): boolean {
   if (!block || typeof block !== "object") return false;
   const keys = labels.length ? labels : Object.keys(block).filter((k) =>
-    !/^(filters_applied|navigation|ok|error|via|url|extract_via|time_grain|chart_title)$/i.test(k)
+    !/^(filters_applied|navigation|ok|error|via|url|extract_via|time_grain|chart_title|extract_debug)$/i.test(k)
   );
   let hits = 0;
   for (const k of keys) {
@@ -131,6 +135,7 @@ function hasKpis(block: any, labels: string[]): boolean {
     if (v == null) continue;
     if (typeof v === "number" && Number.isFinite(v)) hits++;
     else if (typeof v === "string" && /^-?[\d,.]+%?$/.test(v.trim())) hits++;
+    else if (typeof v === "string" && /(?:\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}|[A-Za-z]{3,9}\.?\s+\d{1,2},?\s+\d{2,4}|\d{1,2}\s+[A-Za-z]{3,9},?\s+\d{2,4})/i.test(v.trim())) hits++;
   }
   return hits >= Math.min(1, keys.length || 1);
 }
@@ -148,7 +153,9 @@ export function buildExpectations(opts: {
     : [];
   const timeGrain = (meta.time_grain as string) || null;
   const chartTitle = (meta.chart_title as string) || "";
-  const gridTitle = (meta.grid_title as string) || "Geography Details";
+  const gridTitle = kind.includes("grid") || kind === "geography_grid"
+    ? ((meta.grid_title as string) || "Geography Details")
+    : String(meta.grid_title || "");
 
   let extract: ScriptExpectations["extract"] = "kpi";
   if (kind.includes("chart") || kind === "chart_show_data") extract = "chart_table";
@@ -246,7 +253,7 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
     extractPass = hasChartTable(block, expectations.chartTitle);
     extractDetail = extractPass
       ? "Multi-column chart Show Data table present"
-      : `Missing chart tableData (title=${expectations.chartTitle}); got keys=${Object.keys(block).join(",")}; show_data_error=${block.show_data_error || ""}`;
+      : `Missing chart tableData (title=${expectations.chartTitle}); got keys=${Object.keys(block).join(",")}; show_data_error=${block.show_data_error || ""}; show_data_debug=${JSON.stringify(block.show_data_debug || {}).slice(0, 900)}`;
   } else if (expectations.extract === "grid") {
     extractPass = hasGrid(block, expectations.gridTitle);
     const chrome = looksLikeKpiChromeGrid(block?.grid || block?.tableData);
@@ -259,7 +266,7 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
     extractPass = hasKpis(block, expectations.kpiLabels || []);
     extractDetail = extractPass
       ? "KPI values present"
-      : `Missing KPI values; keys=${Object.keys(block).join(",")}`;
+      : `Missing KPI values; keys=${Object.keys(block).join(",")}; extract_debug=${JSON.stringify(block.extract_debug || {}).slice(0, 900)}`;
   }
   checks.push({ name: "extraction", pass: extractPass, detail: extractDetail });
 
@@ -297,13 +304,39 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
   };
 }
 
+/** Keep constants (head) and extract helpers (tail). Full ~60k scripts time out Magentic. */
+const REPAIR_SCRIPT_EXCERPT_CHARS = 16_000;
+
+export function excerptScriptForRepair(code: string, maxChars = REPAIR_SCRIPT_EXCERPT_CHARS): {
+  text: string;
+  truncated: boolean;
+  original_bytes: number;
+} {
+  const original = code || "";
+  if (original.length <= maxChars) {
+    return { text: original, truncated: false, original_bytes: original.length };
+  }
+  const marker = `\n\n/* … truncated ${original.length - maxChars} chars (head+tail kept for Magentic) … */\n\n`;
+  const budget = Math.max(1_000, maxChars - marker.length);
+  const head = Math.floor(budget * 0.4);
+  const tail = budget - head;
+  return {
+    text: `${original.slice(0, head)}${marker}${original.slice(-tail)}`,
+    truncated: true,
+    original_bytes: original.length,
+  };
+}
+
 export function formatValidationForAgent(report: ValidationReport, previousCode: string): string {
+  const excerpt = excerptScriptForRepair(previousCode);
   return [
     report.repairHints,
     "",
-    "Previous script (fix this — do not ignore NAV_STEPS / extract path):",
+    excerpt.truncated
+      ? `Previous script excerpt (${excerpt.original_bytes} chars; head+tail only — return the COMPLETE fixed script):`
+      : "Previous script (fix this — do not ignore NAV_STEPS / extract path):",
     "```javascript",
-    previousCode.slice(0, 24000),
+    excerpt.text,
     "```",
     "",
     "Return ONLY the corrected complete Playwright script as JSON:",

@@ -109,6 +109,14 @@ Deno.serve(async (req) => {
     const scenario_id: string = body.scenario_id;
     const target: "main" | "reference" = body.target === "reference" ? "reference" : "main";
     const isReferenceTarget = target === "reference";
+    // Campaign bulk: skip_validate / validate_max_attempts for faster gen + Cursor Debug.
+    const forceSkipValidate = body.skip_validate === true;
+    const forceMaxAttempts = Number.isFinite(Number(body.validate_max_attempts))
+      ? Number(body.validate_max_attempts)
+      : undefined;
+    // #region agent log
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "B", location: "agent-scripts/index.ts:body", message: "agent-scripts request flags", data: { target, skip_validate: forceSkipValidate, validate_max_attempts: forceMaxAttempts ?? null, scenario_id }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
     if (!scenario_id || typeof scenario_id !== "string") {
       return new Response(JSON.stringify({ error: "scenario_id is required" }), {
         status: 400,
@@ -332,6 +340,9 @@ Deno.serve(async (req) => {
       }
 
       await log.log("script-gen", "template_miss", "No working template matched — falling back to LLM");
+      // #region agent log
+      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "A", location: "agent-scripts/index.ts:template_miss", message: "template miss falling back to LLM", data: { report_name: scenario?.reports?.name || null, title: scenario?.title || null, target }, timestamp: Date.now() }) }).catch(() => {});
+      // #endregion
       return null;
     };
 
@@ -351,6 +362,8 @@ Deno.serve(async (req) => {
           filters: c.filters || {},
         })),
         log,
+        forceSkip: forceSkipValidate,
+        forceMaxAttempts,
       });
       const inserted = await persistGeneratedScript(sb, {
         scenario_id,
@@ -1403,6 +1416,8 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
         filters: c.filters || {},
       })),
       log,
+      forceSkip: forceSkipValidate,
+      forceMaxAttempts,
     });
 
     const inserted = await persistGeneratedScript(sb, {

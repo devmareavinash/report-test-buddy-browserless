@@ -9,9 +9,10 @@
  * - POST to http://localhost:3000/chromium/function with { code, context? }
  *
  * Chart extraction flow:
- * - Navigate footer tab Performance, then clickByText(TIME_GRAIN) (Monthly/Quarterly) — same as proven Monthly scripts
- * - Apply filters (Area/Region/Territory then others), dismiss MSTR error dialogs, re-assert grain
- * - openShowData(chartTitle) → waitForShowDataPopup → extractShowDataTable → closeShowDataPopup
+ * - Navigate NAV_STEPS (Performance footer, then Activity page tab), record navDebug
+ * - Apply TIME_GRAIN (Weekly/Monthly/Quarterly) after tabs, then filters, then Show Data
+ * - Return { navigation: navDebug, results } and copy navigation onto each combo row
+ * - openShowData(chartTitle + title variants) → waitForShowDataPopup → extractShowDataTable
  * - NEVER scrape canvas/SVG — always use Show Data popup table extraction
  *
  * NOTE: This reference retains Puppeteer-compatible page APIs (page.type, page.waitForNavigation,
@@ -186,13 +187,15 @@ export default async ({ page }) => {
   };
 
   const evalAcrossFrames = async (fn, arg) => {
+    let lastErr = { error: 'not found in any accessible frame' };
     for (const frame of page.frames()) {
       try {
         const result = await frame.evaluate(fn, arg);
         if (result && !result.error) return { frame, result };
+        if (result && result.error) lastErr = result;
       } catch (_) {}
     }
-    return { frame: null, result: { error: 'not found in any accessible frame' } };
+    return { frame: null, result: lastErr };
   };
 
   const evalInFrame = async (frame, fn, arg) => {
@@ -479,6 +482,11 @@ export default async ({ page }) => {
           const target = norm(label);
           const matchText = (direct, inner) => {
             if (direct === target || inner === target) return true;
+            // Short tab labels: do not match longer titles ("Overall Performance",
+            // "Activity Trend", "Performance - Activity").
+            if (target.length <= 18) {
+              return direct.startsWith(target) && direct.length <= target.length + 4;
+            }
             if (inner.includes(target) && inner.length <= target.length + 80) return true;
             if (target.includes(inner) && inner.length >= 4) return true;
             if (target.length >= 10 && inner.includes(target.slice(0, Math.min(24, target.length)))) return true;
@@ -544,9 +552,13 @@ export default async ({ page }) => {
       for (const root of roots) {
         for (const el of Array.from(root.querySelectorAll('*'))) {
           if (!isVisible(el)) continue;
-          const direct = getDirectText(el);
+          const direct = norm(getDirectText(el));
           const inner = norm(el.innerText || '');
-          if ((direct && norm(direct) === target) || inner === target || (inner.includes(target) && inner.length <= target.length + 24)) {
+          const shortTab = target.length <= 18;
+          const hit = (direct && direct === target) || inner === target
+            || (!shortTab && inner.includes(target) && inner.length <= target.length + 24)
+            || (shortTab && direct && direct.startsWith(target) && direct.length <= target.length + 4);
+          if (hit) {
             const r = el.getBoundingClientRect();
             exact.push({ el, area: r.width * r.height });
           }
@@ -577,33 +589,65 @@ export default async ({ page }) => {
     }
     return r || { error: 'Navigation failed: ' + text };
   };
-const findChartWidget = async (chartTitleText) => {
-    const { frame, result } = await evalAcrossFrames((titleText) => {
-      const isVisible = el => { const r = el.getBoundingClientRect(); if (r.width === 0 || r.height === 0) return false; const st = getComputedStyle(el); return st.visibility !== 'hidden' && st.display !== 'none'; };
-      function getDirectText(el) { let t = ''; for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) t += n.textContent; return t.trim(); }
-      const target = titleText.toLowerCase();
-      let titleEl = null, titleArea = Infinity;
-      for (const el of Array.from(document.querySelectorAll('*'))) {
-        if (!isVisible(el)) continue;
-        if (!getDirectText(el).toLowerCase().includes(target)) continue;
-        const r = el.getBoundingClientRect(); const area = r.width * r.height;
-        if (area < titleArea) { titleEl = el; titleArea = area; }
-      }
-      if (!titleEl) return { error: 'chart title not found: ' + titleText };
-      const tr = titleEl.getBoundingClientRect();
-      let best = null, bestDist = Infinity, bestRect = null;
-      for (const el of Array.from(document.querySelectorAll('canvas, svg, [class*="highcharts" i], [class*="mstrmojo-graph" i], [class*="chart-container" i]'))) {
-        if (!isVisible(el)) continue;
-        const r = el.getBoundingClientRect();
-        if (r.width < 100 || r.height < 50 || r.top < tr.bottom - 10) continue;
-        const dist = (r.top - tr.bottom) + Math.abs(r.left - tr.left);
-        if (dist < bestDist) { bestDist = dist; best = el; bestRect = r; }
-      }
-      if (!best) return { error: 'chart element not found below title' };
-      return { top: bestRect.top, left: bestRect.left, width: bestRect.width, height: bestRect.height };
-    }, chartTitleText);
-    if (result.error) return { frame: null, rect: null, error: result.error };
-    return { frame, rect: result };
+  const chartTitleVariants = (titleText) => {
+    const t = String(titleText || '').replace(/\s+/g, ' ').trim();
+    if (!t) return [];
+    const out = [t];
+    const noSuffix = t.replace(/\s+(graph|chart|plot)$/i, '').trim();
+    if (noSuffix && noSuffix !== t) out.push(noSuffix);
+    if (!/\b(graph|chart|plot)\b/i.test(t)) {
+      out.push(t + ' Graph');
+      out.push(t + ' Chart');
+    }
+    if (/\btrend$/i.test(t) && !/\btrends$/i.test(t)) out.push(t + 's');
+    if (/\btrends$/i.test(t)) out.push(t.replace(/s$/i, ''));
+    return [...new Set(out.filter(Boolean))];
+  };
+
+  const locateChartByTitle = (titleText) => {
+    const isVisible = el => { const r = el.getBoundingClientRect(); if (r.width === 0 || r.height === 0) return false; const st = getComputedStyle(el); return st.visibility !== 'hidden' && st.display !== 'none'; };
+    function getDirectText(el) { let t = ''; for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) t += n.textContent; return t.trim(); }
+    const target = String(titleText || '').toLowerCase();
+    let titleEl = null, titleArea = Infinity;
+    for (const el of Array.from(document.querySelectorAll('*'))) {
+      if (!isVisible(el)) continue;
+      const direct = getDirectText(el).toLowerCase();
+      const inner = (el.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+      if (!direct.includes(target) && !(inner.includes(target) && inner.length <= target.length + 48)) continue;
+      const r = el.getBoundingClientRect(); const area = r.width * r.height;
+      if (area < titleArea) { titleEl = el; titleArea = area; }
+    }
+    if (!titleEl) return { error: 'chart title not found: ' + titleText };
+    const tr = titleEl.getBoundingClientRect();
+    let best = null, bestDist = Infinity, bestRect = null;
+    for (const el of Array.from(document.querySelectorAll('canvas, svg, [class*="highcharts" i], [class*="mstrmojo-graph" i], [class*="chart-container" i], [class*="Graph" i]'))) {
+      if (!isVisible(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < 100 || r.height < 50 || r.top < tr.bottom - 10) continue;
+      const dist = (r.top - tr.bottom) + Math.abs(r.left - tr.left);
+      if (dist < bestDist) { bestDist = dist; best = el; bestRect = r; }
+    }
+    if (!best) return { error: 'chart element not found below title' };
+    return { top: bestRect.top, left: bestRect.left, width: bestRect.width, height: bestRect.height };
+  };
+
+  const findChartWidget = async (chartTitleText) => {
+    const titles = chartTitleVariants(chartTitleText);
+    if (!titles.length) titles.push(String(chartTitleText || 'Chart'));
+    let lastError = 'chart title not found: ' + chartTitleText;
+    for (const titleText of titles) {
+      const { frame, result } = await evalAcrossFrames(locateChartByTitle, titleText);
+      if (result && !result.error && frame) return { frame, rect: result };
+      if (result && result.error) lastError = result.error;
+    }
+    for (const titleText of titles) {
+      try {
+        const result = await page.evaluate(locateChartByTitle, titleText);
+        if (result && !result.error) return { frame: page.mainFrame(), rect: result };
+        if (result && result.error) lastError = result.error;
+      } catch (_) {}
+    }
+    return { frame: null, rect: null, error: lastError };
   };
 
   const getFrameViewportOffset = async (frame) => {
@@ -791,20 +835,47 @@ const findChartWidget = async (chartTitleText) => {
         // Fallback: largest multi-col table on page that looks chart-like
         const tables = Array.from(document.querySelectorAll('table')).filter(t => scoreTable(t) > 0);
         tables.sort((a, b) => scoreTable(b) - scoreTable(a));
-        if (!tables.length) return { error: 'no multi-column Show Data table' };
+        if (!tables.length) {
+          return {
+            error: 'no multi-column Show Data table',
+            popupCount: candidates.length,
+            bestScore,
+            visibleTables: document.querySelectorAll('table').length,
+            roleRows: document.querySelectorAll('[role="row"]').length,
+          };
+        }
         bestTable = tables[0];
         best = bestTable.closest(POPUP_SEL) || bestTable;
         bestScore = scoreTable(bestTable);
       }
-      if (bestScore < 20) return { error: 'Show Data table too small (likely KPI, not chart)' };
-      const cols = bestTable && bestTable.rows[0] ? bestTable.rows[0].cells.length : 0;
-      const rows = bestTable ? bestTable.rows.length : 0;
+      if (bestScore < 20) {
+        return {
+          error: 'Show Data table too small (likely KPI, not chart)',
+          popupCount: candidates.length,
+          bestScore,
+          visibleTables: document.querySelectorAll('table').length,
+        };
+      }
+      let cols = bestTable && bestTable.rows[0] ? bestTable.rows[0].cells.length : 0;
+      let rows = bestTable ? bestTable.rows.length : 0;
+      let via = bestTable ? 'html-table' : 'aria-grid';
+      // ARIA Show Data grids set bestTable=null; count role=rows so waitForShowDataPopup
+      // does not treat a ready 634x494 popup as empty (rowCount=0/colCount=0).
+      if (!bestTable && best) {
+        const ariaRows = Array.from(best.querySelectorAll('[role="row"]'));
+        rows = ariaRows.length;
+        const first = ariaRows[0];
+        cols = first
+          ? first.querySelectorAll('[role="columnheader"], [role="gridcell"], [role="cell"], td, [class*="cell" i]').length
+          : 0;
+      }
       const tr = (bestTable || best).getBoundingClientRect();
       return {
         ready: true,
         rowCount: rows,
         colCount: cols,
         score: bestScore,
+        via,
         top: tr.top,
         left: tr.left,
         width: tr.width,
@@ -815,15 +886,17 @@ const findChartWidget = async (chartTitleText) => {
 
   const waitForShowDataPopup = async (maxMs = 20000) => {
     const start = Date.now();
+    let last = null;
     while (Date.now() - start < maxMs) {
       const { result } = await findShowDataPopupContainer();
-      if (result && result.ready && (result.colCount >= 2 || result.rowCount >= 3)) {
+      last = result;
+      if (result && result.ready && (result.colCount >= 2 || result.rowCount >= 3 || (result.via === 'aria-grid' && result.score >= 20))) {
         await sleep(300);
         return result;
       }
       await sleep(250);
     }
-    return { error: 'Show Data popup timed out (no multi-column chart table)' };
+    return { error: 'Show Data popup timed out (no multi-column chart table)', last };
   };
 
   const extractShowDataTable = async () => {
@@ -992,7 +1065,9 @@ const findChartWidget = async (chartTitleText) => {
           let titleRect = null, titleArea = Infinity;
           for (const el of Array.from(document.querySelectorAll('*'))) {
             if (!isVisible(el)) continue;
-            if (norm(getDirectText(el)) !== title) continue;
+            const d = norm(getDirectText(el));
+            const inner = norm(el.innerText || '');
+            if (d !== title && !d.includes(title) && !(inner.includes(title) && inner.length <= title.length + 48)) continue;
             const r = el.getBoundingClientRect();
             const area = r.width * r.height;
             if (area < titleArea) { titleArea = area; titleRect = r; }
@@ -1090,11 +1165,19 @@ const findChartWidget = async (chartTitleText) => {
     return r;
   };
 
+  const navPrefer = (step) => {
+    const s = String(step || '').trim();
+    if (/^(performance|overview|geography)$/i.test(s)) return { preferBottom: true };
+    if (/^(activity|trend)$/i.test(s)) return { preferMiddle: true };
+    return { preferBottom: true };
+  };
+
   await waitForLoadingToFinish();
   const dossierReady = await waitForDossierReady();
   const navDebug = [{ dossier_ready: dossierReady }];
   for (const step of NAV_STEPS) {
-    let r = await clickByText(step, { openers: NAV_OPENERS, preferBottom: true });
+    const pref = navPrefer(step);
+    let r = await clickByText(step, { openers: NAV_OPENERS, ...pref });
     if (r && r.error) {
       r = await clickByText(step, { openers: NAV_OPENERS });
     }
@@ -1102,8 +1185,9 @@ const findChartWidget = async (chartTitleText) => {
     await waitForLoadingToFinish();
   }
   await waitForDashboard();
-  // Grain once after filters — skipping pre-filter grain saves a full reload
-  // (reference/pre-prod was exceeding Browserless TIMEOUT with double grain + long waits).
+  // Grain belongs with navigation (Performance → Activity → Quarterly), before filters.
+  const grainNav = await applyTimeGrain();
+  navDebug.push({ step: TIME_GRAIN, ...(grainNav || {}) });
 
   const filterCombinations = (typeof __filterCombinations !== 'undefined' && Array.isArray(__filterCombinations) && __filterCombinations.length > 0)
     ? __filterCombinations : [];
@@ -1143,6 +1227,11 @@ const findChartWidget = async (chartTitleText) => {
       attempt = await tryExtract(15000);
     }
 
+    row.show_data_debug = {
+      open: attempt.openResult || null,
+      wait: attempt.waitResult || null,
+      tableError: (attempt.tableData && attempt.tableData.error) || null,
+    };
     if (!isGoodChartTable(attempt.tableData)) {
       row.show_data_error = (attempt.tableData && attempt.tableData.error)
         || (attempt.openResult && attempt.openResult.error)
@@ -1160,7 +1249,7 @@ const findChartWidget = async (chartTitleText) => {
 
   if (filterCombinations.length === 0) {
     await waitForDashboard();
-    const row = await extractChartAfterGrain({});
+    const row = await extractChartAfterGrain({ navigation: navDebug });
     return { navigation: navDebug, ...row };
   }
 
@@ -1172,7 +1261,8 @@ const findChartWidget = async (chartTitleText) => {
       await waitForDossierReady();
       await dismissGenericErrorDialog();
       for (const step of NAV_STEPS) {
-        let r = await clickByText(step, { openers: NAV_OPENERS, preferBottom: true });
+        const pref = navPrefer(step);
+        let r = await clickByText(step, { openers: NAV_OPENERS, ...pref });
         if (r && r.error) r = await clickByText(step, { openers: NAV_OPENERS });
       }
       await waitForDashboard();
@@ -1198,7 +1288,7 @@ const findChartWidget = async (chartTitleText) => {
     await dismissGenericErrorDialog();
     await closeAnyOpenDropdown();
     await waitForLoadingToFinish();
-    const row = await extractChartAfterGrain({ filters_applied: debug });
+    const row = await extractChartAfterGrain({ filters_applied: debug, navigation: navDebug });
     results[label] = row;
   }
   return { navigation: navDebug, results };

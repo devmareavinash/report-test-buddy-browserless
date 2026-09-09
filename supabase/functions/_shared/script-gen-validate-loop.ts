@@ -3,11 +3,18 @@
  * feed failures back to the scripts LLM for repair (max attempts).
  */
 
-import { callAgent, tryParseJson } from "./llm.ts";
+import {
+  anthropicFetchTimeoutMs,
+  anthropicMessagesUrl,
+  callAgent,
+  tryParseJson,
+} from "./llm.ts";
 import {
   analyzeScriptRun,
   buildExpectations,
+  firstComboBlock,
   formatValidationForAgent,
+  pickResultRoot,
   type ScriptExpectations,
   type ValidationReport,
 } from "./script-validation.ts";
@@ -15,6 +22,17 @@ import { SCRIPT_GEN_SKILL_LLM_BLOCK } from "./script-gen-skill.ts";
 import type { ScriptAgentSessionLog } from "./script-agent-log.ts";
 
 export const SCRIPT_VALIDATE_MAX_ATTEMPTS = 5;
+
+/** Browserless never started Chrome — Magentic cannot rewrite the script into a working container. */
+export function isBrowserlessLaunchCrash(report: ValidationReport, runPayload?: any): boolean {
+  const parts = [
+    report?.summary,
+    ...(report?.checks || []).map((c) => c.detail),
+    runPayload?.error,
+    runPayload?.message,
+  ].filter(Boolean).join(" ");
+  return /browserless\s+500|chromium failed to launch|chromium[\s\S]{0,40}crashed|ws[- ]endpoint timeout/i.test(parts);
+}
 
 function functionsBase(): string {
   return (Deno.env.get("LOCAL_FUNCTIONS_URL") || "http://127.0.0.1:8000/functions/v1").replace(/\/$/, "");
@@ -81,6 +99,7 @@ export async function repairScriptFromValidation(opts: {
   const raw = await callAgent({
     agentKey: "scripts",
     json: true,
+    maxTokens: 16_000,
     messages: [
       {
         role: "system",
@@ -139,20 +158,36 @@ export async function runGenerateValidationLoop(opts: {
   meta?: Record<string, unknown>;
   filterCombos?: { label?: string; filters?: Record<string, unknown> }[];
   log?: ScriptAgentSessionLog;
+  /** Campaign/bulk: skip Browserless validate (use Auto-heal debugger instead). */
+  forceSkip?: boolean;
+  /** Override SCRIPT_VALIDATE_MAX_ATTEMPTS for this call only. */
+  forceMaxAttempts?: number;
 }): Promise<ValidateLoopResult> {
   const log = opts.log;
-  const enabled = Deno.env.get("SCRIPT_VALIDATE_ON_GENERATE") !== "false";
+  const enabled = !opts.forceSkip && Deno.env.get("SCRIPT_VALIDATE_ON_GENERATE") !== "false";
   const maxAttempts = Math.min(
     10,
-    Math.max(1, Number(Deno.env.get("SCRIPT_VALIDATE_MAX_ATTEMPTS") || SCRIPT_VALIDATE_MAX_ATTEMPTS)),
+    Math.max(
+      1,
+      Number(
+        opts.forceMaxAttempts ??
+          Deno.env.get("SCRIPT_VALIDATE_MAX_ATTEMPTS") ??
+          SCRIPT_VALIDATE_MAX_ATTEMPTS,
+      ),
+    ),
   );
+  // #region agent log
+  fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "D", location: "script-gen-validate-loop.ts:maxAttempts", message: "validation loop config", data: { generatedBy: opts.generatedBy, maxAttempts, forceSkip: !!opts.forceSkip, forceMaxAttempts: opts.forceMaxAttempts ?? null, envMax: Deno.env.get("SCRIPT_VALIDATE_MAX_ATTEMPTS") || null, target: opts.target }, timestamp: Date.now() }) }).catch(() => {});
+  // #endregion
 
   if (!enabled) {
     await log?.log(
       "script-validate",
       "skip",
-      "Validation skipped (SCRIPT_VALIDATE_ON_GENERATE=false)",
-      { max_attempts: maxAttempts },
+      opts.forceSkip
+        ? "Validation skipped (campaign forceSkip — use Auto-heal debugger)"
+        : "Validation skipped (SCRIPT_VALIDATE_ON_GENERATE=false)",
+      { max_attempts: maxAttempts, force_skip: !!opts.forceSkip },
       "warn",
     );
     return {
@@ -205,8 +240,10 @@ export async function runGenerateValidationLoop(opts: {
     filterKeys,
   });
 
-  // If template meta omitted nav, parse from scenario description (never invent screens).
-  if (!expectations.navSteps.length) {
+  // Only parse when meta did not set nav_steps at all. Explicit [] means
+  // stay on the landing page (Overview KPI) — do not backfill from description.
+  const metaHasNavSteps = Array.isArray(opts.meta?.nav_steps);
+  if (!metaHasNavSteps) {
     const { parseNavStepsFromScenario } = await import("./mstr-nav-parse.ts");
     expectations.navSteps = parseNavStepsFromScenario(opts.scenario, {
       allowGeography: expectations.extract === "grid",
@@ -227,10 +264,14 @@ export async function runGenerateValidationLoop(opts: {
     },
     code_bytes: opts.initialCode.length,
   });
+  // #region agent log
+  fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8b3d9b" }, body: JSON.stringify({ sessionId: "8b3d9b", runId: "overview-kpi-nav", hypothesisId: "A", location: "script-gen-validate-loop.ts:nav-expect", message: "nav expectations after meta/backfill", data: { generatedBy: opts.generatedBy, metaHasNavSteps, metaNav: opts.meta?.nav_steps ?? null, expectNav: expectations.navSteps, filterKeys: expectations.filterKeys || [] }, timestamp: Date.now() }) }).catch(() => {});
+  // #endregion
 
   let code = opts.initialCode;
   let generatedBy = opts.generatedBy;
   const reports: ValidationReport[] = [];
+  let infraRetried = false;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     await log?.log("script-validate", "attempt_start", `Attempt ${attempt}/${maxAttempts}`, {
@@ -262,7 +303,16 @@ export async function runGenerateValidationLoop(opts: {
     const report = analyzeScriptRun(runPayload, expectations);
     report.attempt = attempt;
     reports.push(report);
+    // #region agent log
+    {
+      const root = pickResultRoot(runPayload);
+      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8b3d9b" }, body: JSON.stringify({ sessionId: "8b3d9b", runId: "overview-kpi-nav", hypothesisId: "C", location: "script-gen-validate-loop.ts:analyze", message: "validation analyze", data: { attempt, ok: report.ok, summary: report.summary, checks: report.checks, navLen: Array.isArray(root?.navigation) ? root.navigation.length : null, rootKeys: root ? Object.keys(root).slice(0, 20) : [], hasResults: !!(root && root.results) }, timestamp: Date.now() }) }).catch(() => {});
+    }
+    // #endregion
 
+    // #region agent log
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "E", location: "script-gen-validate-loop.ts:attempt_result", message: "validation attempt finished", data: { attempt, maxAttempts, generatedBy, passed: report.ok, summary: report.summary, duration_ms: runMs, sameAsPrev: reports.length > 1 && reports[reports.length - 2]?.summary === report.summary, willRepair: !report.ok && attempt < maxAttempts && !/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy) }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
     await log?.log(
       "script-validate",
       "attempt_result",
@@ -273,12 +323,30 @@ export async function runGenerateValidationLoop(opts: {
         summary: report.summary,
         duration_ms: runMs,
         checks: report.checks.map((c) => ({ name: c.name, pass: c.pass, detail: c.detail })),
-        runtime_ok: runPayload?.ok !== false,
+        runtime_ok: runPayload?.ok !== false && !runPayload?.error,
         runtime_error: runPayload?.error || runPayload?.message || null,
+        extract_debug: firstComboBlock(pickResultRoot(runPayload))?.extract_debug || null,
       },
       report.ok ? "info" : "warn",
     );
 
+    const firstCombo = firstComboBlock(pickResultRoot(runPayload)) || {};
+    // #region agent log
+    {
+      const kpiSample: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(firstCombo)) {
+        if (/^(filters_applied|navigation|extract_debug|ok|error|via|url|extract_via|time_grain|chart_title)$/i.test(k)) continue;
+        kpiSample[k] = v;
+      }
+      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "8b3d9b" }, body: JSON.stringify({ sessionId: "8b3d9b", runId: "overview-refresh-date", hypothesisId: "E", location: "script-gen-validate-loop.ts:kpi-sample", message: "first combo KPI values", data: { kpiSample, extract_debug: firstCombo.extract_debug || null, labels: expectations.kpiLabels || [], extractPass: report.checks.find((c) => c.name === "extraction")?.pass ?? null }, timestamp: Date.now() }) }).catch(() => {});
+    }
+    // #endregion
+    if (firstCombo?.show_data_debug || firstCombo?.show_data_error) {
+      await log?.log("script-validate", "show_data_debug", "Show Data extract diagnostics", {
+        show_data_error: firstCombo?.show_data_error || null,
+        show_data_debug: firstCombo?.show_data_debug || null,
+      }, firstCombo?.show_data_error ? "warn" : "info");
+    }
     if (report.ok) {
       await log?.log("script-validate", "passed", `Validation passed on attempt ${attempt}`, {
         attempts: attempt,
@@ -298,11 +366,49 @@ export async function runGenerateValidationLoop(opts: {
       };
     }
 
+    if (isBrowserlessLaunchCrash(report, runPayload)) {
+      if (!infraRetried && attempt < maxAttempts) {
+        infraRetried = true;
+        await log?.log(
+          "script-validate",
+          "infra_retry",
+          "Browserless Chromium launch crash — retrying once without repair LLM",
+          { attempt, next_attempt: attempt + 1 },
+          "warn",
+        );
+        continue;
+      }
+      await log?.log(
+        "script-validate",
+        "infra_skip_repair",
+        "Browserless Chromium launch crash — skipping Magentic repair (cannot fix a crashed container)",
+        { attempt, stop_loop: true },
+        "warn",
+      );
+      break;
+    }
+
     if (attempt >= maxAttempts) break;
+
+    if (/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy)) {
+      await log?.log(
+        "script-validate",
+        "skill_keep_template",
+        "Assembled skill template failed validation — keeping template (no repair LLM)",
+        { attempt, generated_by: generatedBy, summary: report.summary, stop_loop: true },
+        "warn",
+      );
+      break;
+    }
 
     await log?.log("script-validate", "repair_start", `Repairing script after attempt ${attempt}`, {
       attempt,
       next_attempt: attempt + 1,
+      generated_by: generatedBy,
+      magentic_url: anthropicMessagesUrl(),
+      timeout_ms: anthropicFetchTimeoutMs(),
+      code_bytes: code.length,
+      has_anthropic_key: Boolean((Deno.env.get("ANTHROPIC_API_KEY") || "").trim()),
     });
     try {
       const repaired = await repairScriptFromValidation({
@@ -330,13 +436,18 @@ export async function runGenerateValidationLoop(opts: {
         );
       }
     } catch (e) {
+      const repairErr = String((e as Error)?.message || e);
       await log?.log(
         "script-validate",
         "repair_failed",
-        String((e as Error)?.message || e),
-        { attempt },
+        repairErr,
+        { attempt, stop_loop: true },
         "error",
       );
+      // LLM/network errors (fetch failed, missing key, gateway timeout) leave
+      // the same script in place. Re-running it on Browserless just burns the
+      // remaining attempts (often 10+ minutes) without changing the outcome.
+      break;
     }
   }
 

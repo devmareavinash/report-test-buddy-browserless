@@ -256,6 +256,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { scope_type, scope_id, trigger_source = "manual", existing_run_id, single_report_id, schedule_id, concurrency: requestedConcurrency } = body;
     const concurrency = orchestrateConcurrency(requestedConcurrency);
+    // #region agent log
+    fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'A',location:'agent-orchestrate/index.ts:start',message:'suite orchestrate start',data:{scope_type,scope_id,trigger_source,requestedConcurrency:requestedConcurrency??null,concurrency},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     let comparator_override: string | null = body.comparator_override || null;
     if (!comparator_override && schedule_id) {
       const { data: sch } = await sb.from("schedules").select("comparator").eq("id", schedule_id).maybeSingle();
@@ -417,6 +420,10 @@ Deno.serve(async (req) => {
               }
             }
 
+            // #region agent log
+            fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'A',location:'agent-orchestrate/index.ts:scrape_start',message:'scenario scrape start',data:{scenarioId:s.id,title:s.title,type:s.type,isRef,parallelMainAndRef:!!(isRef&&!refError&&refCode),comboCount:combos.length,concurrency},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            const scrapeStarted = Date.now();
             const [runResp, refRespRaw] = await Promise.all([
               callFn("playwright-runtime", {
                 mode: "headless", scenario_id: s.id, code: script.playwright_code,
@@ -427,6 +434,9 @@ Deno.serve(async (req) => {
                   })
                 : Promise.resolve(null),
             ]);
+            // #region agent log
+            fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'B',location:'agent-orchestrate/index.ts:scrape_done',message:'scenario scrape done',data:{scenarioId:s.id,title:s.title,durationMs:Date.now()-scrapeStarted,mainOk:!(runResp?.error||runResp?.ok===false),mainError:runResp?.error||runResp?.message||null,refOk:refRespRaw?!(refRespRaw.error||refRespRaw.ok===false):null,refError:refRespRaw?.error||refRespRaw?.message||refError||null},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
             if (runResp?.error || runResp?.ok === false) {
               await sb.from("test_results").insert({
                 run_id: run.id, scenario_id: s.id, status: "fail",
