@@ -4,6 +4,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabase } from "../_shared/llm.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
+import { fetchCanonicalScript } from "../_shared/canonical-script.ts";
 
 type Mode = "headed" | "headless";
 
@@ -419,9 +420,11 @@ async function resolveCreds(sb: any, scenarioId?: string, target: "main" | "refe
   // For target=reference: prefer script.reference_credential_profile_id, then
   // report.reference_credential_profile_id, then fall back to the main credentials.
   // For target=main: prefer script.credential_profile_id, then report.credential_profile_id.
-  const { data: script } = await sb.from("scripts")
-    .select("credential_profile_id, reference_credential_profile_id")
-    .eq("scenario_id", scenarioId).maybeSingle();
+  const { data: script } = await fetchCanonicalScript(
+    sb,
+    scenarioId,
+    "credential_profile_id, reference_credential_profile_id",
+  );
   const { data: scenario } = await sb.from("scenarios")
     .select("reports(credential_profile_id, reference_credential_profile_id)")
     .eq("id", scenarioId).maybeSingle();
@@ -454,8 +457,7 @@ async function resolveReportUrl(sb: any, scenarioId?: string, target: "main" | "
   if (target === "reference") return r.reference_url || r.url || "";
   // Main target may be configured (by agent-scripts) to scrape the reference URL
   // when the scenario description points the frontend source at the reference URL.
-  const { data: script } = await sb.from("scripts")
-    .select("assertion_spec").eq("scenario_id", scenarioId).maybeSingle();
+  const { data: script } = await fetchCanonicalScript(sb, scenarioId, "assertion_spec");
   const spec: any = (script as any)?.assertion_spec || {};
   if (spec.__main_uses_reference_source) return r.reference_url || r.url || "";
   return r.url || "";

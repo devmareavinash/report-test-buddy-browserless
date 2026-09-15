@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { requireAuth } from "../_shared/auth.ts";
 import { callAgent, getSupabase, tryParseJson } from "../_shared/llm.ts";
+import { fetchCanonicalScript } from "../_shared/canonical-script.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -11,8 +12,7 @@ Deno.serve(async (req) => {
     const sb = getSupabase();
     const { data: tr } = await sb.from("test_results").select("*, scenarios(*, reports(*))").eq("id", test_result_id).maybeSingle();
     if (!tr) throw new Error("not found");
-    const { data: scripts } = await sb.from("scripts").select("*").eq("scenario_id", tr.scenario_id).limit(1);
-    const script = scripts?.[0];
+    const { data: script } = await fetchCanonicalScript(sb, tr.scenario_id);
 
     const sys = "You are a healing agent for BI test scripts. Propose a minimal patch. Reply JSON {patched_assertion_spec:{...}, patched_playwright_code:'...', rationale:'...'}.";
     const user = `Failure: ${JSON.stringify({ expected: tr.expected, actual: tr.actual, diff: tr.diff, analysis: tr.analysis })}\nCurrent script: ${JSON.stringify(script)}`;

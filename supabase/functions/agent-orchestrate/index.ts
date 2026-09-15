@@ -2,6 +2,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 import { resolveFunctionAuth, resolveFunctionUrl } from "../_shared/internal-functions.ts";
 import { extractFirstTableAlias, qualifyColumn } from "../_shared/sql-filter.ts";
+import { fetchCanonicalScript, scriptHasSavedCode, updateScriptRow } from "../_shared/canonical-script.ts";
 
 // Orchestrator: scope_type ∈ {workstream, report}.
 // For each non-deferred scenario:
@@ -157,7 +158,8 @@ function pickComboKpis(payload: any, comboLabel: string | null): Record<string, 
       for (const [k, v] of Object.entries(root)) {
         if (["filters_applied", "screenshot", "ok", "error", "url", "title", "note", "result", "extracted", "navigation"].includes(k)) continue;
         if (v && typeof v === "object") {
-          if (isStructuredVal(v)) flat[k] = v;
+          if (k === "grains" || Array.isArray(v) && (k === "periods" || k === "missing")) flat[k] = v;
+          else if (isStructuredVal(v)) flat[k] = v;
           continue;
         }
         flat[k] = v;
@@ -165,13 +167,14 @@ function pickComboKpis(payload: any, comboLabel: string | null): Record<string, 
       if (Object.keys(flat).length) return flat;
     } else {
       // Matrix shape: { "<comboLabel>": { "<KPI>": value, filters_applied: ... } }
-      const node = (root as any)[comboLabel];
+      const node = (root as any)[comboLabel] || (root as any).results?.[comboLabel];
       if (node && typeof node === "object") {
         const flat: Record<string, any> = {};
         for (const [k, v] of Object.entries(node)) {
           if (k === "filters_applied" || k === "navigation") continue;
           if (v && typeof v === "object") {
-            if (isStructuredVal(v)) flat[k] = v;
+            if (k === "grains" || Array.isArray(v) && (k === "periods" || k === "missing")) flat[k] = v;
+            else if (isStructuredVal(v)) flat[k] = v;
             continue;
           }
           flat[k] = v;
@@ -256,9 +259,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { scope_type, scope_id, trigger_source = "manual", existing_run_id, single_report_id, schedule_id, concurrency: requestedConcurrency } = body;
     const concurrency = orchestrateConcurrency(requestedConcurrency);
-    // #region agent log
-    fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'A',location:'agent-orchestrate/index.ts:start',message:'suite orchestrate start',data:{scope_type,scope_id,trigger_source,requestedConcurrency:requestedConcurrency??null,concurrency},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     let comparator_override: string | null = body.comparator_override || null;
     if (!comparator_override && schedule_id) {
       const { data: sch } = await sb.from("schedules").select("comparator").eq("id", schedule_id).maybeSingle();
@@ -356,13 +356,22 @@ Deno.serve(async (req) => {
             .eq("deferred", false);
 
           const scenarioOutcomes = await mapPool(scenarios || [], concurrency, async (s) => {
-            let { data: script } = await sb.from("scripts")
-              .select("id, playwright_code, sql_template_id, updated_at")
-              .eq("scenario_id", s.id)
-              .order("updated_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (!script || !script.playwright_code || !script.playwright_code.trim()) {
+            let { data: script, error: scriptErr } = await fetchCanonicalScript(
+              sb,
+              s.id,
+              "id, playwright_code, assertion_spec, sql_template_id, created_at",
+            );
+            if (scriptErr) {
+              await sb.from("test_results").insert({
+                run_id: run.id, scenario_id: s.id, status: "fail",
+                expected: { error: "script_lookup_failed" },
+                actual: { error: scriptErr.message },
+                diff: null, criticality: s.criticality || "medium", severity: s.criticality || "medium",
+              });
+              return { pass: 0, fail: 1 };
+            }
+            // Shared DB row — never per-user. Generate only when no saved playwright_code exists.
+            if (!scriptHasSavedCode(script)) {
               const gen = await callFn("agent-scripts", { scenario_id: s.id });
               if (gen?.script?.playwright_code) {
                 script = gen.script;
@@ -386,7 +395,8 @@ Deno.serve(async (req) => {
               : [{ id: null, label: null as string | null, filters: {} as Record<string, any> }];
 
             const isRef = s.type === "reference_match";
-            let sqlTplId = isRef ? null : ((script as any)?.sql_template_id || (report as any)?.default_sql_template_id || null);
+            const isTrend = s.type === "trend";
+            let sqlTplId = (isRef || isTrend) ? null : ((script as any)?.sql_template_id || (report as any)?.default_sql_template_id || null);
 
             // Prepare reference script first (no browser) so main + reference can scrape in parallel.
             let refCode = "";
@@ -394,20 +404,16 @@ Deno.serve(async (req) => {
             if (isRef) {
               const refUrl: string = (report as any)?.reference_url || "";
               const primaryUrl: string = (report as any)?.url || "";
-              const { data: freshScript } = await sb.from("scripts")
-                .select("id, assertion_spec")
-                .eq("id", (script as any)?.id).maybeSingle();
-              const aspec: any = (freshScript as any)?.assertion_spec
-                || (script as any)?.assertion_spec || {};
+              const aspec: any = (script as any)?.assertion_spec || {};
               refCode = aspec.__reference_playwright_code || "";
               if (!refCode || !refCode.trim()) {
                 const isEnvSwap = !!refUrl && !!primaryUrl && refUrl !== primaryUrl;
                 if (isEnvSwap) {
                   refCode = swapGotoUrl(script.playwright_code || "", refUrl, primaryUrl);
                   if (refCode && (script as any)?.id) {
-                    await sb.from("scripts").update({
+                    await updateScriptRow(sb, (script as any).id, {
                       assertion_spec: { ...aspec, __reference_playwright_code: refCode, __reference_generated_by: "url_swap" },
-                    }).eq("id", (script as any).id);
+                    });
                   }
                 } else {
                   const gen = await callFn("agent-scripts", { scenario_id: s.id, target: "reference" });
@@ -420,10 +426,6 @@ Deno.serve(async (req) => {
               }
             }
 
-            // #region agent log
-            fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'A',location:'agent-orchestrate/index.ts:scrape_start',message:'scenario scrape start',data:{scenarioId:s.id,title:s.title,type:s.type,isRef,parallelMainAndRef:!!(isRef&&!refError&&refCode),comboCount:combos.length,concurrency},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
-            const scrapeStarted = Date.now();
             const [runResp, refRespRaw] = await Promise.all([
               callFn("playwright-runtime", {
                 mode: "headless", scenario_id: s.id, code: script.playwright_code,
@@ -434,9 +436,6 @@ Deno.serve(async (req) => {
                   })
                 : Promise.resolve(null),
             ]);
-            // #region agent log
-            fetch('http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'8b3d9b'},body:JSON.stringify({sessionId:'8b3d9b',runId:'suite',hypothesisId:'B',location:'agent-orchestrate/index.ts:scrape_done',message:'scenario scrape done',data:{scenarioId:s.id,title:s.title,durationMs:Date.now()-scrapeStarted,mainOk:!(runResp?.error||runResp?.ok===false),mainError:runResp?.error||runResp?.message||null,refOk:refRespRaw?!(refRespRaw.error||refRespRaw.ok===false):null,refError:refRespRaw?.error||refRespRaw?.message||refError||null},timestamp:Date.now()})}).catch(()=>{});
-            // #endregion
             if (runResp?.error || runResp?.ok === false) {
               await sb.from("test_results").insert({
                 run_id: run.id, scenario_id: s.id, status: "fail",
@@ -525,6 +524,36 @@ Deno.serve(async (req) => {
               const kpiTol: Record<string, any> = ((script as any)?.assertion_spec || {}).kpi_tolerances || {};
               const mainGrid = pickStructured(scraped);
               const expGrid = pickStructured(expectedMap);
+
+              if (isTrend) {
+                const grainMap = scraped.grains && typeof scraped.grains === "object" ? scraped.grains : null;
+                if (grainMap) actualMap.grains = grainMap;
+                for (const grain of ["Weekly", "Monthly", "Quarterly"]) {
+                  const one = grainMap?.[grain];
+                  if (!one) continue;
+                  actualMap[`Trend check ${grain}`] = one.consecutive ? 1 : 0;
+                }
+                const consecutive = grainMap
+                  ? ["Weekly", "Monthly", "Quarterly"].every((g) => grainMap[g]?.consecutive === true)
+                  : (scraped.consecutive === true || scraped["Trend check"] === 1);
+                const explicitFail = scraped.consecutive === false || scraped["Trend check"] === 0;
+                const periods = Array.isArray(scraped.periods) ? scraped.periods : [];
+                const missing = Array.isArray(scraped.missing) ? scraped.missing : [];
+                actualMap["Trend check"] = consecutive ? 1 : (explicitFail || missing.length || grainMap ? 0 : null);
+                actualMap.consecutive = consecutive;
+                if (periods.length) actualMap.periods = periods;
+                if (missing.length) actualMap.missing = missing;
+                if (scraped.time_grain) actualMap.time_grain = scraped.time_grain;
+                if (scraped.trend_error) actualMap.trend_error = scraped.trend_error;
+                comboPass = consecutive;
+                diffMap["Trend check"] = {
+                  consecutive,
+                  grains: grainMap,
+                  missing,
+                  periods,
+                  error: comboPass ? null : (scraped.trend_error || "gap_in_periods"),
+                };
+              } else {
               if (mainGrid) actualMap[mainGrid.k] = mainGrid.v;
               if (mainGrid && expGrid) {
                 const gridPass = structuredEqual(mainGrid.v, expGrid.v);
@@ -548,7 +577,7 @@ Deno.serve(async (req) => {
                   const ok = a != null && a >= 0 && a <= 1e12;
                   diffMap[lbl] = { value: a };
                   if (!ok) comboPass = false;
-                } else if (s.type === "trend" || (!sqlTplId && !isRef)) {
+                } else if (!sqlTplId && !isRef) {
                   if (a == null) { comboPass = false; diffMap[lbl] = { error: "no_value" }; }
                   else diffMap[lbl] = { value: a };
                 } else {
@@ -599,6 +628,7 @@ Deno.serve(async (req) => {
                     }
                   }
                 }
+              }
               }
 
               const status = comboPass ? "pass" : "fail";

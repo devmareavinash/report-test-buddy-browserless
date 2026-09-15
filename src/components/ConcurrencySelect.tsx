@@ -22,24 +22,39 @@ export function useOrchestrateConcurrency() {
   };
 }
 
+export type ConcurrencyUnit = "screens" | "scenarios";
+
+function unitNoun(unit: ConcurrencyUnit, n: number): string {
+  if (unit === "scenarios") return n === 1 ? "scenario" : "scenarios";
+  return n === 1 ? "screen" : "screens";
+}
+
+function unitTitle(unit: ConcurrencyUnit): string {
+  if (unit === "scenarios") return "How many scenarios run at once on this screen";
+  return "When you Run report: how many screens at once. When you run one screen: how many scenarios at once.";
+}
+
 export function ConcurrencySelect({
   value,
   onChange,
   disabled,
+  unit,
 }: {
   value: number;
   onChange: (n: number) => void;
   disabled?: boolean;
+  /** Noun for the items this control actually parallelizes on this page. */
+  unit: ConcurrencyUnit;
 }) {
   return (
     <Select value={String(value)} onValueChange={(v) => onChange(Number(v))} disabled={disabled}>
-      <SelectTrigger className="w-[7.5rem] h-9" title="How many scenarios scrape at once">
+      <SelectTrigger className={unit === "scenarios" ? "w-[11rem] h-9" : "w-[8.5rem] h-9"} title={unitTitle(unit)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {OPTIONS.map((n) => (
           <SelectItem key={n} value={String(n)}>
-            {n} parallel screens
+            {n} parallel {unitNoun(unit, n)}
           </SelectItem>
         ))}
       </SelectContent>

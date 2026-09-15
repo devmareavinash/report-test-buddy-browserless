@@ -1,0 +1,27 @@
+Part three. We run the tests and read the summary.
+
+You can run the whole Athena report, one screen, or one case.
+
+Run report runs every page. Run suite runs every case on this screen. Run headless runs only this case.
+
+I will run this screen. A run starts right away. Results appear as each case finishes.
+
+This is the live summary. The top line is the score: passed, failed, and still pending.
+
+Open a case. You see expected versus actual. That is either Athena prod versus pre-prod, one screen versus another, or Athena numbers versus the database table.
+
+If it failed, you see why, and often a screenshot.
+
+To run one case only, open the case and click Run headless. Latest result is the summary for that case.
+
+The Runs page is the list you share with the team. Each row shows the report, how many passed, how many failed, and when.
+
+Back on Dashboard, the four boxes tell the story: total cases, how many ran, how many passed, and how many failed. Click Cases ran to see only cases that already have a result.
+
+Green means the numbers match. Red means they do not.
+
+To recap: this tool validates Athena reports. Front-end versus front-end. Screen versus screen. Or report versus the backend table.
+
+Part one, the pages. Part two, configure and generate. Part three, run and read pass or fail.
+
+That's Agentic Frontend Validations.

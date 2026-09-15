@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { Copy } from "lucide-react";
+import { Copy, Pencil, Trash2 } from "lucide-react";
 import { invokeFunction } from "@/lib/functions";
 import {
   resolveSfAuthMethod,
@@ -468,22 +468,101 @@ function CredsTab() {
   const { data } = useQuery({ queryKey: ["creds"], queryFn: async () => (await supabase.from("credential_profiles").select("*")).data ?? [] });
   const [params] = useSearchParams();
   const initialUrl = params.get("loginUrl") || "";
-  const [name, setName] = useState(""); const [url, setUrl] = useState(initialUrl); const [user, setUser] = useState(""); const [pw, setPw] = useState("");
-  useEffect(() => { if (initialUrl) setUrl(initialUrl); }, [initialUrl]);
-  const add = async () => {
-    await supabase.from("credential_profiles").insert({ name, login_url: url, username: user, password_secret_ref: pw });
-    setName(""); setUrl(""); setUser(""); setPw(""); qc.invalidateQueries({ queryKey: ["creds"] }); toast.success("Saved");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [url, setUrl] = useState(initialUrl);
+  const [user, setUser] = useState("");
+  const [pw, setPw] = useState("");
+  useEffect(() => { if (initialUrl && !editingId) setUrl(initialUrl); }, [initialUrl, editingId]);
+
+  const resetForm = () => {
+    setEditingId(null);
+    setName("");
+    setUrl(initialUrl);
+    setUser("");
+    setPw("");
   };
+
+  const startEdit = (c: { id: string; name: string; login_url: string | null; username: string | null; password_secret_ref: string | null }) => {
+    setEditingId(c.id);
+    setName(c.name || "");
+    setUrl(c.login_url || "");
+    setUser(c.username || "");
+    setPw(c.password_secret_ref || "");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const save = async () => {
+    if (!name.trim()) return toast.error("Profile name required");
+    const payload = { name: name.trim(), login_url: url, username: user, password_secret_ref: pw || null };
+    if (editingId) {
+      const { error } = await supabase.from("credential_profiles").update(payload).eq("id", editingId);
+      if (error) return toast.error(error.message);
+      toast.success("Credential updated");
+    } else {
+      const { error } = await supabase.from("credential_profiles").insert(payload);
+      if (error) return toast.error(error.message);
+      toast.success("Saved");
+    }
+    resetForm();
+    qc.invalidateQueries({ queryKey: ["creds"] });
+  };
+
+  const remove = async (c: { id: string; name: string }) => {
+    if (!confirm(`Delete credential "${c.name}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from("credential_profiles").delete().eq("id", c.id);
+    if (error) return toast.error(error.message);
+    if (editingId === c.id) resetForm();
+    toast.success("Credential deleted");
+    qc.invalidateQueries({ queryKey: ["creds"] });
+  };
+
   return (
     <div className="space-y-4 mt-4">
-      <Card><CardContent className="pt-4 grid grid-cols-2 gap-2">
-        <Input placeholder="Profile name" value={name} onChange={(e) => setName(e.target.value)} />
-        <Input placeholder="Login URL" value={url} onChange={(e) => setUrl(e.target.value)} />
-        <Input placeholder="Username" value={user} onChange={(e) => setUser(e.target.value)} />
-        <Input placeholder="Password secret name" value={pw} onChange={(e) => setPw(e.target.value)} />
-        <Button onClick={add}>Add</Button>
-      </CardContent></Card>
-      {(data || []).map((c) => <div key={c.id} className="border border-border rounded p-3 text-sm">{c.name} <span className="mono text-xs text-muted-foreground">· {c.login_url}</span></div>)}
+      <Card>
+        <CardHeader>
+          <CardTitle>{editingId ? "Edit credential" : "Add credential"}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-2">
+          <Input placeholder="Profile name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input placeholder="Login URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+          <Input placeholder="Username" value={user} onChange={(e) => setUser(e.target.value)} />
+          <Input placeholder="Password secret name" value={pw} onChange={(e) => setPw(e.target.value)} />
+          <div className="col-span-2 flex gap-2">
+            <Button onClick={save}>{editingId ? "Save changes" : "Add"}</Button>
+            {editingId && (
+              <Button variant="ghost" onClick={resetForm}>Cancel</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      {(data || []).map((c) => (
+        <div
+          key={c.id}
+          className={`border rounded p-3 text-sm flex justify-between items-center gap-2 ${
+            editingId === c.id ? "border-primary bg-muted/40" : "border-border"
+          }`}
+        >
+          <div className="min-w-0">
+            {c.name}{" "}
+            <span className="mono text-xs text-muted-foreground">· {c.login_url}</span>
+          </div>
+          <div className="flex shrink-0">
+            <Button size="sm" variant="ghost" onClick={() => startEdit(c)} title="Edit">
+              <Pencil className="h-3 w-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => remove(c)}
+              className="text-destructive hover:text-destructive"
+              title="Delete"
+            >
+              <Trash2 className="h-3 w-3" />
+            </Button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -500,7 +579,7 @@ function BrowserTab() {
     <div className="space-y-4 mt-4">
       <Card><CardContent className="pt-4 space-y-2">
         <div className="text-sm text-muted-foreground">Configure a hosted Playwright/CDP endpoint (Browserless, Browserbase, AWS Fargate, self-hosted) for live scraping and the headed script-debug stream.</div>
-        <div className="text-sm text-muted-foreground">Suite parallelism is set on the Screens page (or <span className="mono">ORCHESTRATE_CONCURRENCY</span> in <span className="mono">.env</span>, default 3). Browserless <span className="mono">CONCURRENT</span> should be at least as high so extra sessions queue instead of failing.</div>
+        <div className="text-sm text-muted-foreground">Parallelism is set on Screens (<span className="mono">N parallel screens</span> for Run report) and on a screen (<span className="mono">N parallel scenarios</span> for Run suite), or <span className="mono">ORCHESTRATE_CONCURRENCY</span> in <span className="mono">.env</span> (default 3). Browserless <span className="mono">CONCURRENT</span> should be at least as high so extra sessions queue instead of failing.</div>
         <Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
         <Input placeholder="Provider (browserless|browserbase|fargate|custom)" value={provider} onChange={(e) => setProvider(e.target.value)} />
         <Input placeholder="WS endpoint secret name" value={secret} onChange={(e) => setSecret(e.target.value)} />
@@ -568,7 +647,7 @@ function ApiTab() {
     await supabase.from("api_tokens").insert({ name, token_hash: hash, scopes: { scope_type: scope, scope_id: scopeId || null } });
     setLatest(token); setName(""); qc.invalidateQueries({ queryKey: ["api-tokens"] });
   };
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/trigger-run`;
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/functions/v1/trigger-run`;
   const curlBody = JSON.stringify({ scope_type: scope, scope_id: scopeId || "<id>" });
   return (
     <div className="space-y-4 mt-4">

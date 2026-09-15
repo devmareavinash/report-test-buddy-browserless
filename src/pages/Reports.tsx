@@ -14,7 +14,9 @@ import { toast } from "sonner";
 import { Play, Plus, Pencil, Trash2, ExternalLink, Loader2, Download, Copy } from "lucide-react";
 import { ConcurrencySelect, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
 import { exportScreensToExcel } from "@/lib/exportScreensExcel";
-import { duplicateReport } from "@/lib/duplicateEntities";
+import { duplicateReport, duplicateWorkstream } from "@/lib/duplicateEntities";
+import { deleteReport, deleteWorkstream, deleteReportConfirm, deleteWorkstreamConfirm } from "@/lib/deleteEntities";
+import { fetchLatestTestResultsByScenarioIds } from "@/lib/latestTestResults";
 
 export default function Reports() {
   const qc = useQueryClient();
@@ -22,6 +24,7 @@ export default function Reports() {
   const [wsId, setWsId] = useState("all");
   const [exporting, setExporting] = useState(false);
   const [editWorkstream, setEditWorkstream] = useState<{ id: string; name: string } | null>(null);
+  const [dupingWsId, setDupingWsId] = useState<string | null>(null);
   const { concurrency, setConcurrency } = useOrchestrateConcurrency();
   const { data: tree } = useQuery({
     queryKey: ["report-tree"],
@@ -40,16 +43,12 @@ export default function Reports() {
         .select("id, report_id")
         .eq("deferred", false)
         .limit(5000)).data ?? [];
-      const results = (await supabase
-        .from("test_results")
-        .select("scenario_id, status, created_at")
-        .order("created_at", { ascending: false })
-        .limit(10000)).data ?? [];
+      const latestRows = await fetchLatestTestResultsByScenarioIds(
+        scenarios.map((s: any) => s.id),
+        "scenario_id, status, created_at",
+      );
       const latest = new Map<string, string>();
-      for (const r of results) {
-        const sid = r.scenario_id as string;
-        if (!latest.has(sid)) latest.set(sid, r.status as string);
-      }
+      for (const [sid, r] of latestRows) latest.set(sid, r.status as string);
       const map: Record<string, { pass: number; fail: number; pending: number; total: number }> = {};
       for (const s of scenarios) {
         const rep = s.report_id as string;
@@ -122,7 +121,7 @@ export default function Reports() {
               ))}
             </SelectContent>
           </Select>
-          <ConcurrencySelect value={concurrency} onChange={setConcurrency} disabled={run.isPending} />
+          <ConcurrencySelect unit="screens" value={concurrency} onChange={setConcurrency} disabled={run.isPending} />
           <Button
             size="sm"
             variant="outline"
@@ -167,6 +166,29 @@ export default function Reports() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="ghost"
+                      title="Duplicate report including screens, test cases, saved scripts, mappings, and filter combinations"
+                      disabled={dupingWsId === w.id}
+                      onClick={async () => {
+                        setDupingWsId(w.id);
+                        try {
+                          const copy = await duplicateWorkstream(w.id);
+                          toast.success(`Duplicated report as "${copy.name}"`);
+                          qc.invalidateQueries({ queryKey: ["report-tree"] });
+                          qc.invalidateQueries({ queryKey: ["report-status-map"] });
+                        } catch (e: any) {
+                          toast.error(e?.message || "Duplicate failed");
+                        } finally {
+                          setDupingWsId(null);
+                        }
+                      }}
+                    >
+                      {dupingWsId === w.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Copy className="h-3 w-3" />}
+                    </Button>
+                    <Button
+                      size="sm"
                       variant="outline"
                       disabled={run.isPending && run.variables?.scope_id === w.id}
                       onClick={() => run.mutate({ scope_type: "workstream", scope_id: w.id })}
@@ -180,19 +202,17 @@ export default function Reports() {
                       size="sm"
                       variant="ghost"
                       className="text-destructive hover:text-destructive"
-                      title="Delete report"
+                      title="Delete report and every screen, test case, script, and mapping inside it"
                       onClick={async () => {
-                        const reportCount = (tree?.rep || []).filter((r: any) => r.workstream_id === w.id).length;
-                        if (reportCount > 0) {
-                          return toast.error(`Cannot delete "${w.name}": it still contains ${reportCount} screen(s). Delete or move them first.`);
+                        if (!confirm(deleteWorkstreamConfirm(w.name))) return;
+                        try {
+                          await deleteWorkstream(w.id);
+                          toast.success("Report deleted");
+                          qc.invalidateQueries({ queryKey: ["report-tree"] });
+                          qc.invalidateQueries({ queryKey: ["report-status-map"] });
+                        } catch (e: any) {
+                          toast.error(e?.message || "Delete failed");
                         }
-                        if (!confirm(`Delete report "${w.name}"?`)) return;
-                        await supabase.from("runs").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
-                        await supabase.from("schedules").delete().eq("scope_type", "workstream").eq("scope_id", w.id);
-                        const { error } = await supabase.from("workstreams").delete().eq("id", w.id);
-                        if (error) return toast.error(error.message);
-                        toast.success("Report deleted");
-                        qc.invalidateQueries({ queryKey: ["report-tree"] });
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -293,28 +313,15 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
     },
   });
   const del = async () => {
-    if (!confirm(`Delete screen "${r.name}"? This also deletes its scenarios, scripts, version history, and results.`)) return;
-    // Collect scenarios for cascade
-    const scs = (await supabase.from("scenarios").select("id").eq("report_id", r.id)).data ?? [];
-    const sids = scs.map((s: any) => s.id);
-    if (sids.length) {
-      const scripts = (await supabase.from("scripts").select("id").in("scenario_id", sids)).data ?? [];
-      const scriptIds = scripts.map((s: any) => s.id);
-      if (scriptIds.length) await supabase.from("script_versions").delete().in("script_id", scriptIds);
-      await supabase.from("scripts").delete().in("scenario_id", sids);
-      await supabase.from("scenario_versions").delete().in("scenario_id", sids);
-      await supabase.from("scenario_filter_matrix").delete().in("scenario_id", sids);
-      await supabase.from("test_results").delete().in("scenario_id", sids);
-      await supabase.from("scenarios").delete().in("id", sids);
+    if (!confirm(deleteReportConfirm(r.name))) return;
+    try {
+      await deleteReport(r.id);
+      toast.success("Screen deleted");
+      qc.invalidateQueries({ queryKey: ["report-tree"] });
+      qc.invalidateQueries({ queryKey: ["report-status-map"] });
+    } catch (e: any) {
+      toast.error(e?.message || "Delete failed");
     }
-    await supabase.from("prerun_scripts").delete().eq("report_id", r.id);
-    await supabase.from("runs").delete().eq("scope_type", "report").eq("scope_id", r.id);
-    await supabase.from("schedules").delete().eq("scope_type", "report").eq("scope_id", r.id);
-    const { error } = await supabase.from("reports").delete().eq("id", r.id);
-    if (error) return toast.error(error.message);
-    toast.success("Screen deleted");
-    qc.invalidateQueries({ queryKey: ["report-tree"] });
-    qc.invalidateQueries({ queryKey: ["report-status-map"] });
   };
   const dup = async () => {
     setDuping(true);
@@ -344,11 +351,11 @@ function ReportRow({ r, stats, onRun, running }: { r: any; stats?: { pass: numbe
         <span className="text-xs text-muted-foreground">no scenarios</span>
       )}
       <Button size="sm" variant="ghost" onClick={() => setEdit(true)} title="Edit"><Pencil className="h-3 w-3" /></Button>
-      <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate screen">
+      <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate screen including test cases, saved scripts, mappings, and filter combinations">
         {duping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3" />}
       </Button>
       <Button size="sm" variant="ghost" onClick={onRun} disabled={running}>{running ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}</Button>
-      <Button size="sm" variant="ghost" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3" /></Button>
+      <Button size="sm" variant="ghost" onClick={del} className="text-destructive hover:text-destructive" title="Delete screen and its test cases, scripts, mappings, and results"><Trash2 className="h-3 w-3" /></Button>
       <ReportDialog tree={tree} report={r} open={edit} onOpenChange={setEdit} />
     </div>
   );

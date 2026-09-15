@@ -18,6 +18,7 @@ import { useNavigate } from "react-router-dom";
 import { ReportDialog } from "./Reports";
 import { ConcurrencySelect, readOrchestrateConcurrency, useOrchestrateConcurrency } from "@/components/ConcurrencySelect";
 import { duplicateReport, duplicateScenario } from "@/lib/duplicateEntities";
+import { deleteReport, deleteScenario, deleteReportConfirm, deleteScenarioConfirm } from "@/lib/deleteEntities";
 
 const CRIT = ["low", "medium", "high", "critical"];
 
@@ -111,7 +112,7 @@ export default function ReportDetail() {
                 )}
               </Tooltip>
             </TooltipProvider>
-            <ConcurrencySelect value={concurrency} onChange={setConcurrency} disabled={runSuite.isPending} />
+            <ConcurrencySelect unit="scenarios" value={concurrency} onChange={setConcurrency} disabled={runSuite.isPending} />
             <Button onClick={() => runSuite.mutate()} disabled={runSuite.isPending}>
               {runSuite.isPending
                 ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Running suite…</>
@@ -209,26 +210,14 @@ function ReportHeader({ report }: { report: any }) {
     },
   });
   const del = async () => {
-    if (!confirm(`Delete screen "${report.name}"? This deletes its scenarios, scripts, version history, results, and schedules.`)) return;
-    const scs = (await supabase.from("scenarios").select("id").eq("report_id", report.id)).data ?? [];
-    const sids = scs.map((s: any) => s.id);
-    if (sids.length) {
-      const scripts = (await supabase.from("scripts").select("id").in("scenario_id", sids)).data ?? [];
-      const scriptIds = scripts.map((s: any) => s.id);
-      if (scriptIds.length) await supabase.from("script_versions").delete().in("script_id", scriptIds);
-      await supabase.from("scripts").delete().in("scenario_id", sids);
-      await supabase.from("scenario_versions").delete().in("scenario_id", sids);
-      await supabase.from("scenario_filter_matrix").delete().in("scenario_id", sids);
-      await supabase.from("test_results").delete().in("scenario_id", sids);
-      await supabase.from("scenarios").delete().in("id", sids);
+    if (!confirm(deleteReportConfirm(report.name))) return;
+    try {
+      await deleteReport(report.id);
+      toast.success("Screen deleted");
+      navigate("/reports");
+    } catch (e: any) {
+      toast.error(e?.message || "Delete failed");
     }
-    await supabase.from("prerun_scripts").delete().eq("report_id", report.id);
-    await supabase.from("runs").delete().eq("scope_type", "report").eq("scope_id", report.id);
-    await supabase.from("schedules").delete().eq("scope_type", "report").eq("scope_id", report.id);
-    const { error } = await supabase.from("reports").delete().eq("id", report.id);
-    if (error) return toast.error(error.message);
-    toast.success("Screen deleted");
-    navigate("/reports");
   };
   const dup = async () => {
     setDuping(true);
@@ -254,11 +243,11 @@ function ReportHeader({ report }: { report: any }) {
       </div>
       <div className="flex flex-wrap gap-1 items-center justify-end">
         <Button size="sm" variant="outline" onClick={() => setEdit(true)}><Pencil className="h-3 w-3 mr-1" /> Edit Screen Details</Button>
-        <Button size="sm" variant="outline" onClick={dup} disabled={duping} title="Duplicate this screen and all test cases">
+        <Button size="sm" variant="outline" onClick={dup} disabled={duping} title="Duplicate this screen, test cases, saved scripts, mappings, and filter combinations">
           {duping ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Copy className="h-3 w-3 mr-1" />}
           Duplicate
         </Button>
-        <Button size="sm" variant="outline" onClick={del} className="text-destructive hover:text-destructive"><Trash2 className="h-3 w-3 mr-1" /> Delete</Button>
+        <Button size="sm" variant="outline" onClick={del} className="text-destructive hover:text-destructive" title="Delete screen and its test cases, scripts, mappings, and results"><Trash2 className="h-3 w-3 mr-1" /> Delete</Button>
       </div>
       <ReportDialog tree={tree} report={report} open={edit} onOpenChange={setEdit} />
     </div>
@@ -351,9 +340,14 @@ function ScenarioRow({ s, reportId }: { s: any; reportId: string }) {
     qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
   };
   const del = async () => {
-    if (!confirm(`Delete "${s.title}"?`)) return;
-    await supabase.from("scenarios").delete().eq("id", s.id);
-    qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
+    if (!confirm(deleteScenarioConfirm(s.title))) return;
+    try {
+      await deleteScenario(s.id);
+      toast.success("Test case deleted");
+      qc.invalidateQueries({ queryKey: ["scenarios", reportId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Delete failed");
+    }
   };
   const dup = async () => {
     setDuping(true);
@@ -381,10 +375,10 @@ function ScenarioRow({ s, reportId }: { s: any; reportId: string }) {
           <SelectContent>{CRIT.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
         </Select>
         <Button size="sm" variant="ghost" onClick={() => update({ deferred: !s.deferred })}>{s.deferred ? "Restore" : "Defer"}</Button>
-        <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate this test case">
+        <Button size="sm" variant="ghost" onClick={dup} disabled={duping} title="Duplicate this test case including its saved script, filter combinations, KPI settings, and SQL binding">
           {duping ? <Loader2 className="h-3 w-3 animate-spin" /> : <Copy className="h-3 w-3" />}
         </Button>
-        <Button size="sm" variant="ghost" onClick={del}><Trash2 className="h-3 w-3" /></Button>
+        <Button size="sm" variant="ghost" onClick={del} title="Delete this test case, its saved script, filter combinations, and version history"><Trash2 className="h-3 w-3" /></Button>
       </CardContent>
     </Card>
   );

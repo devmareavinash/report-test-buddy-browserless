@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusChip } from "@/components/StatusChip";
 import { Link } from "react-router-dom";
+import { fetchLatestTestResultsByScenarioIds } from "@/lib/latestTestResults";
 
 export default function Tests() {
   const [search, setSearch] = useState("");
@@ -26,15 +27,10 @@ export default function Tests() {
         .from("scenarios")
         .select("id, title, status, criticality, type, report_id, reports(id, name, workstream_id, workstreams(id, name))")
         .limit(1000)).data ?? [];
-      const results = (await supabase
-        .from("test_results")
-        .select("id, scenario_id, run_id, status, criticality, severity, created_at, runs(id, started_at)")
-        .order("created_at", { ascending: false })
-        .limit(2000)).data ?? [];
-      const latestByScenario = new Map<string, any>();
-      for (const r of results) {
-        if (!latestByScenario.has(r.scenario_id as string)) latestByScenario.set(r.scenario_id as string, r);
-      }
+      const latestByScenario = await fetchLatestTestResultsByScenarioIds(
+        scenarios.map((s: any) => s.id),
+        "id, scenario_id, run_id, status, criticality, severity, created_at, runs(id, started_at)",
+      );
       return scenarios.map((s: any) => ({
         scenario: s,
         latest: latestByScenario.get(s.id) || null,

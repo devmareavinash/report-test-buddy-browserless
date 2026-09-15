@@ -1,0 +1,2338 @@
+ffconcat version 1.0
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00000.jpg'
+duration 0.5216
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00001.jpg'
+duration 0.0590
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00002.jpg'
+duration 0.1371
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00003.jpg'
+duration 0.1602
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00004.jpg'
+duration 0.1383
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00005.jpg'
+duration 0.1466
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00006.jpg'
+duration 0.1875
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00007.jpg'
+duration 0.1503
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00008.jpg'
+duration 0.1429
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00009.jpg'
+duration 0.1263
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00010.jpg'
+duration 0.1310
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00011.jpg'
+duration 0.1333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00012.jpg'
+duration 0.1379
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00013.jpg'
+duration 0.1612
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00014.jpg'
+duration 0.1930
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00015.jpg'
+duration 0.2334
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00016.jpg'
+duration 0.0842
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00017.jpg'
+duration 0.2682
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00018.jpg'
+duration 0.1583
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00019.jpg'
+duration 0.2212
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00020.jpg'
+duration 0.2748
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00021.jpg'
+duration 0.1937
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00022.jpg'
+duration 0.1853
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00023.jpg'
+duration 0.4542
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00024.jpg'
+duration 0.2451
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00025.jpg'
+duration 0.1486
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00026.jpg'
+duration 0.1357
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00027.jpg'
+duration 0.1469
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00028.jpg'
+duration 0.1509
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00029.jpg'
+duration 0.1528
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00030.jpg'
+duration 0.1350
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00031.jpg'
+duration 0.1675
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00032.jpg'
+duration 0.1445
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00033.jpg'
+duration 0.1327
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00034.jpg'
+duration 0.7781
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00035.jpg'
+duration 0.2660
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00036.jpg'
+duration 0.0637
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00037.jpg'
+duration 0.3264
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00038.jpg'
+duration 0.2001
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00039.jpg'
+duration 0.1326
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00040.jpg'
+duration 0.1510
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00041.jpg'
+duration 0.1330
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00042.jpg'
+duration 0.1595
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00043.jpg'
+duration 0.1411
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00044.jpg'
+duration 0.1326
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00045.jpg'
+duration 0.1513
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00046.jpg'
+duration 0.1468
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00047.jpg'
+duration 0.2047
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00048.jpg'
+duration 0.1492
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00049.jpg'
+duration 0.1673
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00050.jpg'
+duration 0.1496
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00051.jpg'
+duration 0.1327
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00052.jpg'
+duration 0.1470
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00053.jpg'
+duration 0.1357
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00054.jpg'
+duration 0.1545
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00055.jpg'
+duration 0.1455
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00056.jpg'
+duration 0.1333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00057.jpg'
+duration 0.4006
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00058.jpg'
+duration 0.1485
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00059.jpg'
+duration 0.1493
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00060.jpg'
+duration 0.1607
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00061.jpg'
+duration 0.1568
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00062.jpg'
+duration 0.1370
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00063.jpg'
+duration 0.2260
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00064.jpg'
+duration 0.1359
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00065.jpg'
+duration 0.1320
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00066.jpg'
+duration 0.1866
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00067.jpg'
+duration 0.1507
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00068.jpg'
+duration 0.2718
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00069.jpg'
+duration 0.1614
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00070.jpg'
+duration 0.1329
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00071.jpg'
+duration 0.1881
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00072.jpg'
+duration 0.2061
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00073.jpg'
+duration 0.3426
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00074.jpg'
+duration 0.2167
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00075.jpg'
+duration 0.1448
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00076.jpg'
+duration 0.3116
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00077.jpg'
+duration 0.2379
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00078.jpg'
+duration 0.5756
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00079.jpg'
+duration 0.1413
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00080.jpg'
+duration 0.1370
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00081.jpg'
+duration 0.4012
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00082.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00083.jpg'
+duration 0.2055
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00084.jpg'
+duration 0.3548
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00085.jpg'
+duration 0.1382
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00086.jpg'
+duration 0.1343
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00087.jpg'
+duration 0.1489
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00088.jpg'
+duration 0.4182
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00089.jpg'
+duration 0.1464
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00090.jpg'
+duration 0.1543
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00091.jpg'
+duration 0.2110
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00092.jpg'
+duration 0.1359
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00093.jpg'
+duration 0.1882
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00094.jpg'
+duration 0.1516
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00095.jpg'
+duration 0.1453
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00096.jpg'
+duration 0.1280
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00097.jpg'
+duration 0.1395
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00098.jpg'
+duration 0.1278
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00099.jpg'
+duration 0.1552
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00100.jpg'
+duration 0.2167
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00101.jpg'
+duration 0.1330
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00102.jpg'
+duration 0.2141
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00103.jpg'
+duration 0.4106
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00104.jpg'
+duration 0.1825
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00105.jpg'
+duration 0.2662
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00106.jpg'
+duration 0.1603
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00107.jpg'
+duration 0.1303
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00108.jpg'
+duration 0.2115
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00109.jpg'
+duration 0.1418
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00110.jpg'
+duration 0.3328
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00111.jpg'
+duration 0.1752
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00112.jpg'
+duration 0.3856
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00113.jpg'
+duration 0.1605
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00114.jpg'
+duration 0.1554
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00115.jpg'
+duration 0.1409
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00116.jpg'
+duration 0.5396
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00117.jpg'
+duration 0.1561
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00118.jpg'
+duration 0.1510
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00119.jpg'
+duration 0.1332
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00120.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00121.jpg'
+duration 0.2140
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00122.jpg'
+duration 0.1376
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00123.jpg'
+duration 0.1663
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00124.jpg'
+duration 0.3627
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00125.jpg'
+duration 0.2559
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00126.jpg'
+duration 0.1480
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00127.jpg'
+duration 0.6203
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00128.jpg'
+duration 0.4644
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00129.jpg'
+duration 0.1517
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00130.jpg'
+duration 0.4156
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00131.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00132.jpg'
+duration 0.4982
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00133.jpg'
+duration 0.4694
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00134.jpg'
+duration 0.1493
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00135.jpg'
+duration 0.1391
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00136.jpg'
+duration 0.1934
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00137.jpg'
+duration 0.5586
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00138.jpg'
+duration 0.5342
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00139.jpg'
+duration 0.1408
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00140.jpg'
+duration 0.3376
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00141.jpg'
+duration 1.0078
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00142.jpg'
+duration 0.3810
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00143.jpg'
+duration 0.4185
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00144.jpg'
+duration 0.1384
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00145.jpg'
+duration 0.1529
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00146.jpg'
+duration 0.2239
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00147.jpg'
+duration 0.1435
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00148.jpg'
+duration 0.1605
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00149.jpg'
+duration 0.5915
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00150.jpg'
+duration 0.2958
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00151.jpg'
+duration 0.5344
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00152.jpg'
+duration 0.1410
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00153.jpg'
+duration 0.1438
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00154.jpg'
+duration 0.1491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00155.jpg'
+duration 0.3559
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00156.jpg'
+duration 0.1946
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00157.jpg'
+duration 0.1668
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00158.jpg'
+duration 0.1309
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00159.jpg'
+duration 0.1473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00160.jpg'
+duration 0.1512
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00161.jpg'
+duration 0.1380
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00162.jpg'
+duration 0.1490
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00163.jpg'
+duration 0.4013
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00164.jpg'
+duration 0.1602
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00165.jpg'
+duration 0.1532
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00166.jpg'
+duration 0.1678
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00167.jpg'
+duration 0.1601
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00168.jpg'
+duration 0.1372
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00169.jpg'
+duration 0.1329
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00170.jpg'
+duration 0.2098
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00171.jpg'
+duration 0.1399
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00172.jpg'
+duration 0.1365
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00173.jpg'
+duration 0.1419
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00174.jpg'
+duration 0.1561
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00175.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00176.jpg'
+duration 0.1385
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00177.jpg'
+duration 0.4113
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00178.jpg'
+duration 0.2333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00179.jpg'
+duration 0.1555
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00180.jpg'
+duration 0.1507
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00181.jpg'
+duration 0.1945
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00182.jpg'
+duration 0.1550
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00183.jpg'
+duration 0.1285
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00184.jpg'
+duration 0.1544
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00185.jpg'
+duration 0.1533
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00186.jpg'
+duration 0.1450
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00187.jpg'
+duration 0.1512
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00188.jpg'
+duration 0.2881
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00189.jpg'
+duration 0.1444
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00190.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00191.jpg'
+duration 0.1505
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00192.jpg'
+duration 0.1361
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00193.jpg'
+duration 0.1523
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00194.jpg'
+duration 0.1425
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00195.jpg'
+duration 0.5156
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00196.jpg'
+duration 0.3423
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00197.jpg'
+duration 0.0642
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00198.jpg'
+duration 0.1478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00199.jpg'
+duration 0.1540
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00200.jpg'
+duration 0.1415
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00201.jpg'
+duration 0.1782
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00202.jpg'
+duration 0.1427
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00203.jpg'
+duration 0.1314
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00204.jpg'
+duration 0.1914
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00205.jpg'
+duration 0.1422
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00206.jpg'
+duration 0.1377
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00207.jpg'
+duration 0.1478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00208.jpg'
+duration 0.1469
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00209.jpg'
+duration 0.2315
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00210.jpg'
+duration 0.1537
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00211.jpg'
+duration 0.1474
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00212.jpg'
+duration 0.1321
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00213.jpg'
+duration 0.1518
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00214.jpg'
+duration 0.1893
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00215.jpg'
+duration 0.1443
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00216.jpg'
+duration 0.1378
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00217.jpg'
+duration 0.1715
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00218.jpg'
+duration 0.1470
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00219.jpg'
+duration 0.1520
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00220.jpg'
+duration 0.1399
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00221.jpg'
+duration 0.1541
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00222.jpg'
+duration 0.1477
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00223.jpg'
+duration 0.1347
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00224.jpg'
+duration 0.1578
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00225.jpg'
+duration 0.1414
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00226.jpg'
+duration 0.2829
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00227.jpg'
+duration 0.2567
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00228.jpg'
+duration 0.1458
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00229.jpg'
+duration 0.1486
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00230.jpg'
+duration 0.1502
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00231.jpg'
+duration 0.1316
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00232.jpg'
+duration 0.1495
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00233.jpg'
+duration 0.1540
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00234.jpg'
+duration 0.1298
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00235.jpg'
+duration 0.1506
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00236.jpg'
+duration 0.1351
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00237.jpg'
+duration 0.1474
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00238.jpg'
+duration 0.1492
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00239.jpg'
+duration 0.1356
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00240.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00241.jpg'
+duration 0.1491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00242.jpg'
+duration 0.1366
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00243.jpg'
+duration 0.1549
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00244.jpg'
+duration 0.1521
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00245.jpg'
+duration 0.1548
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00246.jpg'
+duration 0.1366
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00247.jpg'
+duration 0.1657
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00248.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00249.jpg'
+duration 0.1324
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00250.jpg'
+duration 0.1508
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00251.jpg'
+duration 0.1352
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00252.jpg'
+duration 0.2833
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00253.jpg'
+duration 0.0638
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00254.jpg'
+duration 0.3050
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00255.jpg'
+duration 0.0471
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00256.jpg'
+duration 0.7077
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00257.jpg'
+duration 0.4181
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00258.jpg'
+duration 0.3552
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00259.jpg'
+duration 0.4582
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00260.jpg'
+duration 0.0664
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00261.jpg'
+duration 0.2394
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00262.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00263.jpg'
+duration 0.1403
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00264.jpg'
+duration 0.1513
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00265.jpg'
+duration 0.1480
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00266.jpg'
+duration 0.1378
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00267.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00268.jpg'
+duration 0.1326
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00269.jpg'
+duration 0.2533
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00270.jpg'
+duration 0.2319
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00271.jpg'
+duration 0.1332
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00272.jpg'
+duration 0.1469
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00273.jpg'
+duration 0.1310
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00274.jpg'
+duration 0.1573
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00275.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00276.jpg'
+duration 0.1551
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00277.jpg'
+duration 0.3620
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00278.jpg'
+duration 0.1438
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00279.jpg'
+duration 0.1514
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00280.jpg'
+duration 0.2411
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00281.jpg'
+duration 0.1938
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00282.jpg'
+duration 0.1423
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00283.jpg'
+duration 0.1418
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00284.jpg'
+duration 0.1408
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00285.jpg'
+duration 0.1719
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00286.jpg'
+duration 0.3291
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00287.jpg'
+duration 0.1553
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00288.jpg'
+duration 0.3412
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00289.jpg'
+duration 0.1398
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00290.jpg'
+duration 0.2773
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00291.jpg'
+duration 0.1185
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00292.jpg'
+duration 0.1619
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00293.jpg'
+duration 0.1472
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00294.jpg'
+duration 0.1347
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00295.jpg'
+duration 0.1445
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00296.jpg'
+duration 0.1365
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00297.jpg'
+duration 0.3430
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00298.jpg'
+duration 0.1977
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00299.jpg'
+duration 0.2757
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00300.jpg'
+duration 0.1478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00301.jpg'
+duration 0.1355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00302.jpg'
+duration 0.1460
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00303.jpg'
+duration 0.2730
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00304.jpg'
+duration 0.1653
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00305.jpg'
+duration 0.1480
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00306.jpg'
+duration 0.1311
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00307.jpg'
+duration 0.2035
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00308.jpg'
+duration 0.2477
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00309.jpg'
+duration 0.2404
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00310.jpg'
+duration 0.0700
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00311.jpg'
+duration 0.2584
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00312.jpg'
+duration 0.1494
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00313.jpg'
+duration 0.1517
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00314.jpg'
+duration 0.1489
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00315.jpg'
+duration 0.3205
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00316.jpg'
+duration 0.1299
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00317.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00318.jpg'
+duration 0.1812
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00319.jpg'
+duration 0.1597
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00320.jpg'
+duration 0.1438
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00321.jpg'
+duration 0.2031
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00322.jpg'
+duration 0.1603
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00323.jpg'
+duration 0.2281
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00324.jpg'
+duration 0.1430
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00325.jpg'
+duration 0.1569
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00326.jpg'
+duration 0.2935
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00327.jpg'
+duration 0.1691
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00328.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00329.jpg'
+duration 0.1290
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00330.jpg'
+duration 0.1598
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00331.jpg'
+duration 0.1629
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00332.jpg'
+duration 0.1454
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00333.jpg'
+duration 0.1736
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00334.jpg'
+duration 0.1910
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00335.jpg'
+duration 0.1365
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00336.jpg'
+duration 0.3147
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00337.jpg'
+duration 0.1880
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00338.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00339.jpg'
+duration 0.2488
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00340.jpg'
+duration 0.1463
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00341.jpg'
+duration 0.1497
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00342.jpg'
+duration 0.1344
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00343.jpg'
+duration 0.3070
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00344.jpg'
+duration 0.1762
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00345.jpg'
+duration 0.2163
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00346.jpg'
+duration 0.1511
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00347.jpg'
+duration 0.1340
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00348.jpg'
+duration 0.2744
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00349.jpg'
+duration 0.1807
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00350.jpg'
+duration 0.1450
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00351.jpg'
+duration 0.2179
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00352.jpg'
+duration 0.1524
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00353.jpg'
+duration 0.2153
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00354.jpg'
+duration 0.1466
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00355.jpg'
+duration 0.1349
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00356.jpg'
+duration 0.2778
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00357.jpg'
+duration 0.2667
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00358.jpg'
+duration 0.2550
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00359.jpg'
+duration 0.2203
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00360.jpg'
+duration 0.0446
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00361.jpg'
+duration 0.1854
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00362.jpg'
+duration 0.3337
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00363.jpg'
+duration 0.2840
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00364.jpg'
+duration 0.3442
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00365.jpg'
+duration 0.2771
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00366.jpg'
+duration 0.2168
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00367.jpg'
+duration 0.2028
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00368.jpg'
+duration 0.2213
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00369.jpg'
+duration 0.2825
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00370.jpg'
+duration 0.3785
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00371.jpg'
+duration 0.3773
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00372.jpg'
+duration 0.2431
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00373.jpg'
+duration 0.2964
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00374.jpg'
+duration 0.3658
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00375.jpg'
+duration 0.2590
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00376.jpg'
+duration 0.2811
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00377.jpg'
+duration 0.2325
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00378.jpg'
+duration 0.1677
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00379.jpg'
+duration 0.1637
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00380.jpg'
+duration 0.2618
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00381.jpg'
+duration 0.3939
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00382.jpg'
+duration 1.8667
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00383.jpg'
+duration 0.6766
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00384.jpg'
+duration 0.9663
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00385.jpg'
+duration 0.7678
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00386.jpg'
+duration 0.6500
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00387.jpg'
+duration 2.3503
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00388.jpg'
+duration 0.0674
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00389.jpg'
+duration 3.0121
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00390.jpg'
+duration 1.0286
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00391.jpg'
+duration 0.7853
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00392.jpg'
+duration 1.2087
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00393.jpg'
+duration 0.9478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00394.jpg'
+duration 0.8715
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00395.jpg'
+duration 1.6645
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00396.jpg'
+duration 0.7096
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00397.jpg'
+duration 0.7485
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00398.jpg'
+duration 0.3590
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00399.jpg'
+duration 1.9559
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00400.jpg'
+duration 1.0929
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00401.jpg'
+duration 0.7665
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00402.jpg'
+duration 0.7358
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00403.jpg'
+duration 0.6539
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00404.jpg'
+duration 0.4530
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00405.jpg'
+duration 1.1000
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00406.jpg'
+duration 0.1796
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00407.jpg'
+duration 0.0563
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00408.jpg'
+duration 0.3735
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00409.jpg'
+duration 0.5637
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00410.jpg'
+duration 0.6355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00411.jpg'
+duration 0.2458
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00412.jpg'
+duration 0.0545
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00413.jpg'
+duration 0.3925
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00414.jpg'
+duration 0.1686
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00415.jpg'
+duration 0.1643
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00416.jpg'
+duration 0.2980
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00417.jpg'
+duration 0.2922
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00418.jpg'
+duration 0.2827
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00419.jpg'
+duration 0.3514
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00420.jpg'
+duration 0.2787
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00421.jpg'
+duration 0.4029
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00422.jpg'
+duration 0.2984
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00423.jpg'
+duration 0.2946
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00424.jpg'
+duration 0.2901
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00425.jpg'
+duration 0.2984
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00426.jpg'
+duration 0.2940
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00427.jpg'
+duration 0.2745
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00428.jpg'
+duration 0.2819
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00429.jpg'
+duration 0.3803
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00430.jpg'
+duration 0.2863
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00431.jpg'
+duration 0.2853
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00432.jpg'
+duration 0.2840
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00433.jpg'
+duration 0.2832
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00434.jpg'
+duration 0.2989
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00435.jpg'
+duration 0.3026
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00436.jpg'
+duration 0.2817
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00437.jpg'
+duration 0.2885
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00438.jpg'
+duration 0.2773
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00439.jpg'
+duration 0.0529
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00440.jpg'
+duration 0.2158
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00441.jpg'
+duration 0.1841
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00442.jpg'
+duration 0.0819
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00443.jpg'
+duration 0.1265
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00444.jpg'
+duration 0.8514
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00445.jpg'
+duration 0.5020
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00446.jpg'
+duration 0.6349
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00447.jpg'
+duration 0.4849
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00448.jpg'
+duration 2.1122
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00449.jpg'
+duration 0.5030
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00450.jpg'
+duration 1.1713
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00451.jpg'
+duration 0.2480
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00452.jpg'
+duration 1.0144
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00453.jpg'
+duration 1.3451
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00454.jpg'
+duration 0.1849
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00455.jpg'
+duration 0.1400
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00456.jpg'
+duration 0.3528
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00457.jpg'
+duration 0.2199
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00458.jpg'
+duration 0.1418
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00459.jpg'
+duration 0.0520
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00460.jpg'
+duration 0.1486
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00461.jpg'
+duration 0.4857
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00462.jpg'
+duration 0.1346
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00463.jpg'
+duration 0.7309
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00464.jpg'
+duration 0.1636
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00465.jpg'
+duration 0.5032
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00466.jpg'
+duration 0.1501
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00467.jpg'
+duration 0.1597
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00468.jpg'
+duration 0.1624
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00469.jpg'
+duration 0.2115
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00470.jpg'
+duration 0.3128
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00471.jpg'
+duration 0.1534
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00472.jpg'
+duration 0.4593
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00473.jpg'
+duration 0.8850
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00474.jpg'
+duration 0.3599
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00475.jpg'
+duration 0.1477
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00476.jpg'
+duration 0.0609
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00477.jpg'
+duration 0.1648
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00478.jpg'
+duration 0.3190
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00479.jpg'
+duration 0.6191
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00480.jpg'
+duration 0.3792
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00481.jpg'
+duration 1.0880
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00482.jpg'
+duration 0.1540
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00483.jpg'
+duration 0.1449
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00484.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00485.jpg'
+duration 0.2691
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00486.jpg'
+duration 0.1306
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00487.jpg'
+duration 0.1535
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00488.jpg'
+duration 0.3292
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00489.jpg'
+duration 0.1578
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00490.jpg'
+duration 0.9262
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00491.jpg'
+duration 0.1662
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00492.jpg'
+duration 0.7926
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00493.jpg'
+duration 0.2388
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00494.jpg'
+duration 0.1494
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00495.jpg'
+duration 0.3664
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00496.jpg'
+duration 0.1504
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00497.jpg'
+duration 0.2884
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00498.jpg'
+duration 0.5307
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00499.jpg'
+duration 0.2200
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00500.jpg'
+duration 0.3913
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00501.jpg'
+duration 0.2501
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00502.jpg'
+duration 0.2668
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00503.jpg'
+duration 0.1386
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00504.jpg'
+duration 0.1469
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00505.jpg'
+duration 0.1396
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00506.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00507.jpg'
+duration 0.6300
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00508.jpg'
+duration 0.5021
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00509.jpg'
+duration 0.2709
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00510.jpg'
+duration 0.1464
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00511.jpg'
+duration 0.3615
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00512.jpg'
+duration 0.1396
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00513.jpg'
+duration 0.1838
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00514.jpg'
+duration 0.1490
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00515.jpg'
+duration 0.3395
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00516.jpg'
+duration 0.1460
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00517.jpg'
+duration 0.2819
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00518.jpg'
+duration 0.1840
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00519.jpg'
+duration 0.1364
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00520.jpg'
+duration 0.1439
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00521.jpg'
+duration 0.3051
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00522.jpg'
+duration 0.1966
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00523.jpg'
+duration 0.1354
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00524.jpg'
+duration 0.2581
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00525.jpg'
+duration 0.1612
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00526.jpg'
+duration 0.1460
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00527.jpg'
+duration 0.2348
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00528.jpg'
+duration 0.1460
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00529.jpg'
+duration 0.0826
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00530.jpg'
+duration 0.1354
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00531.jpg'
+duration 0.2218
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00532.jpg'
+duration 0.1423
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00533.jpg'
+duration 0.1609
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00534.jpg'
+duration 0.2053
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00535.jpg'
+duration 0.3171
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00536.jpg'
+duration 0.1524
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00537.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00538.jpg'
+duration 0.1489
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00539.jpg'
+duration 0.1495
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00540.jpg'
+duration 0.1365
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00541.jpg'
+duration 0.1580
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00542.jpg'
+duration 0.1426
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00543.jpg'
+duration 0.1487
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00544.jpg'
+duration 0.1489
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00545.jpg'
+duration 0.1565
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00546.jpg'
+duration 0.1516
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00547.jpg'
+duration 0.1473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00548.jpg'
+duration 0.1472
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00549.jpg'
+duration 0.1507
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00550.jpg'
+duration 0.1547
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00551.jpg'
+duration 0.1449
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00552.jpg'
+duration 0.1548
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00553.jpg'
+duration 0.1885
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00554.jpg'
+duration 0.7821
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00555.jpg'
+duration 0.4951
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00556.jpg'
+duration 0.1757
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00557.jpg'
+duration 0.1582
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00558.jpg'
+duration 0.2458
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00559.jpg'
+duration 0.0652
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00560.jpg'
+duration 0.1587
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00561.jpg'
+duration 0.1857
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00562.jpg'
+duration 0.4839
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00563.jpg'
+duration 0.1434
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00564.jpg'
+duration 0.1441
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00565.jpg'
+duration 0.4898
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00566.jpg'
+duration 0.2527
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00567.jpg'
+duration 0.1400
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00568.jpg'
+duration 0.1550
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00569.jpg'
+duration 0.6909
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00570.jpg'
+duration 0.4341
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00571.jpg'
+duration 0.2491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00572.jpg'
+duration 0.4050
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00573.jpg'
+duration 0.6249
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00574.jpg'
+duration 0.3467
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00575.jpg'
+duration 0.5301
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00576.jpg'
+duration 0.2471
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00577.jpg'
+duration 0.0539
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00578.jpg'
+duration 0.1483
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00579.jpg'
+duration 0.5472
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00580.jpg'
+duration 0.1604
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00581.jpg'
+duration 0.1413
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00582.jpg'
+duration 0.1542
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00583.jpg'
+duration 0.1473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00584.jpg'
+duration 0.5395
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00585.jpg'
+duration 0.3248
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00586.jpg'
+duration 0.1529
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00587.jpg'
+duration 0.1509
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00588.jpg'
+duration 0.1460
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00589.jpg'
+duration 0.5652
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00590.jpg'
+duration 0.3152
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00591.jpg'
+duration 0.1374
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00592.jpg'
+duration 0.1673
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00593.jpg'
+duration 0.4626
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00594.jpg'
+duration 0.4118
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00595.jpg'
+duration 0.5226
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00596.jpg'
+duration 0.9615
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00597.jpg'
+duration 0.2574
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00598.jpg'
+duration 0.0687
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00599.jpg'
+duration 0.3285
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00600.jpg'
+duration 0.1506
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00601.jpg'
+duration 0.1531
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00602.jpg'
+duration 0.1491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00603.jpg'
+duration 1.3618
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00604.jpg'
+duration 0.5072
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00605.jpg'
+duration 0.2088
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00606.jpg'
+duration 0.7313
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00607.jpg'
+duration 0.1396
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00608.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00609.jpg'
+duration 1.0937
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00610.jpg'
+duration 0.1421
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00611.jpg'
+duration 0.1473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00612.jpg'
+duration 0.9277
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00613.jpg'
+duration 0.9686
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00614.jpg'
+duration 0.2462
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00615.jpg'
+duration 1.3091
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00616.jpg'
+duration 1.8828
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00617.jpg'
+duration 0.1173
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00618.jpg'
+duration 2.2147
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00619.jpg'
+duration 0.0522
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00620.jpg'
+duration 4.3990
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00621.jpg'
+duration 0.7449
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00622.jpg'
+duration 0.1382
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00623.jpg'
+duration 0.4610
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00624.jpg'
+duration 0.0577
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00625.jpg'
+duration 0.1342
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00626.jpg'
+duration 0.4793
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00627.jpg'
+duration 0.3531
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00628.jpg'
+duration 0.4945
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00629.jpg'
+duration 0.1599
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00630.jpg'
+duration 0.1429
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00631.jpg'
+duration 0.1322
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00632.jpg'
+duration 0.2108
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00633.jpg'
+duration 0.1984
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00634.jpg'
+duration 0.5405
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00635.jpg'
+duration 0.1382
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00636.jpg'
+duration 0.1477
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00637.jpg'
+duration 0.1695
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00638.jpg'
+duration 0.1510
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00639.jpg'
+duration 0.1802
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00640.jpg'
+duration 0.1488
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00641.jpg'
+duration 0.1411
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00642.jpg'
+duration 0.1518
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00643.jpg'
+duration 0.1432
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00644.jpg'
+duration 0.0831
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00645.jpg'
+duration 0.2658
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00646.jpg'
+duration 0.0505
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00647.jpg'
+duration 0.1448
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00648.jpg'
+duration 0.1371
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00649.jpg'
+duration 0.1308
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00650.jpg'
+duration 0.1520
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00651.jpg'
+duration 0.1357
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00652.jpg'
+duration 0.1463
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00653.jpg'
+duration 0.1548
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00654.jpg'
+duration 0.1842
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00655.jpg'
+duration 0.1457
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00656.jpg'
+duration 0.9092
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00657.jpg'
+duration 0.7252
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00658.jpg'
+duration 0.1505
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00659.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00660.jpg'
+duration 0.3342
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00661.jpg'
+duration 0.8756
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00662.jpg'
+duration 0.1412
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00663.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00664.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00665.jpg'
+duration 0.1391
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00666.jpg'
+duration 0.1718
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00667.jpg'
+duration 0.6843
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00668.jpg'
+duration 0.1376
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00669.jpg'
+duration 0.1525
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00670.jpg'
+duration 0.1501
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00671.jpg'
+duration 0.1367
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00672.jpg'
+duration 0.1470
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00673.jpg'
+duration 0.1664
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00674.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00675.jpg'
+duration 0.1461
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00676.jpg'
+duration 0.1523
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00677.jpg'
+duration 0.1508
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00678.jpg'
+duration 0.1502
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00679.jpg'
+duration 0.1599
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00680.jpg'
+duration 0.1444
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00681.jpg'
+duration 0.1652
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00682.jpg'
+duration 0.1840
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00683.jpg'
+duration 0.1477
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00684.jpg'
+duration 0.1719
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00685.jpg'
+duration 0.1434
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00686.jpg'
+duration 0.1355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00687.jpg'
+duration 0.1453
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00688.jpg'
+duration 0.1408
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00689.jpg'
+duration 0.1450
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00690.jpg'
+duration 0.6113
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00691.jpg'
+duration 0.1408
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00692.jpg'
+duration 0.1481
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00693.jpg'
+duration 0.1496
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00694.jpg'
+duration 0.1614
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00695.jpg'
+duration 0.1393
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00696.jpg'
+duration 0.1316
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00697.jpg'
+duration 0.1533
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00698.jpg'
+duration 0.1523
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00699.jpg'
+duration 0.1492
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00700.jpg'
+duration 0.3007
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00701.jpg'
+duration 0.1457
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00702.jpg'
+duration 0.1434
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00703.jpg'
+duration 0.1394
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00704.jpg'
+duration 0.1351
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00705.jpg'
+duration 0.1495
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00706.jpg'
+duration 0.1554
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00707.jpg'
+duration 0.4797
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00708.jpg'
+duration 2.3161
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00709.jpg'
+duration 0.0501
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00710.jpg'
+duration 0.1305
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00711.jpg'
+duration 0.1546
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00712.jpg'
+duration 0.1313
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00713.jpg'
+duration 0.2664
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00714.jpg'
+duration 0.2441
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00715.jpg'
+duration 0.6534
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00716.jpg'
+duration 0.3515
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00717.jpg'
+duration 0.6232
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00718.jpg'
+duration 0.1432
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00719.jpg'
+duration 0.2808
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00720.jpg'
+duration 0.1519
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00721.jpg'
+duration 0.1337
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00722.jpg'
+duration 0.2563
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00723.jpg'
+duration 0.1554
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00724.jpg'
+duration 0.0882
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00725.jpg'
+duration 0.2228
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00726.jpg'
+duration 0.5041
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00727.jpg'
+duration 0.0658
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00728.jpg'
+duration 0.1419
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00729.jpg'
+duration 0.1519
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00730.jpg'
+duration 0.1647
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00731.jpg'
+duration 0.4002
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00732.jpg'
+duration 0.4273
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00733.jpg'
+duration 0.3260
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00734.jpg'
+duration 0.0473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00735.jpg'
+duration 0.2946
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00736.jpg'
+duration 0.3290
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00737.jpg'
+duration 0.4160
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00738.jpg'
+duration 0.2823
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00739.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00740.jpg'
+duration 0.3785
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00741.jpg'
+duration 0.4517
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00742.jpg'
+duration 0.2295
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00743.jpg'
+duration 0.3507
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00744.jpg'
+duration 0.1461
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00745.jpg'
+duration 0.1415
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00746.jpg'
+duration 0.7714
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00747.jpg'
+duration 0.1440
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00748.jpg'
+duration 0.1449
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00749.jpg'
+duration 0.1702
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00750.jpg'
+duration 0.4437
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00751.jpg'
+duration 0.1586
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00752.jpg'
+duration 0.5974
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00753.jpg'
+duration 0.1465
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00754.jpg'
+duration 0.4122
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00755.jpg'
+duration 0.3937
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00756.jpg'
+duration 0.1513
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00757.jpg'
+duration 0.1519
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00758.jpg'
+duration 0.1426
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00759.jpg'
+duration 0.7978
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00760.jpg'
+duration 0.6437
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00761.jpg'
+duration 0.2368
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00762.jpg'
+duration 0.3665
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00763.jpg'
+duration 0.1536
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00764.jpg'
+duration 0.1373
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00765.jpg'
+duration 0.5399
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00766.jpg'
+duration 0.1441
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00767.jpg'
+duration 0.1544
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00768.jpg'
+duration 0.1463
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00769.jpg'
+duration 0.1624
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00770.jpg'
+duration 0.1344
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00771.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00772.jpg'
+duration 0.1359
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00773.jpg'
+duration 0.3427
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00774.jpg'
+duration 0.1423
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00775.jpg'
+duration 0.5363
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00776.jpg'
+duration 0.1440
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00777.jpg'
+duration 0.4480
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00778.jpg'
+duration 0.1591
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00779.jpg'
+duration 0.2864
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00780.jpg'
+duration 0.2620
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00781.jpg'
+duration 0.1444
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00782.jpg'
+duration 0.1535
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00783.jpg'
+duration 0.1470
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00784.jpg'
+duration 0.1444
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00785.jpg'
+duration 0.3431
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00786.jpg'
+duration 0.3733
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00787.jpg'
+duration 0.5521
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00788.jpg'
+duration 0.1369
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00789.jpg'
+duration 0.1295
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00790.jpg'
+duration 0.3522
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00791.jpg'
+duration 0.1892
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00792.jpg'
+duration 0.6360
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00793.jpg'
+duration 0.1408
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00794.jpg'
+duration 0.1926
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00795.jpg'
+duration 0.1425
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00796.jpg'
+duration 0.1376
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00797.jpg'
+duration 0.1437
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00798.jpg'
+duration 0.1350
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00799.jpg'
+duration 0.7398
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00800.jpg'
+duration 0.1513
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00801.jpg'
+duration 0.1454
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00802.jpg'
+duration 0.1490
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00803.jpg'
+duration 0.0847
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00804.jpg'
+duration 0.0666
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00805.jpg'
+duration 0.6451
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00806.jpg'
+duration 1.1242
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00807.jpg'
+duration 1.6550
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00808.jpg'
+duration 1.1761
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00809.jpg'
+duration 1.6012
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00810.jpg'
+duration 1.0097
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00811.jpg'
+duration 3.1344
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00812.jpg'
+duration 22.4149
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00813.jpg'
+duration 0.2973
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00814.jpg'
+duration 0.2832
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00815.jpg'
+duration 0.2845
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00816.jpg'
+duration 0.2803
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00817.jpg'
+duration 0.2890
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00818.jpg'
+duration 0.3128
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00819.jpg'
+duration 0.2921
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00820.jpg'
+duration 0.1324
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00821.jpg'
+duration 0.3839
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00822.jpg'
+duration 0.0530
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00823.jpg'
+duration 0.7627
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00824.jpg'
+duration 0.2538
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00825.jpg'
+duration 0.1051
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00826.jpg'
+duration 1.1054
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00827.jpg'
+duration 4.1045
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00828.jpg'
+duration 0.6298
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00829.jpg'
+duration 0.3981
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00830.jpg'
+duration 2.0519
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00831.jpg'
+duration 1.1386
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00832.jpg'
+duration 0.9416
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00833.jpg'
+duration 0.3533
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00834.jpg'
+duration 0.0664
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00835.jpg'
+duration 0.6454
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00836.jpg'
+duration 1.8685
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00837.jpg'
+duration 0.3224
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00838.jpg'
+duration 2.2447
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00839.jpg'
+duration 0.4029
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00840.jpg'
+duration 0.0488
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00841.jpg'
+duration 0.2151
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00842.jpg'
+duration 0.3970
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00843.jpg'
+duration 0.0662
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00844.jpg'
+duration 0.2794
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00845.jpg'
+duration 0.1878
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00846.jpg'
+duration 0.6280
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00847.jpg'
+duration 0.3788
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00848.jpg'
+duration 0.1928
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00849.jpg'
+duration 0.1831
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00850.jpg'
+duration 0.1848
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00851.jpg'
+duration 0.1875
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00852.jpg'
+duration 0.1797
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00853.jpg'
+duration 0.7766
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00854.jpg'
+duration 0.1936
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00855.jpg'
+duration 0.1794
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00856.jpg'
+duration 0.3427
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00857.jpg'
+duration 0.0592
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00858.jpg'
+duration 0.2481
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00859.jpg'
+duration 0.4346
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00860.jpg'
+duration 0.1317
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00861.jpg'
+duration 0.2363
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00862.jpg'
+duration 0.1458
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00863.jpg'
+duration 0.1343
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00864.jpg'
+duration 0.1371
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00865.jpg'
+duration 0.3028
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00866.jpg'
+duration 0.1421
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00867.jpg'
+duration 0.1526
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00868.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00869.jpg'
+duration 0.2634
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00870.jpg'
+duration 0.1349
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00871.jpg'
+duration 0.1491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00872.jpg'
+duration 0.1338
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00873.jpg'
+duration 0.1561
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00874.jpg'
+duration 0.4994
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00875.jpg'
+duration 0.1453
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00876.jpg'
+duration 0.4018
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00877.jpg'
+duration 0.1502
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00878.jpg'
+duration 0.1343
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00879.jpg'
+duration 0.1837
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00880.jpg'
+duration 0.1476
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00881.jpg'
+duration 0.1396
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00882.jpg'
+duration 0.1417
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00883.jpg'
+duration 0.1366
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00884.jpg'
+duration 0.1486
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00885.jpg'
+duration 0.2422
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00886.jpg'
+duration 0.1710
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00887.jpg'
+duration 0.3585
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00888.jpg'
+duration 0.1908
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00889.jpg'
+duration 0.1412
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00890.jpg'
+duration 0.1456
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00891.jpg'
+duration 0.4819
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00892.jpg'
+duration 0.1353
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00893.jpg'
+duration 0.1627
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00894.jpg'
+duration 0.1409
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00895.jpg'
+duration 0.1560
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00896.jpg'
+duration 0.1593
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00897.jpg'
+duration 0.1355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00898.jpg'
+duration 0.1573
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00899.jpg'
+duration 0.1369
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00900.jpg'
+duration 0.1590
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00901.jpg'
+duration 0.1523
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00902.jpg'
+duration 0.1526
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00903.jpg'
+duration 0.1391
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00904.jpg'
+duration 0.1466
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00905.jpg'
+duration 0.1333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00906.jpg'
+duration 0.1359
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00907.jpg'
+duration 0.1339
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00908.jpg'
+duration 0.1325
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00909.jpg'
+duration 0.1545
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00910.jpg'
+duration 0.1438
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00911.jpg'
+duration 0.1332
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00912.jpg'
+duration 0.6473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00913.jpg'
+duration 0.7390
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00914.jpg'
+duration 0.4434
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00915.jpg'
+duration 0.7683
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00916.jpg'
+duration 0.3526
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00917.jpg'
+duration 0.6476
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00918.jpg'
+duration 0.5970
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00919.jpg'
+duration 0.4495
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00920.jpg'
+duration 0.6834
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00921.jpg'
+duration 0.3846
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00922.jpg'
+duration 0.4233
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00923.jpg'
+duration 0.6161
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00924.jpg'
+duration 0.8203
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00925.jpg'
+duration 0.2761
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00926.jpg'
+duration 0.2779
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00927.jpg'
+duration 0.3916
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00928.jpg'
+duration 0.2966
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00929.jpg'
+duration 0.6900
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00930.jpg'
+duration 0.5540
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00931.jpg'
+duration 0.4549
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00932.jpg'
+duration 0.3391
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00933.jpg'
+duration 0.2763
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00934.jpg'
+duration 0.6641
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00935.jpg'
+duration 0.4312
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00936.jpg'
+duration 0.3034
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00937.jpg'
+duration 0.5000
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00938.jpg'
+duration 0.7372
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00939.jpg'
+duration 0.3412
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00940.jpg'
+duration 0.1435
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00941.jpg'
+duration 0.1377
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00942.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00943.jpg'
+duration 0.3977
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00944.jpg'
+duration 0.1341
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00945.jpg'
+duration 0.1489
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00946.jpg'
+duration 0.1426
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00947.jpg'
+duration 0.1414
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00948.jpg'
+duration 0.1323
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00949.jpg'
+duration 0.1350
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00950.jpg'
+duration 0.1338
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00951.jpg'
+duration 0.1508
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00952.jpg'
+duration 0.1398
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00953.jpg'
+duration 0.1547
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00954.jpg'
+duration 0.1778
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00955.jpg'
+duration 0.2286
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00956.jpg'
+duration 0.1456
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00957.jpg'
+duration 0.1510
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00958.jpg'
+duration 0.1388
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00959.jpg'
+duration 0.1313
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00960.jpg'
+duration 0.1811
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00961.jpg'
+duration 0.1316
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00962.jpg'
+duration 0.1504
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00963.jpg'
+duration 0.1588
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00964.jpg'
+duration 0.1455
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00965.jpg'
+duration 0.1995
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00966.jpg'
+duration 0.1668
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00967.jpg'
+duration 0.1476
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00968.jpg'
+duration 0.1320
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00969.jpg'
+duration 0.2147
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00970.jpg'
+duration 0.2136
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00971.jpg'
+duration 0.1415
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00972.jpg'
+duration 0.1511
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00973.jpg'
+duration 0.1810
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00974.jpg'
+duration 0.1973
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00975.jpg'
+duration 0.3592
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00976.jpg'
+duration 0.1465
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00977.jpg'
+duration 0.1491
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00978.jpg'
+duration 0.4415
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00979.jpg'
+duration 0.1548
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00980.jpg'
+duration 0.1741
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00981.jpg'
+duration 0.1478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00982.jpg'
+duration 0.2083
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00983.jpg'
+duration 0.1372
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00984.jpg'
+duration 0.0864
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00985.jpg'
+duration 0.2434
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00986.jpg'
+duration 0.3384
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00987.jpg'
+duration 0.0720
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00988.jpg'
+duration 0.4071
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00989.jpg'
+duration 0.2583
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00990.jpg'
+duration 0.2620
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00991.jpg'
+duration 0.2585
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00992.jpg'
+duration 0.1432
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00993.jpg'
+duration 0.2018
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00994.jpg'
+duration 0.2791
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00995.jpg'
+duration 0.1337
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00996.jpg'
+duration 0.2627
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00997.jpg'
+duration 0.1555
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00998.jpg'
+duration 0.1851
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/00999.jpg'
+duration 0.2621
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01000.jpg'
+duration 0.2335
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01001.jpg'
+duration 0.1355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01002.jpg'
+duration 0.1520
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01003.jpg'
+duration 0.1941
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01004.jpg'
+duration 0.1373
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01005.jpg'
+duration 0.2329
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01006.jpg'
+duration 0.1515
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01007.jpg'
+duration 0.1150
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01008.jpg'
+duration 7.9715
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01009.jpg'
+duration 0.8195
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01010.jpg'
+duration 0.5749
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01011.jpg'
+duration 0.1836
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01012.jpg'
+duration 0.2062
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01013.jpg'
+duration 0.1735
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01014.jpg'
+duration 0.2515
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01015.jpg'
+duration 0.3333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01016.jpg'
+duration 0.2037
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01017.jpg'
+duration 0.1773
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01018.jpg'
+duration 0.1849
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01019.jpg'
+duration 0.2007
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01020.jpg'
+duration 0.1852
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01021.jpg'
+duration 0.2182
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01022.jpg'
+duration 0.0535
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01023.jpg'
+duration 0.2288
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01024.jpg'
+duration 0.1475
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01025.jpg'
+duration 0.1343
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01026.jpg'
+duration 0.1504
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01027.jpg'
+duration 0.1333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01028.jpg'
+duration 0.1334
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01029.jpg'
+duration 0.1505
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01030.jpg'
+duration 0.1337
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01031.jpg'
+duration 0.1485
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01032.jpg'
+duration 0.1538
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01033.jpg'
+duration 0.1331
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01034.jpg'
+duration 0.1494
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01035.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01036.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01037.jpg'
+duration 0.1406
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01038.jpg'
+duration 0.1436
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01039.jpg'
+duration 0.4694
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01040.jpg'
+duration 0.1470
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01041.jpg'
+duration 0.1355
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01042.jpg'
+duration 0.2361
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01043.jpg'
+duration 0.0476
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01044.jpg'
+duration 0.1479
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01045.jpg'
+duration 0.1333
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01046.jpg'
+duration 0.1514
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01047.jpg'
+duration 0.1482
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01048.jpg'
+duration 0.1332
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01049.jpg'
+duration 0.1500
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01050.jpg'
+duration 0.1503
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01051.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01052.jpg'
+duration 0.1360
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01053.jpg'
+duration 0.9133
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01054.jpg'
+duration 0.2457
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01055.jpg'
+duration 0.1473
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01056.jpg'
+duration 0.1425
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01057.jpg'
+duration 0.1471
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01058.jpg'
+duration 0.2873
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01059.jpg'
+duration 0.1306
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01060.jpg'
+duration 0.2833
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01061.jpg'
+duration 0.1534
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01062.jpg'
+duration 0.1478
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01063.jpg'
+duration 0.2646
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01064.jpg'
+duration 0.3729
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01065.jpg'
+duration 0.0515
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01066.jpg'
+duration 0.2866
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01067.jpg'
+duration 0.2264
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01068.jpg'
+duration 0.1921
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01069.jpg'
+duration 0.2005
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01070.jpg'
+duration 0.1551
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01071.jpg'
+duration 0.1502
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01072.jpg'
+duration 0.1341
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01073.jpg'
+duration 0.1718
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01074.jpg'
+duration 0.1433
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01075.jpg'
+duration 0.1337
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01076.jpg'
+duration 0.1513
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01077.jpg'
+duration 0.2158
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01078.jpg'
+duration 0.1698
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01079.jpg'
+duration 0.1453
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01080.jpg'
+duration 0.1343
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01081.jpg'
+duration 0.1508
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01082.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01083.jpg'
+duration 0.2050
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01084.jpg'
+duration 0.1433
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01085.jpg'
+duration 0.1348
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01086.jpg'
+duration 0.1672
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01087.jpg'
+duration 0.1521
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01088.jpg'
+duration 0.1310
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01089.jpg'
+duration 0.1499
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01090.jpg'
+duration 0.1651
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01091.jpg'
+duration 0.1694
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01092.jpg'
+duration 0.1850
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01093.jpg'
+duration 0.2172
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01094.jpg'
+duration 0.1787
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01095.jpg'
+duration 0.2552
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01096.jpg'
+duration 0.1501
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01097.jpg'
+duration 0.1474
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01098.jpg'
+duration 0.1319
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01099.jpg'
+duration 0.3224
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01100.jpg'
+duration 0.7937
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01101.jpg'
+duration 0.3823
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01102.jpg'
+duration 0.2814
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01103.jpg'
+duration 0.2065
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01104.jpg'
+duration 0.2429
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01105.jpg'
+duration 0.2809
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01106.jpg'
+duration 2.2047
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01107.jpg'
+duration 0.0510
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01108.jpg'
+duration 0.2607
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01109.jpg'
+duration 0.4610
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01110.jpg'
+duration 2.6556
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01111.jpg'
+duration 0.2974
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01112.jpg'
+duration 0.2893
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01113.jpg'
+duration 0.3069
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01114.jpg'
+duration 0.2908
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01115.jpg'
+duration 0.3503
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01116.jpg'
+duration 0.2949
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01117.jpg'
+duration 0.2583
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01118.jpg'
+duration 0.2424
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01119.jpg'
+duration 0.1701
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01120.jpg'
+duration 0.1516
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01121.jpg'
+duration 0.1528
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01122.jpg'
+duration 0.4212
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01123.jpg'
+duration 0.1654
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01124.jpg'
+duration 0.1811
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01125.jpg'
+duration 0.1999
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01126.jpg'
+duration 0.3024
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01127.jpg'
+duration 0.1655
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01128.jpg'
+duration 0.3024
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01129.jpg'
+duration 0.2319
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01130.jpg'
+duration 0.0768
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01131.jpg'
+duration 0.1771
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01132.jpg'
+duration 0.4398
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01133.jpg'
+duration 0.4689
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01134.jpg'
+duration 0.1541
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01135.jpg'
+duration 0.1680
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01136.jpg'
+duration 0.1600
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01137.jpg'
+duration 0.3624
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01138.jpg'
+duration 0.1387
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01139.jpg'
+duration 0.1598
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01140.jpg'
+duration 0.1416
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01141.jpg'
+duration 0.1505
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01142.jpg'
+duration 0.1496
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01143.jpg'
+duration 0.3260
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01144.jpg'
+duration 0.3243
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01145.jpg'
+duration 0.3239
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01146.jpg'
+duration 0.3897
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01147.jpg'
+duration 0.1578
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01148.jpg'
+duration 0.1498
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01149.jpg'
+duration 0.1633
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01150.jpg'
+duration 0.1490
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01151.jpg'
+duration 0.1493
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01152.jpg'
+duration 0.4005
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01153.jpg'
+duration 0.2770
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01154.jpg'
+duration 0.1568
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01155.jpg'
+duration 0.1697
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01156.jpg'
+duration 0.3138
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01157.jpg'
+duration 0.2220
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01158.jpg'
+duration 0.2130
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01159.jpg'
+duration 0.1662
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01160.jpg'
+duration 0.2538
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01161.jpg'
+duration 0.2383
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01162.jpg'
+duration 0.1788
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01163.jpg'
+duration 0.1609
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01164.jpg'
+duration 0.1878
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01165.jpg'
+duration 0.2042
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01166.jpg'
+duration 0.2993
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01167.jpg'
+duration 0.1200
+file 'C:/Users/EASXP/OneDrive - Bayer/Desktop/Report Test Buddy Brwserless/docs/demo-video/_raw/one-take/frames/01167.jpg'

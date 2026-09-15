@@ -1,0 +1,27 @@
+Part two. We configure the case.
+
+On Screens, click Add screen. Pick or create the Athena report. Name the screen the way people say it, like Overview. Paste the Screen URL. That is the page the tool will open.
+
+If this is prod versus pre-prod, or one screen versus another, add a Reference URL. That is the second front-end report.
+
+Pick the saved Athena login. If this case will check the database, attach the warehouse and SQL template. Then save.
+
+Open the screen and add a test case.
+
+Warehouse type means front-end versus the backend table.
+
+Reference type means front-end versus front-end: prod versus pre-prod, or screen versus screen.
+
+Write a short description of what you see on the Athena page: which page, which tiles or grid, which filters. Do not add extra pages.
+
+Add filter combinations. The script runs once for each filter set, so one case can cover many areas.
+
+Then open Test script and click Generate.
+
+The tool writes the browser steps: open the report, log in, apply filters, and read the numbers. Then it tries the script for real. If something fails, it tries to fix it, up to five times.
+
+When it passes, the script is saved.
+
+For a database case, bind the SQL template. For prod versus pre-prod, generate the reference script, or sync from main and swap the URL. Use the same KPI names on both sides.
+
+Next, we run it and look at the summary.

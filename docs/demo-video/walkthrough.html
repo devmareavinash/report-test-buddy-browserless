@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agentic Frontend Validations</title>
+  <style>
+    :root {
+      --bg: #f4f6f8; --fg: #1d2433; --muted: #6b7380; --card: #fff;
+      --border: #e2e6ec; --primary: #2f9e68; --success: #2a9d5c;
+      --danger: #d94444; --accent: #1a9ed6; --side: #12161c; --side-fg: #e6edf5;
+      --side-muted: #8b95a3; --side-hover: #1c222b;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; font-family: Inter, Segoe UI, system-ui, sans-serif; background: var(--bg); color: var(--fg); }
+    .app { display: flex; height: 100vh; }
+    aside { width: 224px; background: var(--side); color: var(--side-fg); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+    .brand { display: flex; gap: 10px; align-items: center; padding: 8px 10px 18px; }
+    .brand img { width: 32px; height: 32px; border-radius: 6px; background: #fff; }
+    .brand b { font-size: 13px; line-height: 1.2; }
+    .brand small { display: block; color: var(--side-muted); font-size: 10px; letter-spacing: .04em; }
+    .nav { border: 0; background: transparent; color: var(--side-fg); text-align: left; padding: 8px 12px; border-radius: 8px; cursor: default; font-size: 13px; width: 100%; }
+    .nav.active, .nav.hot { background: var(--side-hover); }
+    .nav span { opacity: .75; margin-right: 8px; }
+    .grow { flex: 1; }
+    .email { color: var(--side-muted); font-size: 11px; padding: 10px 12px; }
+    main { flex: 1; overflow: auto; padding: 32px; }
+    h1 { font-size: 24px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+    .search, .sel { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 8px 10px; font-size: 13px; color: var(--muted); }
+    .search { width: 320px; }
+    .sel { min-width: 160px; }
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .stat label { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+    .stat b { display: block; font-size: 32px; margin-top: 6px; }
+    .ok { color: var(--success); } .bad { color: var(--danger); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; }
+    .card h2 { font-size: 15px; margin: 0; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .ws { padding: 12px 16px; }
+    .ws-h { display: flex; justify-content: space-between; align-items: center; }
+    .scr { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 8px; font-size: 13px; }
+    .scr:hover, .scr.hot { background: #f3f6f8; }
+    .btn { border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 7px 12px; font-size: 13px; }
+    .btn.pri { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn.ghost { background: transparent; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; }
+    .chip { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+    .chip.pass { color: var(--success); border-color: #b7e4c7; background: #edf8f1; }
+    .chip.fail { color: var(--danger); border-color: #f2c0c0; background: #fdeeee; }
+    .chip.run { color: #b45309; border-color: #f5d08a; background: #fff7e6; }
+    .dialog-bg { position: fixed; inset: 0; background: rgba(15,20,28,.45); display: none; align-items: center; justify-content: center; }
+    .dialog-bg.on { display: flex; }
+    .dialog { width: 640px; background: #fff; border-radius: 12px; padding: 20px; }
+    .dialog h3 { margin: 0 0 14px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 12px; margin-bottom: 4px; }
+    .field input, .field select, .field textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 8px; font: inherit; }
+    .code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: #0f141b; color: #d7e2ee; padding: 14px; border-radius: 10px; min-height: 180px; white-space: pre-wrap; }
+    .toast { position: fixed; top: 16px; right: 16px; background: #122017; color: #d9ffe8; padding: 10px 14px; border-radius: 8px; display: none; font-size: 13px; }
+    .toast.on { display: block; }
+    .hl { outline: 3px solid var(--accent); outline-offset: 3px; box-shadow: 0 0 0 6px rgba(26,158,214,.15); }
+    .view { display: none; }
+    .view.on { display: block; }
+    .cursor { position: fixed; width: 18px; height: 18px; border-radius: 50%; background: rgba(26,158,214,.35); border: 2px solid #1a9ed6; pointer-events: none; z-index: 50; transform: translate(-50%,-50%); transition: left .35s ease, top .35s ease; }
+    .kpi { display: grid; grid-template-columns: 1fr 90px 90px 80px; gap: 8px; font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+    .tabs { display: flex; gap: 8px; margin: 12px 0; }
+    .tab { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: #fff; font-size: 12px; }
+    .tab.on { border-color: var(--accent); color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <img src="logo.png" alt="logo" />
+      <div><b>Agentic Frontend<br/>Validations</b><small>agentic report QA</small></div>
+    </div>
+    <button class="nav active" data-nav="dash"><span>▣</span>Dashboard</button>
+    <button class="nav" data-nav="screens"><span>▤</span>Screens</button>
+    <button class="nav" data-nav="tests"><span>☑</span>Tests execution status</button>
+    <button class="nav" data-nav="runs"><span>◉</span>Runs</button>
+    <button class="nav" data-nav="sql"><span>⛁</span>SQL templates</button>
+    <div class="grow"></div>
+    <div class="email">qa.user@bayer.com</div>
+    <button class="nav" data-nav="settings"><span>⚙</span>Settings</button>
+  </aside>
+  <main>
+    <div id="v-dash" class="view on">
+      <h1>Dashboard</h1>
+      <div class="sub">Latest status across all Athena test scenarios.</div>
+      <div class="row">
+        <div class="search">Search scenario, report…</div>
+        <div class="sel">All reports</div>
+        <div class="sel">All criticality</div>
+      </div>
+      <div class="stats">
+        <div class="stat" id="box-total"><label>Total scenarios</label><b>48</b></div>
+        <div class="stat" id="box-ran"><label>Cases ran</label><b>36</b></div>
+        <div class="stat" id="box-pass"><label>Passed</label><b class="ok">29</b></div>
+        <div class="stat" id="box-fail"><label>Failed</label><b class="bad">7</b></div>
+      </div>
+      <div class="card">
+        <h2>By report</h2>
+        <div class="ws">
+          <div class="ws-h">
+            <div><b>Crop Protection</b><div class="sub" style="margin:0">2 screens · 18 scenarios</div></div>
+            <div><span class="ok">14 passed</span> &nbsp; <span class="bad">4 failed</span></div>
+          </div>
+          <div id="screen-rows" style="margin-top:10px">
+            <div class="scr"><span>Overview</span><span>12 scenarios &nbsp; <span class="ok">10✓</span> <span class="bad">2✗</span></span></div>
+            <div class="scr"><span>Activity</span><span>6 scenarios &nbsp; <span class="ok">4✓</span> <span class="bad">2✗</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="v-screens" class="view">
+      <div style="display:flex;justify-content:space-between;align-items:start">
+        <div><h1>Screens</h1><div class="sub">Report → Screen. Run a full suite at any level.</div></div>
+        <button class="btn pri" id="btn-add">+ Add screen</button>
+      </div>
+      <div class="card" style="margin-top:12px">
+        <div class="ws-h" style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <b>Crop Protection</b>
+          <button class="btn" id="btn-run-report">▶ Run report</button>
+        </div>
+        <div class="scr" style="margin:8px 10px"><span>Overview</span><span class="muted">https://athena.example/overview</span><span class="ok">10✓</span><span class="bad">2✗</span><button class="btn" id="btn-run-suite">▶</button></div>
+        <div class="scr" style="margin:8px 10px"><span>Activity</span><span>https://athena.example/activity</span><span class="ok">4✓</span><span class="bad">2✗</span><button class="btn">▶</button></div>
+      </div>
+    </div>
+
+    <div id="v-screen" class="view">
+      <div class="sub">Crop Protection</div>
+      <h1>Overview</h1>
+      <div class="sub">https://athena.example/overview</div>
+      <div class="row">
+        <button class="btn" id="btn-run-suite-2">▶ Run suite</button>
+      </div>
+      <div class="tabs"><div class="tab on">Scenarios</div><div class="tab">Runs</div><div class="tab">Schedule</div></div>
+      <div class="row">
+        <input class="search" style="flex:1;max-width:none" value="Overview KPI tiles — Sales, Calls, Claims" readonly />
+        <div class="sel">warehouse_match</div>
+        <div class="sel">high</div>
+        <button class="btn pri">Add</button>
+      </div>
+      <div class="card" style="padding:14px">
+        <b>Overview KPI tiles — Sales, Calls, Claims</b>
+        <div class="sub">warehouse_match · high</div>
+      </div>
+    </div>
+
+    <div id="v-case" class="view">
+      <div class="sub">← Overview</div>
+      <h1>Overview KPI tiles — Sales, Calls, Claims</h1>
+      <div class="sub">Type: Warehouse &nbsp; Criticality: High</div>
+      <div class="field"><label>Description</label>
+        <textarea rows="4">Navigate to the Overview screen.
+Capture these KPI tiles exactly as labeled: Sales, Call Activity, Claims.
+Apply filters Area, then Region, then Territory.</textarea>
+      </div>
+      <div class="card" style="padding:14px;margin:12px 0">
+        <b>Filter combinations</b>
+        <div class="sub">Shared across all scenarios on this screen.</div>
+        <div>AB / St. Louis &nbsp; Area: AB - Central &nbsp; Region: St. Louis</div>
+      </div>
+      <div class="tabs"><div class="tab on">Test script</div><div class="tab">Warehouse SQL</div><div class="tab">Latest result</div></div>
+      <div class="row">
+        <button class="btn pri" id="btn-gen">Generate</button>
+        <button class="btn">Save</button>
+        <button class="btn" id="btn-headless">▶ Run headless</button>
+      </div>
+      <div class="code" id="code">// Playwright script will appear here…</div>
+    </div>
+
+    <div id="v-run" class="view">
+      <h1>Run <span style="color:var(--muted);font-family:monospace;font-size:16px">a1c3e8f2</span> <span class="chip run">running</span></h1>
+      <div class="sub" id="run-score">8 passed · 2 failed · 2 pending · trigger manual</div>
+      <div class="card" style="margin-top:14px">
+        <div class="scr hot" id="case-open"><span>Overview KPI tiles — Sales, Calls, Claims</span><span class="chip fail">fail</span></div>
+        <div id="case-detail" style="display:none;padding:12px 16px">
+          <div class="sub">Crop Protection / Overview · warehouse_match · high</div>
+          <div class="kpi"><b>KPI</b><b>Expected</b><b>Actual</b><b>Status</b></div>
+          <div class="kpi"><span>Sales</span><span>1,248,210</span><span>1,248,210</span><span class="ok">PASS</span></div>
+          <div class="kpi"><span>Call Activity</span><span>18,402</span><span>18,390</span><span class="ok">PASS</span></div>
+          <div class="kpi"><span>Claims</span><span>6,110</span><span>6,440</span><span class="bad">FAIL</span></div>
+          <div class="sub">Analysis: Claims is outside the allowed difference for filter AB / St. Louis.</div>
+        </div>
+        <div class="scr"><span>Activity Trend — Quarterly</span><span class="chip pass">pass</span></div>
+        <div class="scr"><span>Geography grid</span><span class="chip run">pending</span></div>
+      </div>
+    </div>
+
+    <div id="v-runs" class="view">
+      <h1>Runs</h1>
+      <div class="sub">History of every Athena report, screen, or case execution.</div>
+      <div class="card">
+        <table>
+          <tr><th>Run</th><th>Scope</th><th>Result</th><th>Trigger</th><th>When</th><th></th></tr>
+          <tr><td>a1c3e8f2</td><td>Crop Protection / Overview</td><td>10✓ / 2✗</td><td>manual</td><td>Today 12:40</td><td><span class="chip run">running</span></td></tr>
+          <tr><td>91bb02c4</td><td>Crop Protection</td><td>29✓ / 7✗</td><td>schedule</td><td>Today 07:00</td><td><span class="chip fail">failed</span></td></tr>
+          <tr><td>77e10aa1</td><td>Overview KPI tiles</td><td>1✓ / 0✗</td><td>manual</td><td>Yesterday</td><td><span class="chip pass">pass</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="v-tests" class="view">
+      <h1>Tests execution status</h1>
+      <div class="sub">Latest execution per scenario.</div>
+      <div class="card">
+        <div class="scr"><span>Overview KPI tiles — Sales, Calls, Claims</span><span class="chip fail">fail</span></div>
+        <div class="scr"><span>Activity Trend — Quarterly</span><span class="chip pass">pass</span></div>
+        <div class="scr"><span>Geography grid</span><span class="chip pass">pass</span></div>
+      </div>
+    </div>
+
+    <div id="v-sql" class="view">
+      <h1>SQL templates</h1>
+      <div class="sub">Backend queries used when the Athena report is compared to the warehouse table.</div>
+      <div class="card" style="padding:16px">
+        <b>kpi_overview_sales</b>
+        <div class="code" style="margin-top:10px">SELECT area, region, sales, calls, claims
+FROM analytics.athena_overview
+WHERE area = :Area AND region = :Region;</div>
+      </div>
+    </div>
+
+    <div id="v-settings" class="view">
+      <h1>Settings</h1>
+      <div class="sub">Athena login, warehouse, and browser runtime. Credentials are saved once.</div>
+      <div class="row"><div class="tab on">Screen Credentials</div><div class="tab">Warehouses</div><div class="tab">LLM Providers</div></div>
+      <div class="card" style="padding:16px">Athena Prod · qa.user · login URL saved</div>
+    </div>
+  </main>
+</div>
+
+<div class="dialog-bg" id="dlg">
+  <div class="dialog">
+    <h3>New screen</h3>
+    <div class="field"><label>Report *</label><input value="Crop Protection" /></div>
+    <div class="field"><label>Screen Name *</label><input id="f-name" value="" placeholder="Overview" /></div>
+    <div class="field"><label>Screen URL *</label><input id="f-url" value="" placeholder="https://athena…" /></div>
+    <div class="field"><label>Reference URL (prod vs pre-prod, or other screen)</label><input id="f-ref" value="" /></div>
+    <div class="field"><label>Screen Login Credentials</label><input value="Athena Prod · qa.user" /></div>
+    <div style="text-align:right"><button class="btn pri" id="btn-save">Save</button></div>
+  </div>
+</div>
+<div class="toast" id="toast">Run: a1c3e8f2 is in progress</div>
+<div class="cursor" id="cursor"></div>
+<script>
+  const views = ['dash','screens','screen','case','run','runs','tests','sql','settings'];
+  function show(id) {
+    views.forEach(v => document.getElementById('v-'+v).classList.toggle('on', v===id));
+    document.querySelectorAll('.nav').forEach(n => n.classList.toggle('active', n.dataset.nav===id || (id==='screen'&&n.dataset.nav==='screens') || (id==='case'&&n.dataset.nav==='screens') || (id==='run'&&n.dataset.nav==='runs')));
+  }
+  function hl(sel, on=true) {
+    document.querySelectorAll('.hl').forEach(e => e.classList.remove('hl'));
+    if (on && sel) document.querySelectorAll(sel).forEach(e => e.classList.add('hl'));
+  }
+  function navHot(name) {
+    document.querySelectorAll('.nav').forEach(n => n.classList.toggle('hot', n.dataset.nav===name));
+  }
+  function cursor(x,y){ const c=document.getElementById('cursor'); c.style.left=x+'px'; c.style.top=y+'px'; }
+  function openDlg(){ document.getElementById('dlg').classList.add('on'); }
+  function closeDlg(){ document.getElementById('dlg').classList.remove('on'); }
+  function toast(on=true){ document.getElementById('toast').classList.toggle('on', on); }
+  function typeInto(id, text){ document.getElementById(id).value = text; }
+  function setCode(t){ document.getElementById('code').textContent = t; }
+  function openCase(on=true){ document.getElementById('case-detail').style.display = on ? 'block' : 'none'; }
+  function setRunDone(){
+    document.querySelector('#v-run h1 .chip').textContent='completed';
+    document.querySelector('#v-run h1 .chip').className='chip fail';
+    document.getElementById('run-score').textContent='10 passed · 2 failed · 0 pending · trigger manual';
+  }
+  window.demo = { show, hl, navHot, cursor, openDlg, closeDlg, toast, typeInto, setCode, openCase, setRunDone };
+</script>
+</body>
+</html>

@@ -2,9 +2,8 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabaseForRequest, requireAuth } from "../_shared/auth.ts";
 import { callAgent, tryParseJson } from "../_shared/llm.ts";
 import {
-  assembleOverviewScript,
-  isActivityKpiScenario,
-  isOverviewScenario,
+  assembleKpiScript,
+  isKpiScenario,
   normalizeReportUrl,
   parseKpiLabels,
   parseKpiNavSteps,
@@ -26,6 +25,20 @@ import {
   validateAssembledScript,
 } from "../_shared/mstr-chart-template.ts";
 import {
+  assembleDateScript,
+  isDateScenario,
+  parseDateLabels,
+  parseDateNavSteps,
+} from "../_shared/mstr-date-template.ts";
+import {
+  TREND_CHECK_KPI,
+  assembleTrendCheckScript,
+  isTrendCheckScenario,
+  parseTrendChartTitle,
+  parseTrendNavSteps,
+  parseTrendTimeGrain,
+} from "../_shared/mstr-trend-check-template.ts";
+import {
   SCRIPT_GEN_SKILL_ID,
   SCRIPT_GEN_SKILL_LLM_BLOCK,
   SCRIPT_GEN_SKILL_VERSION,
@@ -33,6 +46,7 @@ import {
 } from "../_shared/script-gen-skill.ts";
 import { runGenerateValidationLoop } from "../_shared/script-gen-validate-loop.ts";
 import { ScriptAgentSessionLog } from "../_shared/script-agent-log.ts";
+import { fetchCanonicalScript, insertScriptRow, updateScriptRow } from "../_shared/canonical-script.ts";
 
 async function persistGeneratedScript(
   sb: ReturnType<typeof getSupabaseForRequest>,
@@ -46,9 +60,12 @@ async function persistGeneratedScript(
   },
 ) {
   const { scenario_id, playwright_code, isReferenceTarget, mainShouldUseReferenceSource, credId, generatedBy } = opts;
-  const { data: existing } = await sb.from("scripts")
-    .select("id, assertion_spec, playwright_code, credential_profile_id")
-    .eq("scenario_id", scenario_id).maybeSingle();
+  const { data: existing, error: existingErr } = await fetchCanonicalScript(
+    sb,
+    scenario_id,
+    "id, assertion_spec, playwright_code, credential_profile_id",
+  );
+  if (existingErr) throw new Error(`Failed to look up existing script: ${existingErr.message}`);
   if (isReferenceTarget) {
     const prevSpec: any = (existing as any)?.assertion_spec || {};
     const nextSpec = {
@@ -58,13 +75,13 @@ async function persistGeneratedScript(
       __reference_generated_at: new Date().toISOString(),
     };
     if (existing) {
-      const { data, error } = await sb.from("scripts").update({ assertion_spec: nextSpec }).eq("id", existing.id).select().single();
+      const { data, error } = await updateScriptRow(sb, existing.id, { assertion_spec: nextSpec });
       if (error) throw new Error(`Failed to save reference script: ${error.message}`);
       return data;
     }
-    const { data, error } = await sb.from("scripts").insert({
+    const { data, error } = await insertScriptRow(sb, {
       scenario_id, playwright_code: "", assertion_spec: nextSpec, debug_status: "draft",
-    }).select().single();
+    });
     if (error) throw new Error(`Failed to insert reference script: ${error.message}`);
     return data;
   }
@@ -75,10 +92,24 @@ async function persistGeneratedScript(
       __main_uses_reference_source: mainShouldUseReferenceSource || undefined,
       __generated_by: generatedBy,
       __generated_at: new Date().toISOString(),
+      ...(String(generatedBy).includes("trend_check")
+        ? {
+          kpis: Array.isArray(prevSpec.kpis) && prevSpec.kpis.length ? prevSpec.kpis : [
+            `${TREND_CHECK_KPI} Weekly`, `${TREND_CHECK_KPI} Monthly`, `${TREND_CHECK_KPI} Quarterly`,
+          ],
+          kpi_tolerances: prevSpec.kpi_tolerances && Object.keys(prevSpec.kpi_tolerances).length
+            ? prevSpec.kpi_tolerances
+            : {
+              [`${TREND_CHECK_KPI} Weekly`]: { value: 0, unit: "pct", op: "eq" },
+              [`${TREND_CHECK_KPI} Monthly`]: { value: 0, unit: "pct", op: "eq" },
+              [`${TREND_CHECK_KPI} Quarterly`]: { value: 0, unit: "pct", op: "eq" },
+            },
+        }
+        : {}),
     };
     const update: any = { playwright_code, debug_status: "draft", assertion_spec: nextSpec };
     if (mainShouldUseReferenceSource && credId) update.credential_profile_id = credId;
-    const { data, error } = await sb.from("scripts").update(update).eq("id", existing.id).select().single();
+    const { data, error } = await updateScriptRow(sb, existing.id, update);
     if (error) throw new Error(`Failed to save generated script: ${error.message}`);
     if (!data?.playwright_code) throw new Error("Script save returned empty playwright_code");
     return data;
@@ -90,10 +121,20 @@ async function persistGeneratedScript(
     assertion_spec: {
       __generated_by: generatedBy,
       ...(mainShouldUseReferenceSource ? { __main_uses_reference_source: true } : {}),
+      ...(String(generatedBy).includes("trend_check")
+        ? {
+          kpis: [`${TREND_CHECK_KPI} Weekly`, `${TREND_CHECK_KPI} Monthly`, `${TREND_CHECK_KPI} Quarterly`],
+          kpi_tolerances: {
+            [`${TREND_CHECK_KPI} Weekly`]: { value: 0, unit: "pct", op: "eq" },
+            [`${TREND_CHECK_KPI} Monthly`]: { value: 0, unit: "pct", op: "eq" },
+            [`${TREND_CHECK_KPI} Quarterly`]: { value: 0, unit: "pct", op: "eq" },
+          },
+        }
+        : {}),
     },
   };
   if (mainShouldUseReferenceSource && credId) insertRow.credential_profile_id = credId;
-  const { data, error } = await sb.from("scripts").insert(insertRow).select().single();
+  const { data, error } = await insertScriptRow(sb, insertRow);
   if (error) throw new Error(`Failed to insert generated script: ${error.message}`);
   if (!data?.playwright_code) throw new Error("Script insert returned empty playwright_code");
   return data;
@@ -151,9 +192,11 @@ Deno.serve(async (req) => {
 
     // Prefer the per-scenario script override; fall back to the report's profile.
     // For the reference target, prefer the reference credential profile.
-    const { data: existingScript } = await sb.from("scripts")
-      .select("credential_profile_id, reference_credential_profile_id, assertion_spec")
-      .eq("scenario_id", scenario_id).maybeSingle();
+    const { data: existingScript } = await fetchCanonicalScript(
+      sb,
+      scenario_id,
+      "credential_profile_id, reference_credential_profile_id, assertion_spec",
+    );
 
     // Heuristic: for warehouse_match scenarios where the description explicitly
     // says the FRONTEND source is the reference URL (e.g. "reference URL frontend
@@ -188,10 +231,10 @@ Deno.serve(async (req) => {
     const referenceUrl: string = (scenario.reports as any)?.reference_url || "";
     const targetUrl: string = useReferenceSource ? (referenceUrl || primaryUrl) : primaryUrl;
 
-    // ── Skill-first: description picks KPI | chart | grid template.
+    // ── Skill-first: description picks KPI | chart | grid | date template.
     // Fixed: login, nav mechanics, filter application. Filled from UI/description:
-    // URL, NAV_STEPS, KPI/chart/grid labels, TIME_GRAIN. Filter values = __filterCombinations.
-    // Order: geography_grid → chart_show_data → overview_kpi → activity_kpi → LLM
+    // URL, NAV_STEPS, KPI/chart/grid/date labels, TIME_GRAIN. Filter values = __filterCombinations.
+    // Order: trend_check → geography_grid → kpi (when page says KPI) → chart_show_data → date_refresh → LLM
     type TemplateHit = {
       playwright_code: string;
       generatedBy: string;
@@ -203,6 +246,51 @@ Deno.serve(async (req) => {
         report_name: scenario.reports?.name || null,
         filter_combo_count: (filterCombos || []).length,
       });
+
+      if (isTrendCheckScenario(scenario, existingScript)) {
+        await log.log("script-gen", "template_try", "Trying trend_check template");
+        try {
+          const chartTitle = parseTrendChartTitle(scenario);
+          const timeGrain = parseTrendTimeGrain(scenario, isReferenceTarget ? "reference" : "main");
+          const navSteps = parseTrendNavSteps(scenario);
+          const playwright_code = await assembleTrendCheckScript({
+            reportUrl: normalizeReportUrl(targetUrl),
+            chartTitle,
+            timeGrain,
+            navSteps,
+          });
+          const v = validateAssembledScript(playwright_code);
+          if (v.ok) {
+            await log.log("script-gen", "template_hit", "Assembled trend_check", {
+              chart_title: chartTitle,
+              time_grain: timeGrain,
+              nav_steps: navSteps,
+              code_bytes: playwright_code.length,
+            });
+            return {
+              playwright_code,
+              generatedBy: skillGeneratedBy("trend_check"),
+              meta: {
+                chart_title: chartTitle,
+                time_grain: timeGrain,
+                nav_steps: navSteps,
+                kpi_labels: [`${TREND_CHECK_KPI} Weekly`, `${TREND_CHECK_KPI} Monthly`, `${TREND_CHECK_KPI} Quarterly`],
+                skill: SCRIPT_GEN_SKILL_ID,
+                skill_version: SCRIPT_GEN_SKILL_VERSION,
+              },
+            };
+          }
+          await log.log("script-gen", "template_reject", "trend_check assemble invalid", { reason: v.reason }, "warn");
+        } catch (e) {
+          await log.log(
+            "script-gen",
+            "template_error",
+            "trend_check assemble failed",
+            { error: String((e as Error)?.message || e) },
+            "error",
+          );
+        }
+      }
 
       if (isGridScenario(scenario, existingScript)) {
         await log.log("script-gen", "template_try", "Trying geography_grid template");
@@ -245,6 +333,37 @@ Deno.serve(async (req) => {
           };
         }
         await log.log("script-gen", "template_reject", "geography_grid assemble invalid", { reason: v.reason }, "warn");
+      }
+
+      if (isKpiScenario(scenario, existingScript, isReferenceTarget)) {
+        await log.log("script-gen", "template_try", "Trying kpi template");
+        const kpiLabels = parseKpiLabels(scenario, existingScript, false);
+        const navSteps = parseKpiNavSteps(scenario, []);
+        const playwright_code = assembleKpiScript({
+          reportUrl: normalizeReportUrl(targetUrl),
+          kpiLabels,
+          navSteps,
+        });
+        const v = validateAssembledScript(playwright_code);
+        if (v.ok) {
+          await log.log("script-gen", "template_hit", "Assembled kpi", {
+            kpi_labels: kpiLabels,
+            nav_steps: navSteps,
+            code_bytes: playwright_code.length,
+          });
+          return {
+            playwright_code,
+            generatedBy: skillGeneratedBy("kpi"),
+            // Explicit nav_steps from scenario (Overview often [], Activity ["Activity"]).
+            meta: {
+              kpi_labels: kpiLabels,
+              nav_steps: navSteps,
+              skill: SCRIPT_GEN_SKILL_ID,
+              skill_version: SCRIPT_GEN_SKILL_VERSION,
+            },
+          };
+        }
+        await log.log("script-gen", "template_reject", "kpi assemble invalid", { reason: v.reason }, "warn");
       }
 
       if (isChartScenario(scenario, existingScript)) {
@@ -291,59 +410,35 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (isOverviewScenario(scenario, existingScript, isReferenceTarget)) {
-        await log.log("script-gen", "template_try", "Trying overview_kpi template");
-        const kpiLabels = parseKpiLabels(scenario, existingScript);
-        const playwright_code = assembleOverviewScript({
+      if (isDateScenario(scenario, existingScript)) {
+        await log.log("script-gen", "template_try", "Trying date_refresh template");
+        const dateLabels = parseDateLabels(scenario, existingScript);
+        const navSteps = parseDateNavSteps(scenario, []);
+        const playwright_code = assembleDateScript({
           reportUrl: normalizeReportUrl(targetUrl),
-          kpiLabels,
-          navSteps: [],
-        });
-        const v = validateAssembledScript(playwright_code);
-        if (v.ok) {
-          await log.log("script-gen", "template_hit", "Assembled overview_kpi", {
-            kpi_labels: kpiLabels,
-            code_bytes: playwright_code.length,
-          });
-          return {
-            playwright_code,
-            generatedBy: skillGeneratedBy("overview_kpi"),
-            // Explicit [] = stay on landing page. Omitting nav_steps lets validation
-            // parse junk tabs from the description (e.g. "Values on preprod").
-            meta: {
-              kpi_labels: kpiLabels,
-              nav_steps: [],
-              skill: SCRIPT_GEN_SKILL_ID,
-              skill_version: SCRIPT_GEN_SKILL_VERSION,
-            },
-          };
-        }
-        await log.log("script-gen", "template_reject", "overview_kpi assemble invalid", { reason: v.reason }, "warn");
-      }
-
-      if (isActivityKpiScenario(scenario, existingScript)) {
-        await log.log("script-gen", "template_try", "Trying activity_kpi template");
-        const kpiLabels = parseKpiLabels(scenario, existingScript);
-        const navSteps = parseKpiNavSteps(scenario, []);
-        const playwright_code = assembleOverviewScript({
-          reportUrl: normalizeReportUrl(targetUrl),
-          kpiLabels,
+          dateLabels,
           navSteps,
         });
         const v = validateAssembledScript(playwright_code);
         if (v.ok) {
-          await log.log("script-gen", "template_hit", "Assembled activity_kpi", {
-            kpi_labels: kpiLabels,
+          await log.log("script-gen", "template_hit", "Assembled date_refresh", {
+            date_labels: dateLabels,
             nav_steps: navSteps,
             code_bytes: playwright_code.length,
           });
           return {
             playwright_code,
-            generatedBy: skillGeneratedBy("activity_kpi"),
-            meta: { kpi_labels: kpiLabels, nav_steps: navSteps, skill: SCRIPT_GEN_SKILL_ID, skill_version: SCRIPT_GEN_SKILL_VERSION },
+            generatedBy: skillGeneratedBy("date_refresh"),
+            meta: {
+              date_labels: dateLabels,
+              kpi_labels: dateLabels,
+              nav_steps: navSteps,
+              skill: SCRIPT_GEN_SKILL_ID,
+              skill_version: SCRIPT_GEN_SKILL_VERSION,
+            },
           };
         }
-        await log.log("script-gen", "template_reject", "activity_kpi assemble invalid", { reason: v.reason }, "warn");
+        await log.log("script-gen", "template_reject", "date_refresh assemble invalid", { reason: v.reason }, "warn");
       }
 
       await log.log("script-gen", "template_miss", "No working template matched — falling back to LLM");
@@ -354,14 +449,8 @@ Deno.serve(async (req) => {
     };
 
     const templated = await tryWorkingTemplates();
-    // #region agent log
-    {
-      const payload = {sessionId:"a78821",runId:"post-fix",hypothesisId:"A",location:"agent-scripts/index.ts:after_templates",message:templated?"template path — gen LLM skipped":"template miss — will call gen LLM",data:{hit:!!templated,generated_by:templated?.generatedBy||null,title:scenario?.title||null,report_name:scenario?.reports?.name||null,target},timestamp:Date.now()};
-      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify(payload)}).catch(()=>{});
-      Deno.writeTextFile(new URL("../../../../debug-a78821.log", import.meta.url), JSON.stringify(payload) + "\n", { append: true }).catch(()=>{});
-    }
-    // #endregion
     if (templated) {
+      const isTrendSkill = String(templated.generatedBy || "").includes("trend_check");
       const validated = await runGenerateValidationLoop({
         req,
         scenarioId: scenario_id,
@@ -376,7 +465,9 @@ Deno.serve(async (req) => {
           filters: c.filters || {},
         })),
         log,
-        forceSkip: forceSkipValidate,
+        // Trend template is deterministic (all three grains). Skip Browserless
+        // validate + Magentic repair so Generate returns the script immediately.
+        forceSkip: forceSkipValidate || isTrendSkill,
         forceMaxAttempts,
       });
       const inserted = await persistGeneratedScript(sb, {
@@ -1268,9 +1359,6 @@ Filter combinations (${(filterCombos || []).length}): ${JSON.stringify(filterCom
       target,
       report_url: targetUrl,
     });
-    // #region agent log
-    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify({sessionId:"a78821",runId:"llm-call-check",hypothesisId:"A",location:"agent-scripts/index.ts:llm_start",message:"entering gen callAgent",data:{target,report_url:targetUrl,has_key:Boolean((Deno.env.get("ANTHROPIC_API_KEY")||"").trim())},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     const raw = await callAgent({ agentKey: "scripts", messages: [{ role: "system", content: sys }, { role: "user", content: user }], json: true });
     const parsed = tryParseJson(raw) || {};
     await log.log("script-gen", "llm_response", "LLM agent returned", {

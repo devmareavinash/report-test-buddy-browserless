@@ -37,7 +37,7 @@ assemble / LLM
   → always persist last code (even if still failing)
 ```
 
-Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLOCK`** from `script-gen-skill.ts`, plus `formatValidationForAgent` (head+tail excerpt, not the full 60k script). JSON `{ "playwright_code": "..." }`. Successful repair tags `generated_by` as `skill:repair:<attempt>`. Assembled `skill:overview_kpi` / `chart_show_data` / grid templates still call repair on extract fail — do not add a keep-template skip.
+Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLOCK`** from `script-gen-skill.ts`, plus `formatValidationForAgent` (head+tail excerpt, not the full 60k script). JSON `{ "playwright_code": "..." }`. Successful repair tags `generated_by` as `skill:repair:<attempt>`. Assembled `skill:kpi` / `chart_show_data` / grid templates still call repair on extract fail — do not add a keep-template skip.
 
 ## Env knobs
 
@@ -55,7 +55,7 @@ Repair uses `callAgent({ agentKey: "scripts" })` and **`SCRIPT_GEN_SKILL_LLM_BLO
 
 | Kind | `extract` | Pass |
 |------|-----------|------|
-| overview / activity | `kpi` | ≥1 numeric / numeric-looking KPI |
+| `kpi` | `kpi` | ≥1 numeric / numeric-looking KPI |
 | chart (`chart` in kind) | `chart_table` | ≥2 headers + ≥1 row (`tableData` / title / `Overall Performance`) |
 | grid (`grid` in kind) | `grid` | ≥2 cols + ≥1 row; reject KPI chrome / Line-copy |
 

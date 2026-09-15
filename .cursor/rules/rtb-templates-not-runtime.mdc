@@ -22,6 +22,7 @@ Work only on **working templates** (assemble + references + detectors). New patt
 | KPI / Overview tiles | KPI / `overview_kpi` (or activity KPI) |
 | Graph / chart / Show Data | Chart / `chart_show_data` |
 | Grid / crosstab / Geography | Grid / `geography_grid` |
+| Trend check (consecutive Weekly/Monthly/Quarterly periods) | `trend_check` |
 
 When generating: pick the template from the scenario description; fill URL, `NAV_STEPS`, labels, time grain, filter keys from UI — do not invent screens.
 

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { ScenarioResultCard } from "@/components/ScenarioResultCard";
 import { toast } from "sonner";
+import { fetchLatestTestResultsByScenarioIds } from "@/lib/latestTestResults";
 
 export default function Scenarios() {
   const [params] = useSearchParams();
@@ -36,17 +37,12 @@ export default function Scenarios() {
           .eq("deferred", deferred)
           .order("created_at", { ascending: false })
           .limit(2000)).data ?? [];
-      const results =
-        (await supabase
-          .from("test_results")
-          .select(
-            "id, scenario_id, run_id, status, criticality, severity, analysis, expected, actual, diff, healing_status, healing_proposal, screenshot_url, created_at",
-          )
-          .order("created_at", { ascending: false })
-          .limit(5000)).data ?? [];
-      const latest = new Map<string, any>();
-      for (const r of results) if (!latest.has(r.scenario_id as string)) latest.set(r.scenario_id as string, r);
-      return scenarios.map((s: any) => ({ scenario: s, latest: latest.get(s.id) || null }));
+      const latest = await fetchLatestTestResultsByScenarioIds(
+        scenarios.map((s: any) => s.id),
+        "id, scenario_id, run_id, status, criticality, severity, analysis, expected, actual, diff, healing_status, healing_proposal, screenshot_url, created_at",
+      );
+      const mapped = scenarios.map((s: any) => ({ scenario: s, latest: latest.get(s.id) || null }));
+      return mapped;
     },
   });
 
@@ -57,7 +53,11 @@ export default function Scenarios() {
       if (wsId !== "all" && s.reports?.workstream_id !== wsId) return false;
       if (status !== "all") {
         const st = row.latest?.status || "pending";
-        if (st !== status) return false;
+        if (status === "ran") {
+          if (st === "pending") return false;
+        } else if (st !== status) {
+          return false;
+        }
       }
       if (criticality !== "all") {
         const c = (row.latest?.criticality || s.criticality || "medium").toLowerCase();
@@ -68,7 +68,8 @@ export default function Scenarios() {
         s.title?.toLowerCase().includes(q) ||
         s.reports?.name?.toLowerCase().includes(q) ||
         s.reports?.workstreams?.name?.toLowerCase().includes(q) ||
-        row.latest?.analysis?.toLowerCase().includes(q)
+        row.latest?.analysis?.toLowerCase().includes(q) ||
+        String(row.latest?.actual?.error || row.latest?.expected?.error || "").toLowerCase().includes(q)
       );
     });
   }, [data, search, status, wsId, criticality]);
@@ -119,6 +120,7 @@ export default function Scenarios() {
             <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="ran">Ran</SelectItem>
               <SelectItem value="pass">Pass</SelectItem>
               <SelectItem value="fail">Fail</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
@@ -148,6 +150,7 @@ export default function Scenarios() {
                   scenarioId={s.id}
                   scenarioTitle={s.title}
                   scenarioMeta={meta}
+                  scenarioType={s.type}
                   result={row.latest}
                   onChanged={refetch}
                   rightSlot={

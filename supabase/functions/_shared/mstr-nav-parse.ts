@@ -19,8 +19,10 @@ function cleanStep(raw: string): string {
 function isJunkNavStep(step: string, opts: { allowGeography?: boolean } = {}): boolean {
   if (!step || step.length < 2) return true;
   if (/^(weekly|monthly|quarterly|quaterly|toggle)$/i.test(step)) return true;
-  if (/^(screen|page|dashboard|tab|sub|dossier|report|trend)$/i.test(step)) return true; // lone "Trend" is not a tab label
-  if (/^(to|of|on)\b/i.test(step)) return true;
+  if (/^(screen|page|dashboard|tab|sub|dossier|report|trend|main)$/i.test(step)) return true; // lone "Trend"/"Main" are not tab labels
+  if (/^(to|of|on|vs|after|before|compare)$/i.test(step)) return true;
+  if (/^vs\b/i.test(step)) return true;
+  if (/\b(after|before|navigat|main report)\b/i.test(step)) return true;
   if (/toggle/i.test(step)) return true;
   if (/\b(go to|navigate|switch to|then open|open the)\b/i.test(step)) return true;
   // Widget titles are not footer tabs ("Activity Trend Graph", "… Chart").
@@ -44,12 +46,16 @@ export function parseNavStepsFromScenario(
 
   // Report "Performance - Activity" → click Performance, then Activity (authoritative order).
   // Do not invent a joined "Performance Activity" label.
-  const reportParts = reportName
-    .split(/\s*[-–—]\s*/)
-    .map((p) => cleanStep(p))
-    .filter((p) => p && !/^(graph|chart|grid|kpi|overview|summary)$/i.test(p) && !isJunkNavStep(p, opts));
+  const reportParts = /\bvs\b/i.test(reportName)
+    ? []
+    : reportName
+      .split(/\s*[-–—]\s*/)
+      .map((p) => cleanStep(p))
+      .filter((p) => p && !/^(graph|chart|grid|kpi|overview|summary)$/i.test(p) && !isJunkNavStep(p, opts));
   if (reportParts.length >= 2) {
-    return reportParts;
+    const deduped = reportParts.filter((p, i) => i === 0 || p.toLowerCase() !== reportParts[i - 1].toLowerCase());
+    if (deduped.length >= 2) return deduped;
+    if (deduped.length === 1) return deduped;
   }
 
   const steps: string[] = [];
@@ -80,15 +86,20 @@ export function parseNavStepsFromScenario(
   let m: RegExpExecArray | null;
   while ((m = navRe.exec(blob))) add(m[1]);
 
-  // 2) Explicit sub-tab label: "Performance Trend sub tab"
+  // 2) Explicit sub-tab label: "Activity sub-tab" (last 1–2 words only — not "after navigating to Activity")
   const subRe =
-    /(?:\bon\s+)?(?:\bthe\s+)?([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,3})\s+sub[-\s]?tab\b/gi;
+    /(?:\bthe\s+)?([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*)?)\s+sub[-\s]?tab\b/gi;
   while ((m = subRe.exec(blob))) add(m[1]);
 
-  // 3) "… Performance screen" / "Activity Screen"
+  // 3) "… Performance screen" / "Activity Screen" — skip "Overview screen (main URL)" compare wording
   const screenRe =
     /(?:\b(?:of|on)\s+)?(?:\bthe\s+)?([A-Za-z][A-Za-z0-9]*(?:\s+[A-Za-z][A-Za-z0-9]*){0,2})\s+(?:screen|page)\b/gi;
-  while ((m = screenRe.exec(blob))) add(m[1]);
+  while ((m = screenRe.exec(blob))) {
+    const after = blob.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 28);
+    if (/\(\s*(main|reference)\s+url/i.test(after)) continue;
+    if (/^vs\b/i.test(String(m[1] || ""))) continue;
+    add(m[1]);
+  }
 
   // 4) "… the Performance tab" but not "… sub tab" (handled above)
   const tabRe = /(?:\bthe\s+)?([A-Za-z][A-Za-z0-9 /&-]{1,40}?)\s+tab\b/gi;
@@ -106,7 +117,12 @@ export function parseNavStepsFromScenario(
   // 5) "… on the Performance - Activity report" (common reference_match wording)
   const reportPhraseRe =
     /(?:\bon\s+)?(?:\bthe\s+)?([A-Za-z][A-Za-z0-9 /&-]{1,50}?)\s+report\b/gi;
-  while ((m = reportPhraseRe.exec(blob))) add(m[1]);
+  while ((m = reportPhraseRe.exec(blob))) {
+    // #region agent log
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "A", location: "mstr-nav-parse.ts:reportPhraseRe", message: "report-phrase nav candidate", data: { matched: String(m[1] || "").slice(0, 80), full: String(m[0] || "").slice(0, 80) }, timestamp: Date.now() }) }).catch(() => {});
+    // #endregion
+    add(m[1]);
+  }
 
   // 6) Single-segment report name as a nav hint when description yielded nothing.
   if (!steps.length && reportParts.length === 1) add(reportParts[0]);

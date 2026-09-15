@@ -697,6 +697,7 @@ export type Database = {
           scenario_id: string
           sql_filters: Json
           sql_template_id: string | null
+          updated_at: string
         }
         Insert: {
           assertion_spec?: Json
@@ -709,6 +710,7 @@ export type Database = {
           scenario_id: string
           sql_filters?: Json
           sql_template_id?: string | null
+          updated_at?: string
         }
         Update: {
           assertion_spec?: Json
@@ -721,6 +723,7 @@ export type Database = {
           scenario_id?: string
           sql_filters?: Json
           sql_template_id?: string | null
+          updated_at?: string
         }
         Relationships: [
           {

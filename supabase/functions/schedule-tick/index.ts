@@ -1,14 +1,15 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabase } from "../_shared/llm.ts";
 import cronParser from "npm:cron-parser@4.9.0";
-
-const PROJECT = Deno.env.get("SUPABASE_URL");
-const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+import { resolveFunctionAuth, resolveFunctionUrl } from "../_shared/internal-functions.ts";
 
 async function fireRun(scope_type: string, scope_id: string, schedule_id: string) {
-  const r = await fetch(`${PROJECT}/functions/v1/agent-orchestrate`, {
+  const r = await fetch(resolveFunctionUrl("agent-orchestrate"), {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${SERVICE_KEY}` },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: resolveFunctionAuth("agent-orchestrate"),
+    },
     body: JSON.stringify({ scope_type, scope_id, trigger_source: "schedule", schedule_id }),
   });
   return r.ok;

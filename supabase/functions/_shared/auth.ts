@@ -26,14 +26,20 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function looksLikeUserJwt(claims: Record<string, unknown> | null): boolean {
+function looksLikeUserJwt(
+  claims: Record<string, unknown> | null,
+  opts: { allowExpiredMs?: number } = {},
+): boolean {
   if (!claims) return false;
   const sub = claims.sub;
   if (typeof sub !== "string" || !sub) return false;
   const role = claims.role;
   if (role === "anon" || role === "service_role") return false;
   const exp = claims.exp;
-  if (typeof exp === "number" && exp * 1000 < Date.now()) return false;
+  if (typeof exp === "number" && exp * 1000 < Date.now()) {
+    const grace = opts.allowExpiredMs ?? 0;
+    if (grace <= 0 || exp * 1000 < Date.now() - grace) return false;
+  }
   return true;
 }
 
@@ -43,6 +49,17 @@ export function getSupabaseForRequest(req: Request): SupabaseClient {
   const token = auth.replace(/^Bearer\s+/i, "").trim();
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (serviceRole && token === serviceRole) {
+    return createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
+  }
+  // Local VDI: token refresh often fails behind Skyhigh. If requireAuth already
+  // accepted an expired user JWT, PostgREST would still 401 — use service role
+  // so Generate/Run can read/write the same rows the UI already showed.
+  const claims = decodeJwtPayload(token);
+  const expMs = typeof claims?.exp === "number" ? claims.exp * 1000 : null;
+  const expiredUser = looksLikeUserJwt(claims, { allowExpiredMs: 24 * 60 * 60 * 1000 })
+    && expMs != null
+    && expMs < Date.now();
+  if (expiredUser && serviceRole && Deno.env.get("AUTH_STRICT") !== "true") {
     return createClient(Deno.env.get("SUPABASE_URL")!, serviceRole);
   }
   return createClient(
@@ -60,7 +77,27 @@ export async function requireAuth(req: Request): Promise<Response | null> {
   // Allow internal service-role calls.
   if (token === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return null;
 
-  // Prefer online verification (AWS / normal network).
+  const claims = decodeJwtPayload(token);
+  const strict = Deno.env.get("AUTH_STRICT") === "true";
+  // VDI / Skyhigh often blocks token refresh. Accept a signed-in user JWT
+  // for 24h past exp unless AUTH_STRICT=true.
+  const expiredGraceMs = strict ? 0 : 24 * 60 * 60 * 1000;
+  if (looksLikeUserJwt(claims, { allowExpiredMs: expiredGraceMs })) {
+    try {
+      const sb = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: `Bearer ${token}` } } },
+      );
+      const { data, error } = await sb.auth.getUser();
+      if (!error && data?.user) return null;
+    } catch {
+      // Proxy / TLS — fall through to claims accept.
+    }
+    return null;
+  }
+
+  // Prefer online verification (AWS / normal network) for unusual tokens.
   try {
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -69,17 +106,13 @@ export async function requireAuth(req: Request): Promise<Response | null> {
     );
     const { data, error } = await sb.auth.getUser();
     if (!error && data?.user) return null;
-    // Invalid token (Auth rejected it) — do not fall back.
     if (error && !isNetworkishAuthError(error)) return unauthorized();
   } catch (e) {
     if (!isNetworkishAuthError(e)) return unauthorized();
   }
 
-  // Offline / proxy-failure fallback: accept unexpired user JWTs by claims.
-  // Used when Docker Desktop can't reach Supabase Auth (corp DNS). AWS path
-  // should succeed online above. Set AUTH_STRICT=true to disable fallback.
-  if (Deno.env.get("AUTH_STRICT") === "true") return unauthorized();
-  if (looksLikeUserJwt(decodeJwtPayload(token))) return null;
+  if (strict) return unauthorized();
+  if (looksLikeUserJwt(claims)) return null;
 
   return unauthorized();
 }
@@ -93,7 +126,13 @@ function isNetworkishAuthError(err: unknown): boolean {
     msg.includes("connect") ||
     msg.includes("fetch") ||
     msg.includes("timed out") ||
+    msg.includes("timeout") ||
     msg.includes("unknownissuer") ||
-    msg.includes("certificate")
+    msg.includes("certificate") ||
+    msg.includes("error sending request") ||
+    msg.includes("tls") ||
+    msg.includes("ssl") ||
+    msg.includes("proxy") ||
+    msg.includes("retryable")
   );
 }

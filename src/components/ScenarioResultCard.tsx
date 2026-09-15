@@ -6,7 +6,9 @@ import { invokeFunction } from "@/lib/functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusChip } from "@/components/StatusChip";
-import { KpiSummary, KpiInlineDelta } from "@/components/KpiSummary";
+import { StoredResultTable } from "@/components/StoredResultTable";
+import { storedRunLog, storedRunLogIsRca } from "@/lib/kpi-values";
+import { fetchCanonicalScript } from "@/lib/canonicalScript";
 import { ChevronDown, ChevronRight, Wrench, Pencil, Clock, Save, History } from "lucide-react";
 import { toast } from "sonner";
 
@@ -14,6 +16,7 @@ type Props = {
   scenarioId: string;
   scenarioTitle: string;
   scenarioMeta?: string; // e.g. "Workstream / Report · type · criticality"
+  scenarioType?: string;
   result: any | null;
   defaultOpen?: boolean;
   showRunLink?: boolean;
@@ -25,6 +28,7 @@ export function ScenarioResultCard({
   scenarioId,
   scenarioTitle,
   scenarioMeta,
+  scenarioType,
   result: l,
   defaultOpen = false,
   showRunLink = true,
@@ -32,23 +36,15 @@ export function ScenarioResultCard({
   onChanged,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const runLog = storedRunLog(l);
+  const runLogIsRca = storedRunLogIsRca(l);
 
   const { data: scriptInfo } = useQuery({
     queryKey: ["scenario-script-tolerance", scenarioId],
     enabled: open,
     queryFn: async () =>
-      (await supabase
-        .from("scripts")
-        .select("assertion_spec")
-        .eq("scenario_id", scenarioId)
-        .limit(1)
-        .maybeSingle()).data,
+      (await fetchCanonicalScript(scenarioId, "assertion_spec")).data,
   });
-  const tolerance =
-    scriptInfo?.assertion_spec && typeof (scriptInfo.assertion_spec as any).tolerance === "number"
-      ? ((scriptInfo.assertion_spec as any).tolerance as number)
-      : null;
-
   const proposeFix = async (trId: string) => {
     toast.loading("Generating proposal…", { id: trId });
     try {
@@ -106,13 +102,10 @@ export function ScenarioResultCard({
             <div className="text-xs text-muted-foreground mono truncate">{scenarioMeta}</div>
           )}
         </div>
-        {l && (
-          <KpiInlineDelta
-            expected={l.expected}
-            actual={l.actual}
-            diff={l.diff}
-            status={l.status}
-          />
+        {l && (l.status === "fail" || l.status === "pending") && runLog && (
+          <div className="hidden md:block max-w-md text-xs text-destructive truncate" title={runLog}>
+            {runLogIsRca ? "RCA: " : "Log: "}{runLog}
+          </div>
         )}
         <div className="text-xs text-muted-foreground mono whitespace-nowrap">
           {l?.created_at ? new Date(l.created_at).toLocaleString() : "never run"}
@@ -129,42 +122,35 @@ export function ScenarioResultCard({
           {!l && <div className="text-muted-foreground">No execution recorded yet.</div>}
           {l && (
             <>
-              <KpiSummary
-                expected={l.expected}
-                actual={l.actual}
-                diff={l.diff}
-                status={l.status}
-                tolerance={tolerance}
-              />
-              {l.analysis && (
-                <div>
-                  <span className="text-muted-foreground mono">RCA: </span>
-                  <span>{l.analysis}</span>
+              {(l.status === "fail" || l.status === "pending") && runLog && (
+                <div className="border border-destructive/30 bg-destructive/5 rounded p-2">
+                  <span className="text-muted-foreground mono">{runLogIsRca ? "RCA: " : "Log: "}</span>
+                  <span>{runLog}</span>
                 </div>
               )}
-              {l.healing_proposal && (
+              <StoredResultTable
+                actual={l.actual}
+                expected={l.expected}
+                spec={(scriptInfo as any)?.assertion_spec}
+                scenarioType={scenarioType}
+                status={l.status}
+                diff={l.diff}
+              />
+              {(l.status === "fail" || l.status === "pending") && (
+                <RcaEditor trId={l.id} initial={l.analysis || ""} onSave={saveRca} />
+              )}
+              {l.status !== "pass" && l.healing_proposal && (
                 <div className="border border-border rounded-md p-2 bg-background/40">
                   <div className="text-muted-foreground mono mb-1">
                     Proposed fix · status: {l.healing_status || "proposed"}
                   </div>
                   {l.healing_proposal.rationale && <div>{l.healing_proposal.rationale}</div>}
-                  {l.healing_proposal.patched_playwright_code && (
-                    <pre className="mono text-[10px] mt-1 whitespace-pre-wrap">
-                      {l.healing_proposal.patched_playwright_code}
-                    </pre>
-                  )}
                 </div>
               )}
-              {l.screenshot_url && (
-                <a href={l.screenshot_url} target="_blank" rel="noreferrer" className="text-accent hover:underline">
-                  View screenshot →
-                </a>
-              )}
-              <RcaEditor trId={l.id} initial={l.analysis || ""} onSave={saveRca} />
             </>
           )}
           <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-            {l && (
+            {l && (l.status === "fail" || l.status === "pending") && (
               <Button size="sm" variant="outline" onClick={() => proposeFix(l.id)}>
                 <Wrench className="h-3 w-3 mr-1" /> Propose fix
               </Button>
@@ -193,7 +179,7 @@ function HistoryToggle({ scenarioId, currentRunId }: { scenarioId: string; curre
     queryFn: async () =>
       (await supabase
         .from("test_results")
-        .select("id, run_id, status, criticality, severity, analysis, created_at")
+        .select("id, run_id, status, criticality, severity, analysis, actual, expected, created_at")
         .eq("scenario_id", scenarioId)
         .order("created_at", { ascending: false })
         .limit(50)).data ?? [],
@@ -214,7 +200,7 @@ function HistoryToggle({ scenarioId, currentRunId }: { scenarioId: string; curre
               <StatusChip status={h.status} />
               {(h.criticality || h.severity) && <StatusChip status={h.criticality || h.severity} />}
               <span className="mono text-muted-foreground">{new Date(h.created_at).toLocaleString()}</span>
-              <span className="flex-1 min-w-0 truncate">{h.analysis || "—"}</span>
+              <span className="flex-1 min-w-0 truncate">{storedRunLog(h) || "—"}</span>
               <span className="mono text-muted-foreground">run {h.run_id?.slice(0, 8)}</span>
             </Link>
           ))}

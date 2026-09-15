@@ -9,6 +9,9 @@ import { StatusChip } from "@/components/StatusChip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronDown, ChevronRight, Wrench, Pencil, Clock, Save, History } from "lucide-react";
 import { toast } from "sonner";
+import { GridComparePanels, isChartTable, toTableModel } from "@/components/KpiGrid";
+import { pickTrendView } from "@/lib/trend-payload";
+import { fetchCanonicalScript } from "@/lib/canonicalScript";
 
 type TR = {
   id: string;
@@ -212,11 +215,7 @@ function ScenarioResultTable({
   const { data: script } = useQuery({
     queryKey: ["scenario-tolerances", scenarioId],
     queryFn: async () =>
-      (await supabase
-        .from("scripts")
-        .select("assertion_spec")
-        .eq("scenario_id", scenarioId)
-        .maybeSingle()).data,
+      (await fetchCanonicalScript(scenarioId, "assertion_spec")).data,
   });
   const currentKpiTol: Record<string, any> =
     ((script as any)?.assertion_spec || {}).kpi_tolerances || {};
@@ -260,7 +259,13 @@ function ScenarioResultTable({
   };
   const allRows: Row[] = [];
   const errorBanners: { comboLabel: string; message: string; kind: string }[] = [];
-  const SKIP_KEYS = new Set(["error", "message", "filter", "filters_applied", "source", "where_clause", "sql", "row"]);
+  const SKIP_KEYS = new Set([
+    "error", "message", "filter", "filters_applied", "source", "where_clause", "sql", "row",
+    "periods", "missing", "unparsed_periods", "consecutive", "trend_error", "time_grain",
+    "tableData", "tabledata", "show_data_debug", "show_data_error", "extract_via",
+    "first_col0", "selected_grain", "time_grain_click", "grain_retries", "navigation",
+    "headers", "grains",
+  ]);
   results.forEach((tr, idx) => {
     // Per-run tolerance snapshot (set by agent-orchestrate at execution time).
     // Falls back to the script's current tolerances for legacy rows that have no snapshot.
@@ -295,14 +300,24 @@ function ScenarioResultTable({
     const actualValues = (tr.actual?.values || (tr.actual && typeof tr.actual === "object" ? tr.actual : {})) as Record<string, any>;
     const expectedValues = (tr.expected?.values || {}) as Record<string, any>;
     const diff = (tr.diff || {}) as Record<string, any>;
-    const keys = Array.from(
-      new Set([
-        ...Object.keys(actualValues).filter(
-          (k) => !k.startsWith("__") && !SKIP_KEYS.has(k) && typeof actualValues[k] !== "object",
-        ),
-        ...Object.keys(expectedValues).filter((k) => !k.startsWith("__") && !SKIP_KEYS.has(k)),
-      ]),
-    );
+    const keepKey = (k: string) => !!k && !k.startsWith("__") && !SKIP_KEYS.has(k);
+    const configured = Object.keys(kpiTol || {}).filter(keepKey);
+    const trendKeys = [
+      "Trend check Weekly",
+      "Trend check Monthly",
+      "Trend check Quarterly",
+      "Trend check",
+    ].filter((k) => actualValues[k] != null || expectedValues[k] != null);
+    const keys = isTrend
+      ? (trendKeys.length ? trendKeys : configured.filter((k) => /^Trend check/i.test(k)))
+      : configured.length
+      ? configured
+      : Array.from(
+          new Set([
+            ...Object.keys(actualValues).filter(keepKey),
+            ...Object.keys(expectedValues).filter(keepKey),
+          ]),
+        );
     if (!keys.length && (actualErr || expectedErr)) {
       // Pure error row — no KPI cells to render for this combo.
       return;
@@ -337,7 +352,18 @@ function ScenarioResultTable({
         else if (tOp === "gt") pass = d! - allowed > 0;
         else if (tOp === "lt") pass = -d! - allowed > 0;
         else pass = Math.abs(d!) <= allowed;
-      } else if (a != null && e == null && isTrend) pass = true;
+      } else if (isTrend) {
+        const consecutive = actualValues.consecutive === true || actualValues["Trend check"] === 1 || a === 1;
+        const failed = actualValues.consecutive === false || actualValues["Trend check"] === 0 || a === 0
+          || (Array.isArray(actualValues.missing) && actualValues.missing.length > 0);
+        if (k === "Trend check" || k === "consecutive") pass = consecutive && !failed;
+        else if (a != null && e == null) pass = consecutive && !failed;
+      }
+      else if (isChartTable(a) && isChartTable(e)) {
+        const ta = toTableModel(a);
+        const te = toTableModel(e);
+        pass = JSON.stringify(ta) === JSON.stringify(te);
+      }
       else if (a != null && e == null) pass = null;
       perKeyPass.push(pass);
       allRows.push({
@@ -386,6 +412,32 @@ function ScenarioResultTable({
         <span className="text-muted-foreground ml-2">Type:</span>
         <span className="mono">{scenarioType}</span>
       </div>
+
+      {isTrend && results.map((tr, idx) => {
+        const view = pickTrendView(tr.actual, tr.actual?.values, tr.actual?.extracted, tr.diff);
+        if (!view?.grains.length) return null;
+        return (
+          <div key={idx} className="border border-border rounded p-2 space-y-2 text-xs">
+            <div className="text-muted-foreground">{String(tr.actual?.filter || `Filter #${idx + 1}`)}</div>
+            {view.grains.map((b) => (
+              <div key={String(b.name)} className="space-y-1">
+                <div className="font-semibold mono">{String(b.name || "")}</div>
+                {b.trend_error && <div className="text-destructive">{String(b.trend_error)}</div>}
+                {!!(b.periods || []).length && (
+                  <div className="flex flex-wrap gap-1">
+                    {(b.periods || []).map((p: any, i: number) => (
+                      <span key={i} className="mono px-1.5 py-0.5 rounded border border-border bg-secondary/40">{String(p)}</span>
+                    ))}
+                  </div>
+                )}
+                {!!(b.missing || []).length && (
+                  <div className="text-destructive">Missing: {(b.missing || []).map(String).join(", ")}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })}
 
       {errorBanners.length > 0 && (
         <div className="space-y-2">
@@ -457,11 +509,25 @@ function ScenarioResultTable({
                     )}
                   </td>
                 )}
-                <td className="p-2 mono">{r.kpi}</td>
-                <td className="p-2 mono font-semibold">{fmt(r.actual)}</td>
-                {!isTrend && <td className="p-2 mono font-semibold">{fmt(r.expected)}</td>}
+                <td className="p-2 mono align-top">{r.kpi}</td>
+                {isChartTable(r.actual) || isChartTable(r.expected) ? (
+                  <td className="p-2 align-top" colSpan={isTrend ? 1 : 2}>
+                    <GridComparePanels
+                      actual={r.actual}
+                      expected={r.expected}
+                      leftLabel={actualLabel}
+                      rightLabel={expectedLabel}
+                      hideExpected={isTrend}
+                    />
+                  </td>
+                ) : (
+                  <>
+                    <td className="p-2 mono font-semibold align-top">{fmt(r.actual)}</td>
+                    {!isTrend && <td className="p-2 mono font-semibold align-top">{fmt(r.expected)}</td>}
+                  </>
+                )}
                 {!isTrend && (
-                  <td className="p-2 mono">
+                  <td className="p-2 mono align-top">
                     {r.diff !== null ? (
                       <span className={r.pass === false ? "text-destructive" : "text-muted-foreground"}>
                         {r.diff > 0 ? "+" : ""}
@@ -609,11 +675,7 @@ function ScenarioKpiTolerancesReadOnly({ scenarioId, scenarioType, results }: { 
   const { data: script } = useQuery({
     queryKey: ["scenario-tolerances", scenarioId],
     queryFn: async () =>
-      (await supabase
-        .from("scripts")
-        .select("assertion_spec")
-        .eq("scenario_id", scenarioId)
-        .maybeSingle()).data,
+      (await fetchCanonicalScript(scenarioId, "assertion_spec")).data,
   });
   // Prefer the per-run tolerances_snapshot stored on the latest result for this run,
   // so the panel reflects what was applied at evaluation time (not the live script).

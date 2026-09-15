@@ -1,0 +1,27 @@
+This is Agentic Frontend Validations. We use it to validate Athena reports.
+
+It can do three kinds of checks.
+
+First: front-end report versus front-end report. That is prod versus pre-prod. Same Athena report, two environments. Do the numbers match?
+
+Second: cross-screen front-end validation. Compare one Athena screen with another, for example Overview versus Activity.
+
+Third: front-end report versus the backend database. We read the tiles or grid on the report, then compare those numbers to the warehouse table.
+
+The tool opens the Athena report, reads the numbers, compares them, and shows pass or fail.
+
+The left menu is the whole tool.
+
+Dashboard is the home page. At the top you now see four boxes: total scenarios, how many cases ran, how many passed, and how many failed. So first we see what exists, then what we have run, then the result.
+
+Below, results are grouped by Athena report. Open a report and you see each screen.
+
+Screens is where we add the Athena report and each page.
+
+Tests execution status shows the latest result of every case. Runs is the history of every run.
+
+SQL templates hold the database queries for report versus backend.
+
+If you are an admin, Settings holds Athena login and the database connection. We set that once. We will not type passwords in this video.
+
+Next, we will add a report, add a case, and generate the script.

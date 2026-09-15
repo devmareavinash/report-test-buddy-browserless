@@ -49,7 +49,7 @@ It does **not** run when you click Run headless, run a workstream, or re-open La
 Generate / Regenerate
         │
         ▼
-assemble template  (grid → chart → overview_kpi → activity_kpi)
+assemble template  (grid → chart → date_refresh → kpi)
    or LLM if no detector match
         │
         ▼
@@ -90,7 +90,7 @@ loop attempt 1 … max
 
 | Kind | `extract` | Pass |
 |------|-----------|------|
-| `overview_kpi` / `activity_kpi` / other | `kpi` | At least one configured KPI label (or, if none, a non-bookkeeping key) is a finite number or a numeric-looking string (`12`, `14,655.3`, `58.2%`) |
+| `kpi` / other | `kpi` | At least one configured KPI label (or, if none, a non-bookkeeping key) is a finite number or a numeric-looking string (`12`, `14,655.3`, `58.2%`) |
 | `chart_show_data` (kind contains `chart`) | `chart_table` | `tableData`, or the chart title object, or `Overall Performance`, has **≥2 headers/columns** and **≥1 row**, and no `error` |
 | `geography_grid` (kind contains `grid`) | `grid` | `grid` / `tableData` / titled object has **≥2 columns** and **≥1 row**, no `error`, and does **not** look like Performance KPI chrome / “Line copy” legend |
 
@@ -99,7 +99,7 @@ Shared checks (all kinds):
 | Check | Pass when |
 |-------|-----------|
 | **runtime** | Payload is present, `ok !== false`, and `error` is not `BROWSERLESS_TIMEOUT` / other runtime error. Runtime fail skips nav/filter/extract and goes straight to repair hints (hangs, login, `NAV_STEPS`). |
-| **navigation** | Each expected `NAV_STEPS` item appears in `navigation` as clicked (`clicked === true`, or no `error` plus `via`/`clicked`). If a time grain is expected, it must be clicked in `navigation` **or** `time_grain.clicked` / `time_grain.grain` is set. Explicit `meta.nav_steps: []` (Overview KPI landing page) → pass (“No nav steps required”). Parse from the scenario description only when `nav_steps` is omitted. Chart/grid scripts return `{ navigation, results: { combo } }` — `pickResultRoot` keeps that parent so `navigation` is not dropped when reading the first combo. |
+| **navigation** | Each expected `NAV_STEPS` item appears in `navigation` as clicked (`clicked === true`, or no `error` plus `via`/`clicked`). If a time grain is expected, it must be clicked in `navigation` **or** `time_grain.clicked` / `time_grain.grain` is set. Explicit `meta.nav_steps: []` (KPI landing page / Overview) → pass (“No nav steps required”). Parse from the scenario description only when `nav_steps` is omitted. Chart/grid scripts return `{ navigation, results: { combo } }` — `pickResultRoot` keeps that parent so `navigation` is not dropped when reading the first combo. |
 | **filters** | Each key from the **first** combo has `filters_applied[key].ok` or `.clicked`. Empty keys → pass. |
 
 Overall pass = every check in the report passes.

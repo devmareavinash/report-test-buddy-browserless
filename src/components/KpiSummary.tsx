@@ -1,7 +1,17 @@
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Check } from "lucide-react";
+import { GridComparePanels, isChartTable } from "@/components/KpiGrid";
 
 type AnyRec = Record<string, any> | null | undefined;
+
+const VALUE_NOISE = new Set([
+  "error", "message", "filter", "filters", "filters_applied", "source", "where_clause",
+  "sql", "row", "metric", "value", "values", "ok", "note", "screenshot",
+  "tableData", "tabledata", "show_data_debug", "show_data_error", "extract_via",
+  "first_col0", "selected_grain", "time_grain_click", "grain_retries", "headers",
+  "periods", "missing", "unparsed_periods", "consecutive", "trend_error", "time_grain",
+  "grains", "navigation",
+]);
 
 function formatVal(v: any): string {
   if (v === null || v === undefined) return "—";
@@ -21,12 +31,41 @@ function asNumber(v: any): number | null {
   return null;
 }
 
+function unwrapValues(side: AnyRec): Record<string, any> {
+  if (!side || typeof side !== "object") return {};
+  const raw = (side.values && typeof side.values === "object" && !Array.isArray(side.values))
+    ? side.values
+    : side;
+  const out: Record<string, any> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (!k || k.startsWith("__") || VALUE_NOISE.has(k)) continue;
+    out[k] = v;
+  }
+  return out;
+}
+
+function pickNamedOrChart(side: AnyRec, name?: string | null): any {
+  if (!side || typeof side !== "object") return null;
+  if (side.value !== undefined && side.value !== null && typeof side.value !== "object") return side.value;
+  const values = unwrapValues(side);
+  if (name && values[name] !== undefined) return values[name];
+  const chartName = Object.keys(values).find((k) => isChartTable(values[k]));
+  if (chartName) return values[chartName];
+  const first = Object.keys(values)[0];
+  if (first) return values[first];
+  const td = (side.values && (side.values.tableData || side.values.tabledata)) || side.tableData || side.tabledata;
+  return td ?? null;
+}
+
 export function getKpiInfo(expected: AnyRec, actual: AnyRec, diff: AnyRec) {
-  const metric = expected?.metric ?? actual?.metric ?? null;
+  const valuesA = unwrapValues(actual);
+  const valuesE = unwrapValues(expected);
+  const metric = expected?.metric ?? actual?.metric
+    ?? Object.keys(valuesA)[0] ?? Object.keys(valuesE)[0] ?? null;
   const source = expected?.source ?? actual?.source ?? null;
   const filter = pickFilter(expected) ?? pickFilter(actual);
-  const refVal = expected?.value ?? null;
-  const mainVal = actual?.value ?? null;
+  const refVal = pickNamedOrChart(expected, metric);
+  const mainVal = pickNamedOrChart(actual, metric);
   const refNum = asNumber(refVal);
   const mainNum = asNumber(mainVal);
   let deltaAbs: number | null = null;
@@ -77,6 +116,7 @@ export function KpiSummary({
   const info = getKpiInfo(expected, actual, diff);
   const breached = status === "fail";
   const tolPct = typeof tolerance === "number" ? tolerance * 100 : null;
+  const showGrid = isChartTable(info.mainVal) || isChartTable(info.refVal);
 
   return (
     <div className="border border-border rounded-md p-3 bg-background/40 space-y-3">
@@ -108,6 +148,14 @@ export function KpiSummary({
         <FilterChips filter={info.filter} />
       </div>
 
+      {showGrid ? (
+        <GridComparePanels
+          actual={info.mainVal}
+          expected={info.refVal}
+          leftLabel="Main dashboard"
+          rightLabel="Reference dashboard"
+        />
+      ) : (
       <div className="grid grid-cols-3 gap-2">
         <div className="border border-border rounded-md p-2">
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground mono">
@@ -144,6 +192,7 @@ export function KpiSummary({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 }
@@ -161,6 +210,15 @@ export function KpiInlineDelta({
 }) {
   const info = getKpiInfo(expected, actual, diff);
   if (info.mainVal === null && info.refVal === null) return null;
+  if (isChartTable(info.mainVal) || isChartTable(info.refVal)) {
+    const n = (info.mainVal?.rows || info.refVal?.rows || []).length;
+    return (
+      <div className="hidden md:flex items-center gap-1.5 text-xs mono whitespace-nowrap">
+        {info.metric && <span className="text-muted-foreground">{info.metric}:</span>}
+        <span className="font-medium">{n ? `${n} rows` : "grid"}</span>
+      </div>
+    );
+  }
   const breached = status === "fail";
   return (
     <div className="hidden md:flex items-center gap-1.5 text-xs mono whitespace-nowrap">

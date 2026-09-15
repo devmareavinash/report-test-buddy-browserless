@@ -17,12 +17,20 @@ function scenarioBlob(scenario: any): string {
 
 /** Chart / trend / Show Data — not Overview KPI tiles or Geography grid. */
 export function isChartScenario(scenario: any, existingScript?: any): boolean {
+  if (String(scenario?.type || "").toLowerCase() === "trend") return false;
   const blob = scenarioBlob(scenario).toLowerCase();
   if (/\bgeography details\b/.test(blob) && /\bgrid\b/.test(blob)) return false;
   if (/\bperformance\s*trends?\s*grid\b/.test(blob) || (/\bperformance\s*trend\b/.test(blob) && /\bgrid\b/.test(blob))) {
     return false;
   }
   if (/\b(grid data|crosstab|on-page grid|all grid columns)\b/.test(blob)) return false;
+
+  // Page/title says KPI tiles — "Performance Trend" as a screen name is not Show Data.
+  // Only stay on the chart template when the user asked for graph / Show Data.
+  const saysKpi = /\bkpis?\b/.test(blob);
+  const explicitChart =
+    /\b(show\s*data|chart\s*data|graph\s*data|line\s*chart|bar\s*chart)\b/.test(blob);
+  if (saysKpi && !explicitChart) return false;
 
   if (/\b(show\s*data|chart\s*data|graph\s*data|line chart|bar chart|performance\s*trend|overall performance|activity\s*trend|segment\s*summary)\b/.test(blob)) {
     return true;

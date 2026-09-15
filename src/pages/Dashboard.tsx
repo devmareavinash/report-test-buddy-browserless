@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Link, useNavigate } from "react-router-dom";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { fetchLatestTestResultsByScenarioIds } from "@/lib/latestTestResults";
 
 type Row = {
   scenario: any;
@@ -24,14 +25,10 @@ export default function Dashboard() {
           .select("id, title, criticality, type, report_id, reports(id, name, workstream_id, workstreams(id, name))")
           .eq("deferred", false)
           .limit(2000)).data ?? [];
-      const results =
-        (await supabase
-          .from("test_results")
-          .select("id, scenario_id, run_id, status, criticality, severity, analysis, expected, actual, created_at")
-          .order("created_at", { ascending: false })
-          .limit(5000)).data ?? [];
-      const latest = new Map<string, any>();
-      for (const r of results) if (!latest.has(r.scenario_id as string)) latest.set(r.scenario_id as string, r);
+      const latest = await fetchLatestTestResultsByScenarioIds(
+        scenarios.map((s: any) => s.id),
+        "id, scenario_id, run_id, status, criticality, severity, analysis, expected, actual, created_at",
+      );
       return scenarios.map((s: any) => ({ scenario: s, latest: latest.get(s.id) || null }));
     },
   });
@@ -101,6 +98,7 @@ export default function Dashboard() {
 
   const passed = all.filter((r) => r.latest?.status === "pass");
   const failed = all.filter((r) => r.latest?.status === "fail");
+  const ran = all.filter((r) => r.latest && r.latest.status !== "pending");
   const pending = all.filter((r) => !r.latest || r.latest.status === "pending");
 
   // workstream rollup of latest-per-scenario
@@ -157,8 +155,9 @@ export default function Dashboard() {
           <div className="text-xs text-muted-foreground mono ml-auto">{all.length} scenarios</div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Stat label="Total scenarios" value={all.length} linkTo="/scenarios" />
+          <Stat label="Cases ran" value={ran.length} linkTo="/scenarios?status=ran" />
           <Stat
             label="Passed"
             value={passed.length}

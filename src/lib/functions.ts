@@ -3,27 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 type InvokeResult<T = any> = { data: T | null; error: Error | null };
 
 const publishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-const useAllLocalBackend = import.meta.env.VITE_USE_LOCAL_BACKEND === "true";
+const useCloudFunctions = import.meta.env.VITE_USE_CLOUD_FUNCTIONS === "true";
 const configuredBase = (import.meta.env.VITE_FUNCTIONS_BASE_URL as string | undefined)?.replace(/\/$/, "");
-const localFunctions = new Set(
-  (import.meta.env.VITE_LOCAL_FUNCTIONS as string | undefined)
-    ?.split(",")
-    .map((s) => s.trim())
-    .filter(Boolean) ?? [
-      "run-warehouse-sql",
-      "test-warehouse-connectivity",
-      "agent-orchestrate",
-      "agent-scripts",
-      "agent-heal",
-      "playwright-runtime",
-    ],
-);
 
-function shouldUseLocalBackend(name: string) {
-  // Docker/full self-host: all functions hit the local gateway.
-  if (useAllLocalBackend || configuredBase) return true;
-  // Dev default: only warehouse/Snowflake functions use local backend + SSO sidecar.
-  return localFunctions.has(name);
+function shouldUseLocalBackend(_name: string) {
+  // Hosted Edge idle-kills Playwright at 150s. Default is same-origin Deno
+  // (Vite proxy locally, nginx → :8000 on AWS). Opt back into Edge only with
+  // VITE_USE_CLOUD_FUNCTIONS=true.
+  if (useCloudFunctions) return false;
+  return true;
 }
 
 function functionsBaseUrl() {
@@ -31,9 +19,34 @@ function functionsBaseUrl() {
   return "";
 }
 
+function jwtExpMs(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const json = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+    const exp = (JSON.parse(json) as { exp?: number }).exp;
+    return typeof exp === "number" ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 async function authHeaders() {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token || publishableKey || "";
+  let { data } = await supabase.auth.getSession();
+  let token = data.session?.access_token || "";
+  const expMs = token ? jwtExpMs(token) : null;
+  if (token && expMs != null && expMs < Date.now() + 60_000) {
+    try {
+      const refreshed = await supabase.auth.refreshSession();
+      if (refreshed.data.session?.access_token) {
+        token = refreshed.data.session.access_token;
+      }
+    } catch {
+      // VDI proxy can block refresh; send the existing token (local Deno
+      // accepts a recently expired user JWT).
+    }
+  }
+  token = token || publishableKey || "";
   return {
     "Content-Type": "application/json",
     ...(publishableKey ? { apikey: publishableKey } : {}),

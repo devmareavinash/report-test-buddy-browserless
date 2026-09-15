@@ -34,6 +34,7 @@ export function scenarioBlob(scenario: any): string {
 }
 
 export function isGridScenario(scenario: any, existingScript?: any): boolean {
+  if (String(scenario?.type || "").toLowerCase() === "trend") return false;
   const blob = scenarioBlob(scenario).toLowerCase();
   if (/\bgeography details\b/.test(blob) && /\bgrid\b/.test(blob)) return true;
   // Performance Trend Grid / Trends Grid (on-page crosstab — not Overall Performance chart Show Data)
@@ -601,44 +602,80 @@ export default async ({ page }) => {
     return false;
   };
 
+  const looksLikeRealGridHeaders = (headers) => {
+    const hits = (headers || []).filter((h) => {
+      const t = String(h || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      if (!t || /performance\\s*kpis|line\\s*copy/.test(t)) return false;
+      return /employee name|^area$|territory|nbrx total|nrx total|trx total|total calls|reach \\(%\\)|frequency|latest month|qtd|metric/.test(t)
+        || /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[-/ ]?\\d{2}$/.test(t);
+    }).length;
+    return hits >= 2;
+  };
+
   const isGarbageGridRaw = (raw) => {
     if (!raw || raw.error) return true;
     const headers = raw.headers || raw.columns || [];
+    // Geography / Trend grids often share the page with Overview KPI chrome.
+    // Keep the scrape when real grid columns are present; toGrid drops junk headers.
+    if (looksLikeRealGridHeaders(headers)) return false;
     const records = Array.isArray(raw.data) ? raw.data
       : (Array.isArray(raw.rows) && raw.rows[0] && !Array.isArray(raw.rows[0]) ? raw.rows : null);
     const blob = JSON.stringify({ headers, sample: (records || raw.rows || []).slice(0, 8) }).toLowerCase();
     if (/performance\\s*kpis\\s*-/.test(blob)) return true;
     if ((headers || []).filter((h) => /line\\s*copy/i.test(String(h))).length >= 2) return true;
     if ((headers || []).filter((h) => isJunkCol(h)).length >= Math.max(3, Math.floor((headers || []).length / 2))) return true;
+    const clean = (headers || []).filter((h) => !isJunkCol(h));
+    if ((headers || []).length && clean.length < 2) return true;
     return false;
   };
+
+  const looksLikeMetricLabel = (t) => /nbrx|nrx|trx|blink|writer|call|reach|frequency|speaker|breadth|depth|paid|sample/i.test(String(t || ''));
+
+  const promoteRowLabelColumn = (columns, rows) => {
+    const cols = (columns || []).map((c, i) => String(c || '').trim() || ('col_' + i));
+    const body = Array.isArray(rows) ? rows : [];
+    if (cols.length < 2 || !body.length) return { columns: cols, rows: body };
+    const stub = !String(columns[0] || '').trim() || /^col_\\d+$/i.test(String(columns[0] || ''));
+    const hits = body.filter((r) => looksLikeMetricLabel(r && r[0])).length;
+    if (stub && hits >= 1) cols[0] = 'Metric';
+    return { columns: cols, rows: body };
+  };
+
+  const dropRepeatedLabelRows = (rows) => (rows || []).filter((line) => {
+    const vals = (line || []).map((c) => String(c || '').replace(/\\s+/g, ' ').trim()).filter(Boolean);
+    if (vals.length < 2) return true;
+    const uniq = Array.from(new Set(vals.map((v) => v.toLowerCase())));
+    if (uniq.length === 1 && /^(latest month|current time period|prior month)$/i.test(uniq[0])) return false;
+    return true;
+  });
 
   const toGrid = (raw) => {
     if (!raw || raw.error) return raw || { error: 'no table' };
     if (isGarbageGridRaw(raw)) return { error: 'rejected Performance KPIs / chrome scrape', via: raw.via || 'rejected' };
+    if (Array.isArray(raw.columns) && Array.isArray(raw.rows) && Array.isArray(raw.rows[0])) {
+      const promoted = promoteRowLabelColumn(raw.columns, raw.rows);
+      const body = dropRepeatedLabelRows(promoted.rows);
+      const keepIdx = promoted.columns.map((c, i) => (isJunkCol(c) ? -1 : i)).filter((i) => i >= 0);
+      if (keepIdx.length < 2) return { error: 'too few clean columns after filter', via: raw.via || 'normalized-grid', headers: promoted.columns };
+      return {
+        columns: keepIdx.map((i) => prettyCol(promoted.columns[i])),
+        rows: body.map((row) => keepIdx.map((i) => (row && row[i] != null ? String(row[i]) : ''))),
+        via: raw.via || 'normalized-grid',
+      };
+    }
     const records = Array.isArray(raw.data) ? raw.data
       : (Array.isArray(raw.rows) && raw.rows.length && raw.rows[0] && !Array.isArray(raw.rows[0]) ? raw.rows : null);
-    if (!records || !records.length) {
-      // Already matrix form { columns, rows: string[][] }
-      if (Array.isArray(raw.columns) && Array.isArray(raw.rows) && Array.isArray(raw.rows[0])) {
-        const keepIdx = raw.columns.map((c, i) => (isJunkCol(c) ? -1 : i)).filter((i) => i >= 0);
-        if (keepIdx.length < 2) return { error: 'too few clean columns after filter' };
-        return {
-          columns: keepIdx.map((i) => prettyCol(raw.columns[i])),
-          rows: raw.rows.map((row) => keepIdx.map((i) => (row && row[i] != null ? String(row[i]) : ''))),
-          via: raw.via || 'normalized-grid',
-        };
-      }
-      return raw;
-    }
-    const keys = [];
-    for (const rec of records) {
-      for (const k of Object.keys(rec || {})) {
-        if (!k || isJunkCol(k)) continue;
-        if (!keys.includes(k)) keys.push(k);
-      }
-    }
-    if (keys.length < 2) return { error: 'too few clean columns after filter', via: raw.via };
+    if (!records || !records.length) return raw;
+    const rawHeaders = Array.isArray(raw.headers) && raw.headers.length
+      ? raw.headers
+      : (Array.isArray(raw.columns) && raw.columns.length ? raw.columns : Object.keys(records[0] || {}));
+    const seenHdr = {};
+    const keys = rawHeaders.map((h, i) => {
+      const base = String(h || '').trim() || ('col_' + i);
+      const n = (seenHdr[base] = (seenHdr[base] || 0) + 1);
+      return n === 1 ? base : (base + ' (' + n + ')');
+    }).filter((k) => k && !isJunkCol(k));
+    if (keys.length < 2) return { error: 'too few clean columns after filter', via: raw.via, headers: rawHeaders };
     const columns = keys.map(prettyCol);
     const rows = records.map((rec) => keys.map((k) => (rec[k] == null ? '' : String(rec[k]))));
     // Drop rows that are clearly Overview KPI chrome
@@ -896,7 +933,7 @@ export default async ({ page }) => {
   };
 
   const extractShowDataTable = async () => {
-    const extractFn = () => {
+    const extractFn = (expectedCols) => {
       const norm = s => (s || '').replace(/\\s+/g, ' ').trim();
       const isVisible = el => {
         const r = el.getBoundingClientRect();
@@ -916,29 +953,100 @@ export default async ({ page }) => {
       };
       const scoreTable = (table) => {
         if (!table || !table.rows || table.rows.length < 2) return 0;
-        const cols = table.rows[0] ? table.rows[0].cells.length : 0;
+        let cols = 0;
+        for (let i = 0; i < Math.min(table.rows.length, 4); i++) {
+          cols = Math.max(cols, table.rows[i] ? table.rows[i].cells.length : 0);
+        }
         if (cols < 2) return 0;
         return table.rows.length * cols;
+      };
+      const headerNorm = (t) => String(t || '').toLowerCase().replace(/[^a-z0-9%]+/g, '');
+      const expectedKeys = (expectedCols || []).map(headerNorm).filter(Boolean);
+      const uniquifyHeaders = (headers) => {
+        const seen = {};
+        return (headers || []).map((h, i) => {
+          const base = String(h || '').trim() || ('col_' + i);
+          const n = (seen[base] = (seen[base] || 0) + 1);
+          return n === 1 ? base : (base + ' (' + n + ')');
+        });
+      };
+      const isDataRow = (cells) => {
+        const numeric = cells.filter((t) => /^[\\d,.%$()\\s-]+$/.test(String(t || '').replace(/,/g, ''))).length;
+        return numeric >= Math.max(2, Math.floor(cells.length / 2));
+      };
+      const scoreHeaderRow = (cells) => {
+        const named = cells.filter((t) => t && !/^[\\d,.%()\\s/-]+$/.test(t));
+        const unique = new Set(named.map((t) => t.toLowerCase().replace(/\\s+/g, ' ').trim()));
+        if (named.length >= 3 && unique.size <= 1) return -100;
+        let hits = 0;
+        for (const k of expectedKeys) {
+          if ([...unique].some((u) => {
+            const n = headerNorm(u);
+            return n && k && (n === k || n.includes(k) || k.includes(n));
+          })) hits++;
+        }
+        return unique.size * 8 + hits * 25;
       };
       const parseHtmlTable = (table) => {
         const rows = Array.from(table.querySelectorAll('tr'));
         if (rows.length < 2) return null;
-        const headerCells = Array.from(rows[0].querySelectorAll('th, td'));
-        const headers = headerCells.map((h, i) => (h.innerText || h.textContent || '').trim() || ('col_' + i));
+        const rowCells = (tr) => Array.from(tr.querySelectorAll('th, td')).map((h) => (h.innerText || h.textContent || '').trim());
+        let headerIdx = 0;
+        let bestScore = -Infinity;
+        for (let i = 0; i < Math.min(rows.length, 6); i++) {
+          const cells = rowCells(rows[i]);
+          if (cells.length < 2 || isDataRow(cells)) continue;
+          const score = scoreHeaderRow(cells);
+          if (score > bestScore) { bestScore = score; headerIdx = i; }
+        }
+        const headerTexts = rowCells(rows[headerIdx]);
+        if (headerTexts.length < 2) return null;
+        const headers = uniquifyHeaders(headerTexts.map((t, i) => t || ('col_' + i)));
+        const matrix = [];
         const data = [];
-        for (let i = 1; i < rows.length; i++) {
+        for (let i = 0; i < rows.length; i++) {
+          if (i === headerIdx) continue;
           const cells = Array.from(rows[i].querySelectorAll('td, th'));
           if (!cells.length) continue;
           const rowText = norm(rows[i].innerText || rows[i].textContent || '');
           if (isControlText(rowText)) continue;
+          const line = headers.map((_, idx) => cells[idx] ? (cells[idx].innerText || cells[idx].textContent || '').trim() : '');
+          if (!line.some(Boolean)) continue;
+          matrix.push(line);
           const rowData = {};
-          headers.forEach((h, idx) => {
-            rowData[h] = cells[idx] ? (cells[idx].innerText || cells[idx].textContent || '').trim() : '';
-          });
+          headers.forEach((h, idx) => { rowData[h] = line[idx]; });
           data.push(rowData);
         }
+        if (headers[0] && /^col_\\d+$/i.test(headers[0]) && matrix.some((line) => /nbrx|nrx|trx|reach|writer|call/i.test(String(line[0] || '')))) {
+          headers[0] = 'Metric';
+          matrix.forEach((line, i) => { if (data[i]) { data[i] = { Metric: line[0], ...data[i] }; delete data[i]['col_0']; } });
+        }
         if (isKpiLike(headers, data)) return null;
-        return { headers, data, via: 'show-data-html-table' };
+        return { headers, columns: headers, rows: matrix, data, via: 'show-data-html-table' };
+      };
+
+      const parseAgGrid = (root) => {
+        if (!root) return null;
+        const headerEls = Array.from(root.querySelectorAll('.ag-header-cell, [class*="ag-header-cell"]')).filter(isVisible);
+        if (headerEls.length < 2) return null;
+        const headers = uniquifyHeaders(headerEls.map((h, i) => (h.innerText || h.textContent || '').trim() || ('col_' + i)));
+        const data = [];
+        const matrix = [];
+        const rowEls = Array.from(root.querySelectorAll('.ag-row, [role="row"]')).filter(isVisible);
+        for (const rowEl of rowEls) {
+          if (rowEl.querySelector('.ag-header-cell, [role="columnheader"]')) continue;
+          const cells = Array.from(rowEl.querySelectorAll('.ag-cell, [role="gridcell"], [role="cell"]'));
+          if (!cells.length) continue;
+          const line = headers.map((_, idx) => cells[idx] ? (cells[idx].innerText || cells[idx].textContent || '').trim() : '');
+          if (!line.some(Boolean)) continue;
+          if (isControlText(line.join(' '))) continue;
+          matrix.push(line);
+          const rowData = {};
+          headers.forEach((h, idx) => { rowData[h] = line[idx]; });
+          data.push(rowData);
+        }
+        if (isKpiLike(headers, data) || data.length < 1) return null;
+        return { headers, columns: headers, rows: matrix, data, via: 'show-data-ag-grid' };
       };
 
       const popups = Array.from(document.querySelectorAll(POPUP_SEL)).filter(isVisible);
@@ -998,16 +1106,25 @@ export default async ({ page }) => {
           return { headers, data, via: 'show-data-aria-grid' };
         }
       }
+      const agRoots = Array.from(document.querySelectorAll('.ag-root, .ag-root-wrapper, [class*="ag-theme"]')).filter(isVisible);
+      let bestAg = null, bestAgScore = 0;
+      for (const root of agRoots) {
+        const parsed = parseAgGrid(root);
+        if (!parsed) continue;
+        const s = (parsed.headers || []).length * ((parsed.data || []).length + 1);
+        if (s > bestAgScore) { bestAgScore = s; bestAg = parsed; }
+      }
+      if (bestAg) return bestAg;
       return { error: 'Show Data table not found' };
     };
 
     for (const frame of page.frames()) {
       try {
-        const result = await frame.evaluate(extractFn);
+        const result = await frame.evaluate(extractFn, EXPECTED_COLUMNS);
         if (result && !result.error) return result;
       } catch (_) {}
     }
-    return await page.evaluate(extractFn).catch(() => ({ error: 'Show Data extract failed' }));
+    return await page.evaluate(extractFn, EXPECTED_COLUMNS).catch(() => ({ error: 'Show Data extract failed' }));
   };
 
   const closeShowDataPopup = async () => {
@@ -1027,7 +1144,13 @@ export default async ({ page }) => {
     const openResult = await openShowData(titleHint);
     if (openResult && openResult.error) return { error: openResult.error, open: openResult };
     await waitForLoadingToFinish(20000);
-    const table = await extractShowDataTable();
+    const start = Date.now();
+    let table = { error: 'Show Data table not found' };
+    while (Date.now() - start < 8000) {
+      table = await extractShowDataTable();
+      if (table && !table.error && !isGarbageGridRaw(table)) break;
+      await sleep(350);
+    }
     await closeShowDataPopup();
     if (!table || table.error || isGarbageGridRaw(table)) {
       return { error: (table && table.error) || 'Show Data returned KPI/chrome noise', open: openResult };
@@ -1048,6 +1171,10 @@ export default async ({ page }) => {
       if (raw.some(t => /trend/i.test(String(t || ''))) || /trend/i.test(GRID_TITLE)) {
         add(KPI_LABEL);
         add('Performance Trend Grid');
+      }
+      if (raw.some(t => /geography/i.test(String(t || ''))) || /geography/i.test(GRID_TITLE)) {
+        add('Employee Name');
+        add('Geography Details');
       }
       hints.sort((a, b) => b.length - a.length);
       return hints;
@@ -1108,17 +1235,23 @@ export default async ({ page }) => {
           if (score > titleScore) { titleScore = score; titleEl = el; titleRect = r; }
         }
       }
-      if (!titleRect) {
-        for (const el of Array.from(document.querySelectorAll('th, [role="columnheader"], span, div, td'))) {
+      const preferEmployeeNameHeader = () => {
+        for (const el of Array.from(document.querySelectorAll('th, [role="columnheader"], [class*="ag-header-cell"], span, div, td'))) {
           if (!isOnPage(el) || isNavChrome(el)) continue;
-          if (norm(getDirectText(el)).toLowerCase() !== 'employee name') continue;
+          if (norm(getDirectText(el) || el.innerText || '').toLowerCase() !== 'employee name') continue;
           const r = el.getBoundingClientRect();
           if (r.width > 400 || r.height > 60) continue;
           titleEl = el;
           titleRect = { top: Math.max(0, r.top - 36), left: r.left, bottom: r.bottom, right: r.right, width: r.width, height: r.height };
-          break;
+          return true;
         }
+        return false;
+      };
+      // Page/tab label "Geography Details" is not the xtab — pin to Employee Name when present.
+      if (!titleRect || (/geography/i.test(titleHintsIn.join(' ')) && titleRect && titleRect.height < 48 && titleRect.width < 360)) {
+        preferEmployeeNameHeader();
       }
+      if (!titleRect) preferEmployeeNameHeader();
       // Trend/Geography: do not scrape the whole page when title is missing (that yields KPI chrome).
       if (!titleRect && /trend|geography/i.test(titleHintsIn.join(' '))) {
         return { error: 'grid title not found on page', title_found: false, cell_count: 0 };
@@ -1432,10 +1565,17 @@ export default async ({ page }) => {
     let extracted = { error: 'no extract' };
     for (const hint of titles) {
       extracted = await extractViaShowData(hint);
-      if (extracted && !extracted.error) break;
+      if (extracted && !extracted.error) {
+        const preview = toGrid(extracted);
+        if (preview && preview.error) {
+          extracted = { error: preview.error, via: extracted.via, headers: extracted.headers || preview.headers };
+        } else {
+          break;
+        }
+      }
     }
     row.show_data = extracted && extracted.error
-      ? { ok: false, error: extracted.error, open: extracted.open || null }
+      ? { ok: false, error: extracted.error, open: extracted.open || null, headers: extracted.headers || null }
       : { ok: true, via: extracted && extracted.via };
     if (extracted && extracted.error) {
       extracted = await extractOnPageGrid(titles, EXPECTED_COLUMNS);

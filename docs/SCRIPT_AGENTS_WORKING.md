@@ -32,6 +32,7 @@ Report Test Buddy (RTB) generates Playwright scripts that:
 | Generate / persist / detect | `supabase/functions/agent-scripts/index.ts` |
 | KPI / Activity template | `supabase/functions/_shared/mstr-overview-template.ts` |
 | Chart Show Data template | `supabase/functions/_shared/mstr-chart-template.ts` |
+| Trend check (consecutive periods) | `supabase/functions/_shared/mstr-trend-check-template.ts` |
 | Geography / Trend Grid template | `supabase/functions/_shared/mstr-grid-template.ts` |
 | Generate-time validate + repair | `supabase/functions/_shared/script-gen-validate-loop.ts` |
 | Nav / filter / extract checks | `supabase/functions/_shared/script-validation.ts` |
@@ -87,7 +88,7 @@ User description picks **KPI | chart | grid**. That selects the template.
 
 `generated_by` on save:
 
-- Template hit: `skill:<kind>` (`skill:overview_kpi`, `skill:activity_kpi`, `skill:chart_show_data`, `skill:geography_grid`)
+- Template hit: `skill:<kind>` (`skill:kpi`, `skill:chart_show_data`, `skill:geography_grid`, `skill:date_refresh`)
 - Repair after a failed validate run: `skill:repair:<attempt>`
 - Novel Claude path: LLM / untagged
 
@@ -131,7 +132,7 @@ Pipeline constants (`script-gen-skill.ts`):
 
 `agent-scripts` tries templates in this order:
 
-**`grid → chart → overview_kpi → activity_kpi → LLM`**
+**`trend_check → grid → chart → date_refresh → kpi → LLM`**
 
 ### 7.1 `geography_grid` (`skill:geography_grid`)
 
@@ -178,24 +179,19 @@ A result with **one header** (e.g. `NBRx New Writers`) and **one value** is a **
 - Titles e.g. `Segment Summary`, `Overall Performance` (default title if unspecified: Overall Performance)
 - For reference_match, “for Quarterly toggle” vs “Monthly Toggle” can differ main vs reference
 
-### 7.3 `overview_kpi` (`skill:overview_kpi`)
+### 7.3 `kpi` (`skill:kpi`)
 
-**When** (`isOverviewScenario`):
+**When** (`isKpiScenario`) — after grid / chart / date are ruled out:
 
-- Text contains Overview, or looks like Overview KPI tiles
-- **Not** if the blob is only Activity / Performance / HCP / Show Data / Geography / grid (without Overview)
+- Overview, Activity, or any numeric KPI tiles (not a graph / grid / refresh date)
+- User-configured labels (`assertion_spec.kpis`, `kpi_tolerances`, report `kpi_config`) or labels mentioned in title/description
+- **Not** Show Data / Geography / grid / chart / date
 
-**Extract:** `extractKPI` — largest font under the **exact** label.
+**Extract:** `extractKPI` — largest font under the **exact** user-configured label. Do not inject the 18 default Overview KPIs.
 
-`NAV_STEPS` is empty (stay on Overview).
+`NAV_STEPS` from the scenario (Overview often `[]`, Activity `["Activity"]` or Performance → Activity).
 
-### 7.4 `activity_kpi` (`skill:activity_kpi`)
-
-**When:** “activity” + KPI-like, and not Show Data / Geography / grid.
-
-**Extract:** same `extractKPI` + `NAV_STEPS` default `Performance` → `Activity`.
-
-### 7.5 `llm`
+### 7.4 `llm`
 
 Novel only. Same Browserless rules and pipeline. Do not invent new extract shapes or filter cadence.
 
@@ -204,9 +200,11 @@ Novel only. Same Browserless rules and pipeline. Do not invent new extract shape
 ## 8. Extraction decision (hard rule)
 
 ```
-KPI tiles / pass values     → overview_kpi / activity_kpi  → extractKPI
+KPI tiles / pass values     → kpi                          → extractKPI
 Graph / chart / toggle data → chart_show_data              → openShowData + multi-col table
+Trend type / consecutive periods → trend_check             → Show Data + no missing W/M/Q
 Geography Details / Trend Grid → geography_grid            → Show Data, then on-page grid
+Refresh / as-of dates       → date_refresh                 → extractRefreshDate
 ```
 
 Do **not** mix extractors across kinds.

@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getSupabase } from "../_shared/llm.ts";
+import { resolveFunctionAuth, resolveFunctionUrl } from "../_shared/internal-functions.ts";
 
 async function sha256(s: string) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
@@ -30,9 +31,12 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "token not authorized for this scope" }), { status: 403, headers: corsHeaders });
     }
 
-    const r = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/agent-orchestrate`, {
+    const r = await fetch(resolveFunctionUrl("agent-orchestrate"), {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: resolveFunctionAuth("agent-orchestrate"),
+      },
       body: JSON.stringify({ scope_type, scope_id, trigger_source: "api" }),
     });
     const data = await r.json();

@@ -20,6 +20,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { extractFirstTableAlias, qualifyColumn } from "@/lib/sqlFilter";
 import { duplicateScenario } from "@/lib/duplicateEntities";
+import { attachTrendFields, trendStatusFromValues } from "@/lib/trend-payload";
+import { fetchCanonicalScript, persistCanonicalScript } from "@/lib/canonicalScript";
 
 const canonFilters = (f: Record<string, string>) => {
   const keys = Object.keys(f || {}).map((k) => k.trim()).filter(Boolean).sort();
@@ -58,7 +60,11 @@ export default function ScenarioDetail() {
   };
   const { data: script } = useQuery({
     queryKey: ["script", id],
-    queryFn: async () => (await supabase.from("scripts").select("*").eq("scenario_id", id!).maybeSingle()).data,
+    queryFn: async () => {
+      const q = await fetchCanonicalScript(id!);
+      if (q.error) throw q.error;
+      return q.data;
+    },
     staleTime: 0,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -128,6 +134,7 @@ export default function ScenarioDetail() {
 
   const scenarioType: string = (scenario as any)?.type || "warehouse_match";
   const isReferenceMatch = scenarioType === "reference_match";
+  const isTrendCheck = scenarioType === "trend";
   const referenceUrl: string = (scenario as any)?.reports?.reference_url || "";
   const primaryReportUrl: string = (scenario as any)?.reports?.url || "";
   const reportId = (scenario as any)?.reports?.id;
@@ -187,6 +194,12 @@ export default function ScenarioDetail() {
 
 
   useEffect(() => {
+    setCode("");
+    setRefCode("");
+    setSpec("{}");
+  }, [id]);
+
+  useEffect(() => {
     const reportDefaults: any = (scenario as any)?.reports || {};
     if (script) {
       setCode(script.playwright_code || "");
@@ -198,9 +211,11 @@ export default function ScenarioDetail() {
       setRefCredId((script as any).reference_credential_profile_id || reportDefaults.reference_credential_profile_id || "");
       setKpiTolerances(normalizeTolerances(as.kpi_tolerances));
     } else if (scenario) {
-      setTplId((prev) => prev || reportDefaults.default_sql_template_id || "");
-      setCredId((prev) => prev || reportDefaults.credential_profile_id || "");
-      setRefCredId((prev) => prev || reportDefaults.reference_credential_profile_id || "");
+      setCode("");
+      setRefCode("");
+      setTplId(reportDefaults.default_sql_template_id || "");
+      setCredId(reportDefaults.credential_profile_id || "");
+      setRefCredId(reportDefaults.reference_credential_profile_id || "");
     }
   }, [script, scenario]);
 
@@ -208,7 +223,7 @@ export default function ScenarioDetail() {
     setKpiTolerances(next);
     if (!script) {
       toast.error("Save a test script first, then configure KPIs");
-      return;
+      return false;
     }
     setSavingTolerances(true);
     try {
@@ -216,13 +231,15 @@ export default function ScenarioDetail() {
       // Keep assertion_spec.kpis in sync so Add/Remove is the source of truth
       // (otherwise old kpis / last-run keys reappear in the tolerances list).
       const updated = { ...as, kpi_tolerances: next, kpis: Object.keys(next) };
-      const { error } = await supabase.from("scripts").update({ assertion_spec: updated }).eq("id", script.id);
+      const { data, error } = await supabase.from("scripts").update({ assertion_spec: updated }).eq("id", script.id).select().single();
       if (error) {
         toast.error(error.message);
-        return;
+        return false;
       }
-      setSpec(JSON.stringify(updated, null, 2));
-      qc.invalidateQueries({ queryKey: ["script", id] });
+      qc.setQueryData(["script", id], data);
+      qc.invalidateQueries({ queryKey: ["scenario-tolerances", id] });
+      setSpec(JSON.stringify((data as any)?.assertion_spec || updated, null, 2));
+      return true;
     } finally {
       setSavingTolerances(false);
     }
@@ -320,7 +337,11 @@ export default function ScenarioDetail() {
 
   const genScript = useMutation({
     mutationFn: async () => {
-      toast.info("Generating script… validation will run after generate (up to 5 attempts)");
+      toast.info(
+        isTrendCheck
+          ? "Generating trend script (Weekly / Monthly / Quarterly)…"
+          : "Generating script… validation will run after generate (up to 5 attempts)",
+      );
       const { data, error } = await invokeFunction("agent-scripts", { scenario_id: id });
       if (error) throw error;
       if ((data as any)?.error) {
@@ -351,6 +372,7 @@ export default function ScenarioDetail() {
       } else {
         toast.success((hasMainCode ? "Script regenerated" : "Script generated") + by);
       }
+      if (data?.script) qc.setQueryData(["script", id], data.script);
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Generation failed"),
@@ -380,6 +402,7 @@ export default function ScenarioDetail() {
       } else {
         toast.success(hasRefCode ? "Reference script regenerated from description" : "Reference script generated from description");
       }
+      if (data?.script) qc.setQueryData(["script", id], data.script);
       qc.invalidateQueries({ queryKey: ["script", id] });
     },
     onError: (e: any) => toast.error(e?.message || "Reference script generation failed"),
@@ -390,17 +413,34 @@ export default function ScenarioDetail() {
     let parsedSpec: any = {};
     try { parsedSpec = JSON.parse(spec); } catch { return toast.error("Assertion spec is not valid JSON"); }
     parsedSpec.__reference_playwright_code = refCode || undefined;
-    const payload: any = { scenario_id: id, playwright_code: code, assertion_spec: parsedSpec, sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
-    if (script) await supabase.from("scripts").update(payload).eq("id", script.id);
-    else await supabase.from("scripts").insert(payload);
+    const payload: any = { playwright_code: code, assertion_spec: parsedSpec, sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
+    const { data, error } = await persistCanonicalScript(id!, payload, script?.id);
+    if (error) { toast.error(error.message || "Failed to save script"); return; }
+    if (data) qc.setQueryData(["script", id], data);
     toast.success("Script saved");
-    qc.invalidateQueries({ queryKey: ["script", id] });
+    await qc.invalidateQueries({ queryKey: ["script", id] });
+    qc.invalidateQueries({ queryKey: ["scenario-tolerances"] });
+    qc.invalidateQueries({ queryKey: ["scenario-script-tolerance"] });
   };
 
   const runMode = async (mode: "headed" | "headless") => {
     setRunError(null); setRunResult(null); setLiveUrl(null); setRunning(mode);
     try {
-      const { data, error } = await invokeFunction("playwright-runtime", { mode, scenario_id: id, code });
+      const freshQ = await fetchCanonicalScript(id!, "id, playwright_code, assertion_spec, created_at");
+      if (freshQ.error) throw freshQ.error;
+      const fresh = freshQ.data;
+      if (fresh) qc.setQueryData(["script", id], (prev: any) => ({ ...(prev || {}), ...fresh }));
+      const dbCode = String((fresh as any)?.playwright_code || "").trim();
+      const editorCode = String(code || "").trim();
+      const runCode = dbCode || editorCode;
+      if (!runCode) {
+        const msg = "No saved script for this scenario. Generate or Save first.";
+        setRunError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (dbCode && dbCode !== editorCode) setCode(dbCode);
+      const { data, error } = await invokeFunction("playwright-runtime", { mode, scenario_id: id, code: runCode });
       const errorMessage = data?.message || error?.message || (data?.ok === false ? data?.error : null) || (!data ? "Run failed" : null);
       if (errorMessage) { setRunError(errorMessage); toast.error(errorMessage); return; }
       if (mode === "headed") {
@@ -487,12 +527,13 @@ export default function ScenarioDetail() {
     if (!healProposal?.patched_playwright_code) return;
     const newCode = healProposal.patched_playwright_code;
     setCode(newCode);
-    const payload: any = { scenario_id: id, playwright_code: newCode, assertion_spec: (() => { try { return JSON.parse(spec); } catch { return {}; } })(), sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
-    if (script) await supabase.from("scripts").update(payload).eq("id", script.id);
-    else await supabase.from("scripts").insert(payload);
+    const payload: any = { playwright_code: newCode, assertion_spec: (() => { try { return JSON.parse(spec); } catch { return {}; } })(), sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
+    const { data, error } = await persistCanonicalScript(id!, payload, script?.id);
+    if (error) { toast.error(error.message || "Failed to save healed script"); return; }
+    if (data) qc.setQueryData(["script", id], data);
     setHealProposal(null); setRunError(null);
     toast.success("Script updated with healed version");
-    qc.invalidateQueries({ queryKey: ["script", id] });
+    await qc.invalidateQueries({ queryKey: ["script", id] });
   };
 
   const autoHeal = async () => {
@@ -580,9 +621,14 @@ export default function ScenarioDetail() {
           lastEntry.changes = healData.proposal.changes;
         }
         // 3. Save
-        const payload: any = { scenario_id: id, playwright_code: currentCode, assertion_spec: (() => { try { return JSON.parse(spec); } catch { return {}; } })(), sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
-        if (script) await supabase.from("scripts").update(payload).eq("id", script.id);
-        else await supabase.from("scripts").insert(payload);
+        const payload: any = { playwright_code: currentCode, assertion_spec: (() => { try { return JSON.parse(spec); } catch { return {}; } })(), sql_template_id: tplId || null, credential_profile_id: credId || null, reference_credential_profile_id: refCredId || null };
+        const { data: saved, error: saveErr } = await persistCanonicalScript(id!, payload, script?.id);
+        if (saveErr) {
+          log(`Save failed: ${saveErr.message}`);
+          toast.error(saveErr.message || "Failed to save healed script");
+          return;
+        }
+        if (saved) qc.setQueryData(["script", id], saved);
         log(`Applied heal v${attempt}: ${(healData.proposal.rationale || "").slice(0, 120)}`);
       }
     } catch (e: any) {
@@ -599,10 +645,14 @@ export default function ScenarioDetail() {
     setComboScriptRunning(combo.id);
     toast.loading(`Running ${label}…`, { id: `combo-run-${combo.id}` });
     try {
+      const freshQ = await fetchCanonicalScript(id!, "playwright_code");
+      if (freshQ.error) throw freshQ.error;
+      const runCode = String((freshQ.data as any)?.playwright_code || code || "").trim();
+      if (!runCode) throw new Error("No saved script for this scenario. Generate or Save first.");
       const { data, error } = await invokeFunction("playwright-runtime", {
         mode: "headless",
         scenario_id: id,
-        code,
+        code: runCode,
         filter_combinations: [{ label, filters: combo.filters || {} }],
       });
       const errorMessage = data?.message || error?.message
@@ -629,7 +679,18 @@ export default function ScenarioDetail() {
   const runRefMode = async (mode: "headed" | "headless") => {
     setRefRunError(null); setRefRunResult(null); setRefLiveUrl(null); setRefRunning(mode);
     try {
-      const { data, error } = await invokeFunction("playwright-runtime", { mode, scenario_id: id, code: refCode, target: "reference" });
+      const freshQ = await fetchCanonicalScript(id!, "assertion_spec");
+      if (freshQ.error) throw freshQ.error;
+      const dbRef = String((freshQ.data as any)?.assertion_spec?.__reference_playwright_code || "").trim();
+      const runRef = dbRef || String(refCode || "").trim();
+      if (!runRef) {
+        const msg = "No saved reference script for this scenario. Generate or Save first.";
+        setRefRunError(msg);
+        toast.error(msg);
+        return;
+      }
+      if (dbRef && dbRef !== String(refCode || "").trim()) setRefCode(dbRef);
+      const { data, error } = await invokeFunction("playwright-runtime", { mode, scenario_id: id, code: runRef, target: "reference" });
       const errorMessage = data?.message || error?.message || (data?.ok === false ? data?.error : null) || (!data ? "Run failed" : null);
       if (errorMessage) { setRefRunError(errorMessage); toast.error(errorMessage); return; }
       if (mode === "headed") {
@@ -990,7 +1051,7 @@ export default function ScenarioDetail() {
         expectedMap[k] = exp;
         passes.push(evalPass(v, exp, getTol(kpiTolerances, k)));
       }
-          const status = overallFromPassResults(passes);
+      const status = overallFromPassResults(passes);
       return { combo: c, label, actualMap, expectedMap, status, filters: c.filters || {} };
     });
   })();
@@ -1389,9 +1450,11 @@ export default function ScenarioDetail() {
                   for (const k of cleaned) {
                     next[k] = kpiTolerances[k] ?? { value: 0, unit: "pct", op: globalOp };
                   }
-                  await saveKpiTolerances(next);
-                  setKpiEditorOpen(false);
-                  toast.success("KPIs updated");
+                  const ok = await saveKpiTolerances(next);
+                  if (ok) {
+                    setKpiEditorOpen(false);
+                    toast.success("KPIs updated");
+                  }
                 }}
               >
                 Save
@@ -1406,7 +1469,7 @@ export default function ScenarioDetail() {
           <TabsList>
             <TabsTrigger value="script">Test script</TabsTrigger>
             {isReferenceMatch && <TabsTrigger value="ref">Reference script</TabsTrigger>}
-            {!isReferenceMatch && <TabsTrigger value="sql">Warehouse SQL</TabsTrigger>}
+            {!isReferenceMatch && !isTrendCheck && <TabsTrigger value="sql">Warehouse SQL</TabsTrigger>}
             <TabsTrigger value="result">Latest result</TabsTrigger>
           </TabsList>
 
@@ -1892,12 +1955,12 @@ export default function ScenarioDetail() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 text-xs">
-                {!latest && !hasManual && <div className="text-muted-foreground">No executions recorded yet. Run the Test Script (headless/headed) and {isReferenceMatch ? "Reference Script" : "Warehouse SQL"} to populate this view.</div>}
+                {!latest && !hasManual && <div className="text-muted-foreground">No executions recorded yet. Run the Test Script (headless/headed){isTrendCheck ? " to check consecutive Weekly/Monthly/Quarterly periods." : ` and ${isReferenceMatch ? "Reference Script" : "Warehouse SQL"} to populate this view.`}</div>}
                 {(latest || hasManual) && (
                   <>
                     <div className="flex gap-4 items-center">
                       <div><span className="text-muted-foreground">Source:</span> <span className="mono font-semibold">{hasManual ? `${manualActual ? "Test script" : "—"} + ${manualExpected ? (isReferenceMatch ? "Reference script" : "Warehouse SQL") : "—"}` : (storedSource || "stored")}</span></div>
-                      <div><span className="text-muted-foreground">Check:</span> <span className="mono">{isReferenceMatch ? "main vs reference report" : `main vs ${scenarioType.replace("_match","")}`}</span></div>
+                      <div><span className="text-muted-foreground">Check:</span> <span className="mono">{isTrendCheck ? "consecutive graph periods" : isReferenceMatch ? "main vs reference report" : `main vs ${scenarioType.replace("_match","")}`}</span></div>
                       {!hasManual && latest?.run_id && <Link to={`/runs/${latest.run_id}`} className="text-accent hover:underline ml-auto">open run →</Link>}
                     </div>
                     {!!combos?.length ? (
@@ -1909,6 +1972,7 @@ export default function ScenarioDetail() {
                         onTolerancesChange={saveKpiTolerances}
                         savingTolerances={savingTolerances}
                         isReferenceMatch={isReferenceMatch}
+                        isTrendCheck={isTrendCheck}
                         referenceKpis={manualReference}
                         refRunResult={effectiveRefRunResult}
                         globalSqlResult={sqlResult}
@@ -1919,27 +1983,36 @@ export default function ScenarioDetail() {
                         comboBlockOverrides={comboScriptBlocks}
                         persistedStatus={!hasManual ? persistedStatus : undefined}
                         onLiveOverallChange={setTableLiveOverall}
+                        scriptKpiLabels={[
+                          ...parseKpiLabelsFromPlaywright(code),
+                          ...parseKpiLabelsFromPlaywright(refCode),
+                        ]}
                       />
                     ) : (
                       <KpiRowsTable
                         actual={displayActual}
-                        sqlRes={isReferenceMatch ? null : sqlResult}
-                        fallbackExpected={displayExpected}
+                        sqlRes={isReferenceMatch || isTrendCheck ? null : sqlResult}
+                        fallbackExpected={isTrendCheck ? { "Trend check": 1 } : displayExpected}
                         tolerances={kpiTolerances}
                         onTolerancesChange={saveKpiTolerances}
                         savingTolerances={savingTolerances}
                         isReferenceMatch={isReferenceMatch}
+                        isTrendCheck={isTrendCheck}
                         onResetTolerances={resetTolerancesToLastRun}
                         canResetTolerances={tolerancesChanged && Object.keys(lastRunTolerances).length > 0}
                         persistedStatus={!hasManual ? persistedStatus : undefined}
                         onLiveOverallChange={setTableLiveOverall}
+                        scriptKpiLabels={[
+                          ...parseKpiLabelsFromPlaywright(code),
+                          ...parseKpiLabelsFromPlaywright(refCode),
+                        ]}
                       />
                     )}
                     {/* Stale RCA/analysis from prior runs intentionally hidden — only manual Test Script + Warehouse SQL output should drive Latest Result. */}
-                    {hasManual && !combos?.length && (!manualActual || !manualExpected) && (
+                    {hasManual && !combos?.length && (!manualActual || (!isTrendCheck && !manualExpected)) && (
                       <div className="text-muted-foreground text-[11px] border-t border-border pt-2">
                         {!manualActual && "↳ Run the Test Script (headless or headed) to populate Actual. "}
-                        {!manualExpected && (isReferenceMatch ? "↳ Run the Reference Script to populate Reference URL." : "↳ Run the Warehouse SQL to populate Expected.")}
+                        {!isTrendCheck && !manualExpected && (isReferenceMatch ? "↳ Run the Reference Script to populate Reference URL." : "↳ Run the Warehouse SQL to populate Expected.")}
                       </div>
                     )}
                   </>
@@ -2145,7 +2218,8 @@ function recordsToTable(records: any[]): { columns: string[]; rows: any[][] } | 
   const columns: string[] = [];
   for (const rec of records) {
     for (const k of Object.keys(rec || {})) {
-      if (!isKpiNoiseKey(k) && !columns.includes(k)) columns.push(k);
+      if (isKpiNoiseKey(k) || /^col_\d+$/i.test(k)) continue;
+      if (!columns.includes(k)) columns.push(k);
     }
   }
   if (!columns.length) return null;
@@ -2393,6 +2467,9 @@ const KPI_META_KEYS = new Set([
   "metric", "time_bucket", "timebucket", "navigation", "area", "region", "territory",
   "time_grain", "time_grain_retry", "chart_title", "show_data_error", "mstr_error_dismissed",
   "tabledata_rejected", "filters_applied", "dossier_ready",
+  "periods", "missing", "unparsed_periods", "consecutive", "trend_error", "grains",
+  "show_data_debug", "show_data_error", "extract_via", "first_col0", "selected_grain",
+  "time_grain_click", "grain_retries", "headers", "tableData", "tabledata",
 ]);
 
 const STRUCTURED_KPI_KEYS = new Set([
@@ -2400,8 +2477,15 @@ const STRUCTURED_KPI_KEYS = new Set([
   "heatmap", "viz", "dataset",
 ]);
 
+const KPI_NOISE_NORM = new Set(
+  [...KPI_SKIP_KEYS, ...KPI_META_KEYS].map((k) => k.toLowerCase().replace(/[^a-z0-9]/g, "")),
+);
+
 function isKpiNoiseKey(k: string) {
-  return KPI_SKIP_KEYS.has(k) || KPI_META_KEYS.has(k) || k.startsWith("__");
+  const raw = String(k || "");
+  if (!raw || raw.startsWith("__")) return true;
+  if (KPI_SKIP_KEYS.has(raw) || KPI_META_KEYS.has(raw)) return true;
+  return KPI_NOISE_NORM.has(raw.toLowerCase().replace(/[^a-z0-9]/g, ""));
 }
 
 function looksLikeLocatorJunk(v: any): boolean {
@@ -2521,6 +2605,8 @@ function structuredSize(v: any): number {
 /** Script output uses keys like grid/data/graph; the scenario KPI is often "Segment Summary". */
 function pickStructuredKpi(map: any): any {
   if (!map || typeof map !== "object" || Array.isArray(map)) return undefined;
+  const td = map.tableData || map.tabledata;
+  if (td && isStructuredKpiValue(td)) return td;
   const entries = Object.entries(map).filter(([k, v]) => !isKpiNoiseKey(k) && isStructuredKpiValue(v));
   if (!entries.length) return undefined;
   const preferred = entries.find(([k]) => STRUCTURED_KPI_KEYS.has(k.toLowerCase().replace(/[^a-z0-9]/g, "")));
@@ -2562,6 +2648,175 @@ function resolveKpiValue(name: string, ...sources: any[]): any {
   return undefined;
 }
 
+type TrendPayload = {
+  periods: string[];
+  missing: string[];
+  consecutive: boolean | null;
+  time_grain: string | null;
+  trend_error: string | null;
+  score: number | null;
+  grains?: TrendPayload[];
+};
+
+function grainLabel(v: any): string | null {
+  if (typeof v === "string" && v.trim()) return v.trim();
+  if (v && typeof v === "object" && typeof v.grain === "string") return v.grain;
+  return null;
+}
+
+function periodsFromTableData(td: any): string[] {
+  if (!td || typeof td !== "object") return [];
+  const headers = Array.isArray(td.headers) ? td.headers : [];
+  const rows = td.rows || td.data;
+  if (!Array.isArray(rows) || !rows.length) return [];
+  let col = headers.findIndex((h: any) => /date|month|week|quarter|period|time|bucket/i.test(String(h || "")));
+  if (col < 0) col = 0;
+  const key = headers[col] || (rows[0] && typeof rows[0] === "object" && !Array.isArray(rows[0])
+    ? Object.keys(rows[0])[0]
+    : null);
+  const out: string[] = [];
+  for (const row of rows) {
+    let cell: any;
+    if (Array.isArray(row)) cell = row[col];
+    else if (row && typeof row === "object") cell = key ? row[key] : Object.values(row)[0];
+    else cell = row;
+    const t = String(cell ?? "").replace(/\s+/g, " ").trim();
+    if (t && !/^(total|grand total|sum)$/i.test(t)) out.push(t);
+  }
+  return out;
+}
+
+function sliceToTrendPayload(map: any, grainHint?: string): TrendPayload | null {
+  if (!map || typeof map !== "object") return null;
+  const td = map.tableData || map.tabledata;
+  const periods = Array.isArray(map.periods) && map.periods.length
+    ? map.periods.map((p: any) => String(p))
+    : periodsFromTableData(td);
+  const missing = Array.isArray(map.missing) ? map.missing.map((p: any) => String(p)) : [];
+  const consecutive = typeof map.consecutive === "boolean" ? map.consecutive : null;
+  const scoreKey = grainHint ? `Trend check ${grainHint}` : "Trend check";
+  const score = map[scoreKey] == null && map["Trend check"] == null
+    ? null
+    : Number(map[scoreKey] ?? map["Trend check"]);
+  const time_grain = grainLabel(map.time_grain) || grainHint || null;
+  const trend_error = map.trend_error ? String(map.trend_error) : null;
+  if (!periods.length && consecutive == null && score == null && !trend_error) return null;
+  return { periods, missing, consecutive, time_grain, trend_error, score };
+}
+
+function pickTrendPayload(...sources: any[]): TrendPayload | null {
+  let best: TrendPayload | null = null;
+  for (const src of sources) {
+    if (!src || typeof src !== "object") continue;
+    const maps = [src, src.values, src.extracted, src.result].filter((x) => x && typeof x === "object");
+    for (const map of maps) {
+      const grainMap = map.grains && typeof map.grains === "object" && !Array.isArray(map.grains)
+        ? map.grains
+        : null;
+      const grainList: TrendPayload[] = [];
+      if (grainMap) {
+        for (const name of ["Weekly", "Monthly", "Quarterly"]) {
+          const one = sliceToTrendPayload(grainMap[name], name);
+          if (one) grainList.push({ ...one, time_grain: name });
+        }
+      }
+      const cand = sliceToTrendPayload(map);
+      if (grainList.length) {
+        const merged: TrendPayload = {
+          ...(cand || { periods: [], missing: [], consecutive: null, time_grain: "Weekly+Monthly+Quarterly", trend_error: null, score: null }),
+          grains: grainList,
+          consecutive: grainList.every((g) => g.consecutive === true),
+          score: grainList.every((g) => g.consecutive === true) ? 1 : 0,
+        };
+        if (!best || (merged.grains?.length || 0) > (best.grains?.length || 0)) best = merged;
+        continue;
+      }
+      if (!cand) continue;
+      if (!best || cand.periods.length > best.periods.length) best = cand;
+    }
+  }
+  return best;
+}
+
+function TrendCheckPanel({
+  payload,
+  filterLabel,
+}: {
+  payload: TrendPayload | null;
+  filterLabel?: string;
+}) {
+  const badge = (s: "pass" | "fail" | "pending") => {
+    const cls = s === "pass"
+      ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+      : s === "fail"
+      ? "bg-destructive/15 text-destructive border-destructive/30"
+      : "bg-secondary text-muted-foreground border-border";
+    return <span className={`mono uppercase text-[10px] px-1.5 py-0.5 rounded border ${cls}`}>{s}</span>;
+  };
+  const pass = payload?.consecutive === true || payload?.score === 1;
+  const fail = payload?.consecutive === false || payload?.score === 0
+    || (payload?.missing && payload.missing.length > 0) || !!payload?.trend_error;
+  const status: "pass" | "fail" | "pending" = !payload ? "pending" : (pass && !fail ? "pass" : fail ? "fail" : "pending");
+  const grainBlocks = payload?.grains?.length ? payload.grains : (payload ? [payload] : []);
+  return (
+    <div className="border border-border rounded p-3 space-y-3 text-xs">
+      <div className="flex items-center gap-2 flex-wrap">
+        {filterLabel && <span className="font-semibold">{filterLabel}</span>}
+        <span className="text-muted-foreground">Trend check — all toggles</span>
+        {badge(status)}
+      </div>
+      {payload?.trend_error && grainBlocks.length <= 1 && (
+        <div className="text-destructive">{payload.trend_error}</div>
+      )}
+      {grainBlocks.map((g, gi) => {
+        const gPass = g.consecutive === true || g.score === 1;
+        const gFail = g.consecutive === false || g.score === 0 || (g.missing || []).length > 0 || !!g.trend_error;
+        const gStatus: "pass" | "fail" | "pending" = gPass && !gFail ? "pass" : gFail ? "fail" : "pending";
+        const periods = g.periods || [];
+        const missing = g.missing || [];
+        return (
+          <div key={g.time_grain || gi} className="border border-border rounded p-2 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold mono">{g.time_grain || "Period"}</span>
+              {badge(gStatus)}
+              <span className="text-muted-foreground">{periods.length} period{periods.length === 1 ? "" : "s"}</span>
+            </div>
+            {g.trend_error && <div className="text-destructive">{g.trend_error}</div>}
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Periods on graph</div>
+              {periods.length ? (
+                <div className="flex flex-wrap gap-1">
+                  {periods.map((p, i) => (
+                    <span key={`${p}-${i}`} className="mono px-1.5 py-0.5 rounded border border-border bg-secondary/40">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted-foreground">No labels extracted for this toggle.</div>
+              )}
+            </div>
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground mb-1">Missing (gap in the middle)</div>
+              {missing.length ? (
+                <div className="flex flex-wrap gap-1">
+                  {missing.map((p, i) => (
+                    <span key={`${p}-${i}`} className="mono px-1.5 py-0.5 rounded border border-destructive/40 text-destructive">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted-foreground">{periods.length >= 2 ? "None — consecutive" : "—"}</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function aliasConfiguredKpis(values: Record<string, any>, tolerances?: Record<string, Tolerance>): Record<string, any> {
   const out = { ...(values || {}) };
   for (const name of Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k))) {
@@ -2570,6 +2825,47 @@ function aliasConfiguredKpis(values: Record<string, any>, tolerances?: Record<st
     if (resolved !== undefined) out[name] = resolved;
   }
   return out;
+}
+
+/** KPI_LABELS from a generated Playwright script (source of truth for what was scraped). */
+function parseKpiLabelsFromPlaywright(code?: string | null): string[] {
+  if (!code) return [];
+  const m = code.match(/const\s+KPI_LABELS\s*=\s*\[([\s\S]*?)\];/);
+  if (!m) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const sm of m[1].matchAll(/["']([^"']+)["']/g)) {
+    const s = sm[1].trim();
+    const key = s.toLowerCase();
+    if (!s || seen.has(key) || isKpiNoiseKey(s)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+/** Latest result rows: Add/Remove KPI list is the source of truth when configured. */
+function resultKpiNames(
+  tolerances: Record<string, Tolerance> | undefined,
+  scriptLabels: string[] | undefined,
+  ...extractedMaps: Array<Record<string, any> | null | undefined>
+): string[] {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string) => {
+    const key = String(raw || "").trim();
+    if (!key || key.startsWith("__") || isKpiNoiseKey(key) || seen.has(key.toLowerCase())) return;
+    seen.add(key.toLowerCase());
+    names.push(key);
+  };
+  for (const k of Object.keys(tolerances || {})) add(k);
+  if (names.length) return names;
+  for (const k of scriptLabels || []) add(k);
+  for (const map of extractedMaps) {
+    if (!map || typeof map !== "object") continue;
+    for (const k of Object.keys(map)) add(k);
+  }
+  return names;
 }
 
 function extractKpisFromBlock(block: any): Record<string, any> {
@@ -2592,6 +2888,8 @@ function extractKpisFromBlock(block: any): Record<string, any> {
     const leaf = unwrapKpiLeaf(v);
     if (leaf !== undefined && !looksLikeComboLabel(k)) out[k] = leaf;
   }
+  const td = block.tableData || block.tabledata;
+  if (td && !out.tableData) out.tableData = td;
   if (Object.keys(out).length) return out;
   const nested = Object.entries(block).filter(([k, v]) => {
     if (isKpiNoiseKey(k) && k !== "extracted" && k !== "result" && k !== "results") return false;
@@ -2679,7 +2977,10 @@ function singleComboBlock(rr: any, label: string, idx: number, comboId?: string)
 function kpiMapFromStored(actual: any): Record<string, any> | null {
   if (!actual || typeof actual !== "object") return null;
   if (actual.values && typeof actual.values === "object") {
-    const fromValues = extractKpisFromBlock(flattenResultRoot(actual.values) || actual.values);
+    const raw = flattenResultRoot(actual.values) || actual.values;
+    const fromValues = extractKpisFromBlock(raw);
+    const td = raw?.tableData || raw?.tabledata || actual.tableData;
+    if (td && !fromValues.tableData) fromValues.tableData = td;
     if (Object.keys(fromValues).length) return fromValues;
   }
   if (actual.extracted) {
@@ -2809,12 +3110,18 @@ function statusFromKpis(
 ): "pass" | "fail" | "pending" {
   if (scrapeFailed) return "fail";
   const actual = actualValues && typeof actualValues === "object" ? actualValues : {};
+  const trendStatus = trendStatusFromValues(actual);
+  if (trendStatus) return trendStatus;
   const expected = expectedValues && typeof expectedValues === "object" ? expectedValues : {};
   const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k));
   const structured = collectStructuredKeys(actual, expected);
-  const scalarKeys = configured.length
-    ? configured.filter((k) => !isStructuredKeyName(k))
-    : Object.keys(actual).filter((k) => !isKpiNoiseKey(k) && !isStructuredKeyName(k) && !isStructuredKpiValue(actual[k]));
+  const extractedScalars = [actual, expected].flatMap((map) =>
+    Object.keys(map || {}).filter((k) => !isKpiNoiseKey(k) && !isStructuredKeyName(k) && !isStructuredKpiValue(map[k])),
+  );
+  const scalarKeys = Array.from(new Set([
+    ...configured.filter((k) => !isStructuredKeyName(k)),
+    ...extractedScalars,
+  ]));
   const keys = Array.from(new Set([...structured, ...scalarKeys]));
   if (!keys.length) return "pending";
   const passes = keys.map((k) => {
@@ -2871,6 +3178,7 @@ async function persistManualHeadlessRun(opts: {
       const block = pickComboBlock(root, label, i, c.id);
       let values = extractKpisFromBlock(block);
       if (!Object.keys(values).length) values = extractKpisFromRun(payload) || {};
+      values = attachTrendFields(values, block, payload, payload?.extracted, payload?.extracted?.result);
       values = aliasConfiguredKpis(values, tolerances);
       const expectedValues = resolveExpectedValues({
         label, idx: i, comboId: c.id, actualKeys: Object.keys(values),
@@ -2900,7 +3208,10 @@ async function persistManualHeadlessRun(opts: {
       });
     }
   } else {
-    const values = aliasConfiguredKpis(extractKpisFromRun(payload) || {}, tolerances);
+    const values = aliasConfiguredKpis(
+      attachTrendFields(extractKpisFromRun(payload) || {}, payload, payload?.extracted, payload?.extracted?.result),
+      tolerances,
+    );
     const expectedValues = resolveExpectedValues({
       label: "", idx: 0, actualKeys: Object.keys(values),
       isReferenceMatch, referencePayload, storedRows, sqlByCombo, sqlResult,
@@ -3381,8 +3692,8 @@ function TolerancesEditor({
 
 function FilterComparisonTable({
   combos, comboResults, runResult, tolerances, onTolerancesChange, savingTolerances,
-  isReferenceMatch, referenceKpis, refRunResult, globalSqlResult, onResetTolerances, canResetTolerances,
-  onRunCombo, runningComboId, comboBlockOverrides, persistedStatus, onLiveOverallChange,
+  isReferenceMatch, isTrendCheck, referenceKpis, refRunResult, globalSqlResult, onResetTolerances, canResetTolerances,
+  onRunCombo, runningComboId, comboBlockOverrides, persistedStatus, onLiveOverallChange, scriptKpiLabels,
 }: {
   combos: any[];
   comboResults: Record<string, any>;
@@ -3391,6 +3702,7 @@ function FilterComparisonTable({
   onTolerancesChange: (next: Record<string, Tolerance>) => void;
   savingTolerances?: boolean;
   isReferenceMatch?: boolean;
+  isTrendCheck?: boolean;
   referenceKpis?: Record<string, any> | null;
   refRunResult?: any;
   globalSqlResult?: any;
@@ -3401,6 +3713,7 @@ function FilterComparisonTable({
   comboBlockOverrides?: Record<string, any>;
   persistedStatus?: "pass" | "fail" | "pending";
   onLiveOverallChange?: (status: "pass" | "fail" | "pending") => void;
+  scriptKpiLabels?: string[];
 }) {
   const [openCombo, setOpenCombo] = useState<any>(null);
 
@@ -3433,11 +3746,12 @@ function FilterComparisonTable({
     let refKpis = refBlock ? extractKpisFromBlock(refBlock) : null;
     if (!refKpis || !Object.keys(refKpis).length) refKpis = extractKpisFromRun(refRunResult);
     const sqlRes = comboResults[c.id] || (globalSqlResult?.ok ? globalSqlResult : null);
-    const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k));
-    const kpiNames = configured.length ? configured : Object.keys(kpis);
+    const kpiNames = resultKpiNames(tolerances, scriptKpiLabels, kpis, refKpis);
     const rows: Row[] = kpiNames.map((k) => {
       const v = resolveKpiValue(k, kpis, pwBlock, runResult);
-      const exp = isReferenceMatch
+      const exp = isTrendCheck
+        ? (k === "Trend check" || k === "consecutive" ? 1 : null)
+        : isReferenceMatch
         ? resolveKpiValue(k, refKpis, referenceKpis, refBlock, refRunResult)
         : expectedForKpi(sqlRes, k);
       const a = toNum(v);
@@ -3468,8 +3782,16 @@ function FilterComparisonTable({
         });
       }
     }
-    const overall = overallFromPassResults(rows.map((r) => r.pass));
-    return { combo: c, idx, label, rows, overall };
+    const trend = isTrendCheck
+      ? pickTrendPayload(pwBlock, kpis, refKpis, runResult, refRunResult)
+      : null;
+    const trendPass = trend
+      ? ((trend.consecutive === true || trend.score === 1) && !(trend.missing || []).length && !trend.trend_error)
+      : null;
+    const overall = isTrendCheck
+      ? (trendPass === true ? "pass" : trendPass === false || trend?.trend_error ? "fail" : "pending")
+      : overallFromPassResults(rows.map((r) => r.pass));
+    return { combo: c, idx, label, rows, overall, trend };
   });
 
 
@@ -3494,6 +3816,21 @@ function FilterComparisonTable({
   };
 
   
+
+  if (isTrendCheck) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Overall Status:</span>
+          {badge(overallStatus)}
+          <span className="text-muted-foreground">consecutive week / month / quarter periods</span>
+        </div>
+        {perCombo.map(({ combo, label, trend }) => (
+          <TrendCheckPanel key={combo.id || label} payload={trend} filterLabel={label} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -3606,7 +3943,7 @@ function FilterComparisonTable({
 }
 
 function KpiRowsTable({
-  actual, sqlRes, fallbackExpected, tolerances, onTolerancesChange, savingTolerances, isReferenceMatch, onResetTolerances, canResetTolerances, persistedStatus, onLiveOverallChange,
+  actual, sqlRes, fallbackExpected, tolerances, onTolerancesChange, savingTolerances, isReferenceMatch, isTrendCheck, onResetTolerances, canResetTolerances, persistedStatus, onLiveOverallChange, scriptKpiLabels,
 }: {
   actual: any;
   sqlRes: any;
@@ -3615,10 +3952,12 @@ function KpiRowsTable({
   onTolerancesChange: (next: Record<string, Tolerance>) => void;
   savingTolerances?: boolean;
   isReferenceMatch?: boolean;
+  isTrendCheck?: boolean;
   onResetTolerances?: () => void;
   canResetTolerances?: boolean;
   persistedStatus?: "pass" | "fail" | "pending";
   onLiveOverallChange?: (status: "pass" | "fail" | "pending") => void;
+  scriptKpiLabels?: string[];
 }) {
   const badge = (s: "pass" | "fail" | "pending") => {
     const cls = s === "pass"
@@ -3630,10 +3969,8 @@ function KpiRowsTable({
   };
 
   const kpis = actual && typeof actual === "object" ? actual : {};
-  const configured = Object.keys(tolerances || {}).filter((k) => !isKpiNoiseKey(k) && !k.startsWith("__"));
-  const keys = configured.length
-    ? configured
-    : Object.keys(kpis).filter((k) => !k.startsWith("__") && !isKpiNoiseKey(k));
+  const trend = isTrendCheck ? pickTrendPayload(kpis, fallbackExpected, actual) : null;
+  const keys = resultKpiNames(tolerances, scriptKpiLabels, kpis, fallbackExpected);
 
   const rows = keys.map((k) => {
     const a = resolveKpiValue(k, kpis);
@@ -3651,12 +3988,29 @@ function KpiRowsTable({
     return { k, a, exp, diff, deltaPct, pass };
   });
 
-  const computedOverall = overallFromPassResults(rows.map((r) => r.pass));
+  const trendPass = trend
+    ? ((trend.consecutive === true || trend.score === 1) && !(trend.missing || []).length && !trend.trend_error)
+    : null;
+  const computedOverall = isTrendCheck
+    ? (trendPass === true ? "pass" : trend ? "fail" : "pending")
+    : overallFromPassResults(rows.map((r) => r.pass));
   const overall = computedOverall;
 
   useEffect(() => {
     onLiveOverallChange?.(computedOverall);
   }, [computedOverall, onLiveOverallChange]);
+
+  if (isTrendCheck) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Overall Status:</span>
+          {badge(overall)}
+        </div>
+        <TrendCheckPanel payload={trend} />
+      </div>
+    );
+  }
 
   if (!keys.length) {
     return <div className="text-muted-foreground text-xs">No KPI values extracted yet.</div>;
@@ -3674,7 +4028,7 @@ function KpiRowsTable({
             <tr>
               <th className="text-left p-2">KPI</th>
               <th className="text-left p-2">Actual (UI main report)</th>
-              <th className="text-left p-2">{isReferenceMatch ? "Reference URL" : "Expected (BE / SQL)"}</th>
+              <th className="text-left p-2">{isTrendCheck ? "Required" : isReferenceMatch ? "Reference URL" : "Expected (BE / SQL)"}</th>
               <th className="text-left p-2">Diff</th>
               <th className="text-left p-2">Result</th>
             </tr>
@@ -3762,7 +4116,7 @@ function ScenarioMeta({ s }: { s: any }) {
         <Button variant="outline" size="sm" className="w-full" onClick={() => update({ deferred: !s.deferred })}>
           {s.deferred ? "Restore" : "Defer"}
         </Button>
-        <Button variant="outline" size="sm" className="w-full" onClick={dup} disabled={duping} title="Duplicate this test case">
+        <Button variant="outline" size="sm" className="w-full" onClick={dup} disabled={duping} title="Duplicate this test case including its saved script, filter combinations, KPI settings, and SQL binding. FE ↔ BE mappings stay on this screen.">
           {duping ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Copy className="h-3 w-3 mr-1" />}
           Duplicate
         </Button>

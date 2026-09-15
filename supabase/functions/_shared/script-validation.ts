@@ -13,8 +13,9 @@ export type ScriptExpectations = {
   kind: string;
   navSteps: string[];
   timeGrain?: string | null;
-  extract: "kpi" | "chart_table" | "grid";
+  extract: "kpi" | "chart_table" | "grid" | "dates" | "trend_periods";
   kpiLabels?: string[];
+  dateLabels?: string[];
   chartTitle?: string;
   gridTitle?: string;
   filterKeys?: string[];
@@ -54,7 +55,7 @@ export function pickResultRoot(payload: any): any {
 export function firstComboBlock(root: any): any {
   if (!root) return null;
   // Combo row already (do not treat sibling `navigation` as the extract block).
-  if (root.filters_applied || root.tableData || root.grid) return root;
+  if (root.filters_applied || root.tableData || root.grid || root.grains || Array.isArray(root.periods) || typeof root.consecutive === "boolean") return root;
   const nested = asObj(root.results);
   if (nested) {
     const keys = Object.keys(nested).filter((k) => !k.startsWith("__") && k !== "navigation");
@@ -124,6 +125,34 @@ function hasGrid(block: any, gridTitle?: string, kpiLabel?: string): boolean {
   return false;
 }
 
+function hasTrendPeriods(block: any): boolean {
+  if (!block || typeof block !== "object") return false;
+  if (block.grains && typeof block.grains === "object") {
+    const hits = Object.values(block.grains).filter((g: any) =>
+      Array.isArray(g?.periods) && g.periods.length >= 2
+    );
+    if (hits.length >= 1) return true;
+  }
+  if (Array.isArray(block.periods) && block.periods.length >= 2 && typeof block.consecutive === "boolean") {
+    return true;
+  }
+  const td = block.tableData;
+  const rows = td?.rows || td?.data;
+  return Array.isArray(rows) && rows.length >= 2;
+}
+
+function hasDateValues(block: any, labels: string[]): boolean {
+  if (!block || typeof block !== "object") return false;
+  const keys = labels.length ? labels : Object.keys(block).filter((k) =>
+    !/^(filters_applied|navigation|ok|error|via|url|extract_via|time_grain|chart_title|extract_debug)$/i.test(k)
+  );
+  for (const k of keys) {
+    const v = block[k];
+    if (typeof v === "string" && v.trim().length > 0) return true;
+  }
+  return false;
+}
+
 function hasKpis(block: any, labels: string[]): boolean {
   if (!block || typeof block !== "object") return false;
   const keys = labels.length ? labels : Object.keys(block).filter((k) =>
@@ -158,8 +187,14 @@ export function buildExpectations(opts: {
     : String(meta.grid_title || "");
 
   let extract: ScriptExpectations["extract"] = "kpi";
-  if (kind.includes("chart") || kind === "chart_show_data") extract = "chart_table";
+  if (kind.includes("trend") || kind === "trend_check") extract = "trend_periods";
+  else if (kind.includes("chart") || kind === "chart_show_data") extract = "chart_table";
   else if (kind.includes("grid") || kind === "geography_grid") extract = "grid";
+  else if (kind.includes("date") || kind === "date_refresh") extract = "dates";
+
+  const dateLabels = Array.isArray(meta.date_labels)
+    ? (meta.date_labels as string[]).map(String)
+    : [];
 
   return {
     kind,
@@ -170,11 +205,19 @@ export function buildExpectations(opts: {
     gridTitle,
     filterKeys: opts.filterKeys || [],
     kpiLabels: Array.isArray(meta.kpi_labels) ? (meta.kpi_labels as string[]).map(String) : [],
+    dateLabels,
   };
 }
 
 export function analyzeScriptRun(payload: any, expectations: ScriptExpectations): ValidationReport {
   const checks: ValidationCheck[] = [];
+
+  // #region agent log
+  {
+    const extracted = payload?.extracted;
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "C", location: "script-validation.ts:analyzeScriptRun", message: "analyze entry", data: { expectNav: expectations.navSteps, expectFilters: expectations.filterKeys, expectKpis: expectations.kpiLabels, payloadOk: payload?.ok, payloadError: payload?.error || null, extractedOk: extracted?.ok, extractedError: extracted?.error || null, extractedMessage: String(extracted?.message || "").slice(0, 180), extractedKeys: extracted && typeof extracted === "object" ? Object.keys(extracted).slice(0, 24) : [] }, timestamp: Date.now() }) }).catch(() => {});
+  }
+  // #endregion
 
   if (!payload || payload.ok === false || payload.error === "BROWSERLESS_TIMEOUT" || payload.error) {
     const msg = String(payload?.message || payload?.error || "Script run failed");
@@ -225,6 +268,9 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
   } else {
     checks.push({ name: "navigation", pass: true, detail: "No nav steps required" });
   }
+  // #region agent log
+  fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "C", location: "script-validation.ts:nav-check", message: "nav check vs extract keys", data: { expectNav: expectations.navSteps, navPass: checks.find((c) => c.name === "navigation")?.pass ?? null, navDetail: String(checks.find((c) => c.name === "navigation")?.detail || "").slice(0, 240), navDebugLen: navigation.length, blockKeys: block && typeof block === "object" ? Object.keys(block).slice(0, 20) : [] }, timestamp: Date.now() }) }).catch(() => {});
+  // #endregion
 
   // Filters
   if (expectations.filterKeys?.length) {
@@ -249,7 +295,12 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
   // Extraction
   let extractPass = false;
   let extractDetail = "";
-  if (expectations.extract === "chart_table") {
+  if (expectations.extract === "trend_periods") {
+    extractPass = hasTrendPeriods(block);
+    extractDetail = extractPass
+      ? `Trend periods extracted (grain=${block.time_grain || expectations.timeGrain || "?"}; count=${Array.isArray(block.periods) ? block.periods.length : 0})`
+      : `Missing consecutive-period extract; keys=${Object.keys(block).join(",")}; show_data_error=${block.show_data_error || ""}; trend_error=${block.trend_error || ""}`;
+  } else if (expectations.extract === "chart_table") {
     extractPass = hasChartTable(block, expectations.chartTitle);
     extractDetail = extractPass
       ? "Multi-column chart Show Data table present"
@@ -262,6 +313,11 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
       : chrome
       ? `Rejected Performance KPIs / Line-copy chrome scrape; use Menu → Show Data on '${expectations.gridTitle}'`
       : `Missing grid extract (title=${expectations.gridTitle}); extract_via=${block.extract_via || ""}; show_data=${JSON.stringify(block.show_data || {}).slice(0, 200)}; keys=${Object.keys(block).join(",")}`;
+  } else if (expectations.extract === "dates") {
+    extractPass = hasDateValues(block, expectations.dateLabels?.length ? expectations.dateLabels : (expectations.kpiLabels || []));
+    extractDetail = extractPass
+      ? "Date / refresh-date string values present"
+      : `Missing date strings; keys=${Object.keys(block).join(",")}; extract_debug=${JSON.stringify(block.extract_debug || {}).slice(0, 900)}`;
   } else {
     extractPass = hasKpis(block, expectations.kpiLabels || []);
     extractDetail = extractPass
@@ -281,6 +337,9 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
         ? `- Required NAV_STEPS = ${JSON.stringify(expectations.navSteps)}`
         : null,
       expectations.timeGrain ? `- Required TIME_GRAIN / toggle = ${expectations.timeGrain}` : null,
+      expectations.extract === "trend_periods"
+        ? `- Click ${expectations.timeGrain || "Weekly/Monthly/Quarterly"} then openShowData('${expectations.chartTitle || "chart"}') and return periods + consecutive`
+        : null,
       expectations.extract === "chart_table"
         ? `- Extract via openShowData('${expectations.chartTitle}') → multi-column tableData (never a single KPI cell)`
         : null,
@@ -289,6 +348,9 @@ export function analyzeScriptRun(payload: any, expectations: ScriptExpectations)
         : null,
       expectations.extract === "kpi"
         ? `- Use extractKPI for configured labels; largest font under exact label`
+        : null,
+      expectations.extract === "dates"
+        ? `- Use extractRefreshDate for DATE_LABELS; expect string dates (not numeric KPIs)`
         : null,
       "- Keep Browserless APIs only (evaluate/click/type); do not invent locators.",
       "- Do not hardcode filter values; use __filterCombinations.",

@@ -31,29 +31,11 @@ export default defineConfig(() => ({
       ],
     },
     proxy: {
-      "/functions/v1/run-warehouse-sql": {
+      "/functions/v1": {
         target: backendTarget,
         changeOrigin: true,
-      },
-      "/functions/v1/test-warehouse-connectivity": {
-        target: backendTarget,
-        changeOrigin: true,
-      },
-      "/functions/v1/agent-orchestrate": {
-        target: backendTarget,
-        changeOrigin: true,
-      },
-      "/functions/v1/agent-scripts": {
-        target: backendTarget,
-        changeOrigin: true,
-      },
-      "/functions/v1/agent-heal": {
-        target: backendTarget,
-        changeOrigin: true,
-      },
-      "/functions/v1/playwright-runtime": {
-        target: backendTarget,
-        changeOrigin: true,
+        timeout: 480_000,
+        proxyTimeout: 480_000,
       },
     },
   },

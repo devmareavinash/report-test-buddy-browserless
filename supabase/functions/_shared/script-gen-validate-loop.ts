@@ -84,6 +84,12 @@ export async function executeScriptValidation(opts: {
   if (!resp.ok && !payload) {
     return { ok: false, error: "VALIDATION_RUN_HTTP", message: `playwright-runtime ${resp.status}` };
   }
+  // #region agent log
+  {
+    const ex = payload?.extracted && typeof payload.extracted === "object" ? payload.extracted : payload;
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "B", location: "script-gen-validate-loop.ts:executeScriptValidation", message: "validation run payload", data: { httpStatus: resp.status, topKeys: payload && typeof payload === "object" ? Object.keys(payload).slice(0, 20) : [], extractedKeys: ex && typeof ex === "object" ? Object.keys(ex).slice(0, 24) : [], extractedOk: ex?.ok, extractedError: ex?.error || payload?.error || null, extractedMessage: String(ex?.message || payload?.message || "").slice(0, 180), hasNavigation: Array.isArray(ex?.navigation), hasFilters: !!(ex?.filters_applied || ex?.results) }, timestamp: Date.now() }) }).catch(() => {});
+  }
+  // #endregion
   return payload;
 }
 
@@ -200,7 +206,11 @@ export async function runGenerateValidationLoop(opts: {
         attempts: 0,
         max_attempts: maxAttempts,
         reports: [],
-        skipped_reason: "SCRIPT_VALIDATE_ON_GENERATE=false",
+        skipped_reason: opts.forceSkip
+          ? (String(opts.generatedBy || "").includes("trend_check")
+            ? "trend_check template — skip Browserless validate so Generate returns immediately"
+            : "forceSkip")
+          : "SCRIPT_VALIDATE_ON_GENERATE=false",
       },
     };
   }
@@ -311,7 +321,7 @@ export async function runGenerateValidationLoop(opts: {
     // #endregion
 
     // #region agent log
-    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "E", location: "script-gen-validate-loop.ts:attempt_result", message: "validation attempt finished", data: { attempt, maxAttempts, generatedBy, passed: report.ok, summary: report.summary, duration_ms: runMs, sameAsPrev: reports.length > 1 && reports[reports.length - 2]?.summary === report.summary, willRepair: !report.ok && attempt < maxAttempts && !/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy) }, timestamp: Date.now() }) }).catch(() => {});
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bf7284" }, body: JSON.stringify({ sessionId: "bf7284", runId: "campaign-speed", hypothesisId: "E", location: "script-gen-validate-loop.ts:attempt_result", message: "validation attempt finished", data: { attempt, maxAttempts, generatedBy, passed: report.ok, summary: report.summary, duration_ms: runMs, sameAsPrev: reports.length > 1 && reports[reports.length - 2]?.summary === report.summary, willRepair: !report.ok && attempt < maxAttempts && !/^skill:(kpi|overview_kpi|activity_kpi|chart_show_data|geography_grid|date_refresh|trend_check)$/.test(generatedBy) }, timestamp: Date.now() }) }).catch(() => {});
     // #endregion
     await log?.log(
       "script-validate",
@@ -390,7 +400,20 @@ export async function runGenerateValidationLoop(opts: {
 
     if (attempt >= maxAttempts) break;
 
-    // Skill templates still get Magentic repair on nav/filter/extract fail (not kept forever).
+    const isStableSkill = /^skill:(kpi|overview_kpi|activity_kpi|chart_show_data|geography_grid|date_refresh|trend_check)$/
+      .test(generatedBy);
+    if (isStableSkill) {
+      await log?.log(
+        "script-validate",
+        "skip_repair",
+        "Skill template kept as-is — skipping Magentic repair",
+        { attempt, generated_by: generatedBy, summary: report.summary, stop_loop: true },
+        "warn",
+      );
+      break;
+    }
+
+    // LLM-generated scripts still get Magentic repair on nav/filter/extract fail.
     await log?.log("script-validate", "repair_start", `Repairing script after attempt ${attempt}`, {
       attempt,
       next_attempt: attempt + 1,
@@ -401,11 +424,7 @@ export async function runGenerateValidationLoop(opts: {
       has_anthropic_key: Boolean((Deno.env.get("ANTHROPIC_API_KEY") || "").trim()),
     });
     // #region agent log
-    {
-      const payload = {sessionId:"a78821",runId:"post-fix",hypothesisId:"B",location:"script-gen-validate-loop.ts:repair_start",message:"about to call repair LLM",data:{attempt,generatedBy,isSkill:/^skill:(overview_kpi|activity_kpi|chart_show_data|geography_grid)$/.test(generatedBy),has_key:Boolean((Deno.env.get("ANTHROPIC_API_KEY")||"").trim()),summary:report.summary},timestamp:Date.now()};
-      fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"a78821"},body:JSON.stringify(payload)}).catch(()=>{});
-      Deno.writeTextFile(new URL("../../../debug-a78821.log", import.meta.url), JSON.stringify(payload) + "\n", { append: true }).catch(()=>{});
-    }
+    fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "D", location: "script-gen-validate-loop.ts:repair_start", message: "repair after attempt", data: { attempt, generatedBy, summary: String(report.summary || "").slice(0, 200), navFail: report.checks?.some((c) => c.name === "navigation" && !c.pass) ?? null, filterFail: report.checks?.some((c) => c.name === "filters" && !c.pass) ?? null, extractFail: report.checks?.some((c) => c.name === "extraction" && !c.pass) ?? null }, timestamp: Date.now() }) }).catch(() => {});
     // #endregion
     try {
       const repaired = await repairScriptFromValidation({

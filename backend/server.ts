@@ -23,6 +23,7 @@ const FUNCTIONS = [
   "admin-users",
   "agent-analyze",
   "agent-heal",
+  "agent-heal-script",
   "agent-orchestrate",
   "agent-scenarios",
   "agent-scrape",
@@ -30,6 +31,7 @@ const FUNCTIONS = [
   "bootstrap-admin",
   "playwright-runtime",
   "run-warehouse-sql",
+  "schedule-tick",
   "test-warehouse-connectivity",
   "trigger-run",
 ];

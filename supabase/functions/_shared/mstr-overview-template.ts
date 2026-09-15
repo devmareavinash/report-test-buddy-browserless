@@ -1,6 +1,6 @@
-/** Deterministic Overview Playwright script. Only URL and KPI labels vary. */
+/** Deterministic KPI Playwright script (Overview, Activity, or any numeric tiles). Only URL, KPI labels, and NAV_STEPS vary. */
 
-import { parseNavStepsFromScenario } from "./mstr-nav-parse.ts";
+import { parseNavStepsFromScenario, scenarioTextBlob } from "./mstr-nav-parse.ts";
 
 export const DEFAULT_OVERVIEW_KPIS = [
   "NBRx Total",
@@ -21,6 +21,7 @@ export const DEFAULT_OVERVIEW_KPIS = [
   "PA/ME Submission Rate",
   "PA/ME Initiated Volume",
   "Approval Rate",
+  "Samples Dropped",
 ];
 
 export function normalizeReportUrl(raw: string): string {
@@ -37,6 +38,26 @@ export function normalizeReportUrl(raw: string): string {
   }
 }
 
+function looksLikeDateKpiNoise(raw: string): boolean {
+  const s = String(raw || "").trim();
+  if (!s) return false;
+  const t = s.toLowerCase();
+  if (/\brefresh\s*date\b/.test(t)) return true;
+  if (/^(claims me|call activity we)$/i.test(s)) return true;
+  if (/\b(as\s*of|data\s*as\s*of)\b/.test(t)) return true;
+  if (/^sales\s*\(/i.test(s) && /\b(nbrx|nrx|trx)\b/i.test(s)) return true;
+  return false;
+}
+
+function looksLikeUserKpiLabel(raw: string): boolean {
+  const s = String(raw || "").trim();
+  if (!s || s.length > 80) return false;
+  if (looksLikeDateKpiNoise(s)) return false;
+  if (/^(overview|activity|performance|geography|filters?|navigation|summary)$/i.test(s)) return false;
+  if (/\b(screen|tab|page|report|dashboard|graph|chart|grid|toggle)\b/i.test(s)) return false;
+  return /\b(nbrx|nrx|trx|writers|reach|frequency|blink|calls|rate|volume|approval|target|hcp|bap|paid insured|kpi|samples?|dropped)\b/i.test(s);
+}
+
 export function looksLikeOverviewKpis(scenario: any, existingScript?: any): boolean {
   const labels = parseKpiLabels(scenario, existingScript, false);
   if (!labels.length) return false;
@@ -44,62 +65,123 @@ export function looksLikeOverviewKpis(scenario: any, existingScript?: any): bool
   return /\b(nbrx|nrx|trx|writers|reach|frequency|blink|calls to target|my plan)\b/i.test(blob);
 }
 
-/** Overview page only. Chart/grid use dedicated templates; Activity KPI uses isActivityKpiScenario. */
+/**
+ * Leftover numeric KPI tiles (Overview, Activity, or any KPI page).
+ * Grid / chart / date use dedicated templates — never steal those.
+ */
+export function isKpiScenario(
+  scenario: any,
+  existingScript?: any,
+  _isReferenceTarget = false,
+): boolean {
+  if (String(scenario?.type || "").toLowerCase() === "trend") return false;
+  const blob = scenarioTextBlob(scenario).toLowerCase();
+
+  // Refresh / as-of dates use date_refresh — never extractKPI.
+  if (/\brefresh\s*dates?\b/.test(blob) || /\b(claims\s*me|call activity we)\b/.test(blob)) return false;
+  if (/\b(as[\s-]?of\s*date|date\s*validat|date\s*labels?|data\s*as\s*of)\b/.test(blob)) return false;
+
+  // Graphs / grids use Show Data — never KPI tile extract.
+  if (/\bactivity\s*trend\b/.test(blob)) return false;
+  if (/\b(show\s*data|chart\s*data|geography details|grid data|crosstab|graph|chart|plot)\b/.test(blob)) {
+    return false;
+  }
+  if (/\bgrid\b/.test(blob) && !/\b(overview|kpi|tile|pass\s*value)/.test(blob)) return false;
+  if (/\bperformance\s*trend\b/.test(blob) && !/\bkpi\b/.test(blob)) return false;
+
+  const configured = parseKpiLabels(scenario, existingScript, false);
+  if (configured.length) return true;
+
+  if (/\boverview\b/.test(blob)) return true;
+  if (/\b(kpi|pass\s*values?|kpi\s*tiles?|numeric\s*tiles?)\b/.test(blob)) return true;
+  if (/\bactivity\b/.test(blob) && (looksLikeOverviewKpis(scenario, existingScript) || /\bkpi\b/.test(blob))) {
+    return true;
+  }
+  return looksLikeOverviewKpis(scenario, existingScript);
+}
+
+/** @deprecated Use isKpiScenario — Overview and Activity share the KPI template. */
 export function isOverviewScenario(
   scenario: any,
   existingScript?: any,
   isReferenceTarget = false,
 ): boolean {
-  const reportName = String(scenario?.reports?.name || "");
-  const title = String(scenario?.title || "");
-  const desc = String(scenario?.description || "");
-  const blob = `${reportName}\n${title}\n${desc}`.toLowerCase();
-
-  const otherOnly =
-    /\b(hcp customer|activity\s*(tab|screen|sub-?tab)|performance\s*(tab|screen)|show\s*data|chart\s*data|geography details|grid data|crosstab|all grid columns)\b/.test(blob)
-    && !/\boverview\b/.test(blob);
-  if (otherOnly) return false;
-  if (/\bgrid\b/.test(blob) && !/\boverview\b/.test(blob)) return false;
-  if (/\b(show\s*data|chart\s*data|performance\s*trend)\b/.test(blob) && !/\boverview\b/.test(blob)) return false;
-
-  if (isReferenceTarget) {
-    const secondScreenIsOther =
-      /\boverview\b[\s\S]{0,160}\b(vs\.?|versus|against)\b[\s\S]{0,80}\b(activity|performance|hcp)\b/.test(blob);
-    if (secondScreenIsOther) return false;
-  }
-
-  if (/\boverview\b/.test(blob)) return true;
-  return looksLikeOverviewKpis(scenario, existingScript) && !/\b(activity|hcp customer|performance)\b/.test(blob);
+  return isKpiScenario(scenario, existingScript, isReferenceTarget);
 }
 
-/**
- * Activity (or similar) tab with KPI pass-value tiles — same extractKPI + waits + GEO
- * cadence as Overview, with NAV_STEPS to reach the tab.
- */
+/** @deprecated Use isKpiScenario — Overview and Activity share the KPI template. */
 export function isActivityKpiScenario(scenario: any, existingScript?: any): boolean {
-  const blob = `${scenario?.reports?.name || ""}\n${scenario?.title || ""}\n${scenario?.description || ""}`.toLowerCase();
-  // Graphs/charts use Show Data — never Activity KPI tile extract.
-  if (/\b(show\s*data|chart\s*data|geography details|grid data|crosstab|graph|chart|plot)\b/.test(blob)) return false;
-  if (/\bactivity\s*trend\b/.test(blob)) return false;
-  if (!/\bactivity\b/.test(blob)) return false;
-  return looksLikeOverviewKpis(scenario, existingScript) || /\bkpi\b/.test(blob);
+  return isKpiScenario(scenario, existingScript);
 }
+
+export const isActivityScenario = isActivityKpiScenario;
 
 /** Footer / left-nav steps only — never Weekly/Monthly/Quarterly (chart radios). */
 export function parseKpiNavSteps(scenario: any, fallback: string[] = []): string[] {
-  const steps = parseNavStepsFromScenario(scenario, { allowGeography: false });
-  if (steps.length) return steps;
+  // Overview is the dossier landing page — do not click it as a tab.
+  // Only real footer tabs. Comparison titles ("Overview vs Performance…", "Main Report") are not tabs.
+  const steps = parseNavStepsFromScenario(scenario, { allowGeography: false })
+    .map((s) => {
+      const tab = String(s || "").match(/\b(activity|performance|geography)\b/i);
+      if (tab && /navigat|after|before|vs\b/i.test(s)) return tab[1];
+      return s;
+    })
+    .filter((s) => {
+      if (/^load\b/i.test(s)) return false;
+      if (/^(overview|summary|main)$/i.test(s)) return false;
+      if (/^vs\b|\bafter\b|\bbefore\b|\bnavigat/i.test(s)) return false;
+      if (/\boverview\b/i.test(s) && !/\b(activity|performance|geography|hcp)\b/i.test(s)) return false;
+      return /^(activity|performance|geography)$/i.test(s);
+    });
+  if (steps.length) {
+    __dbgKpiNav(scenario, steps);
+    return steps;
+  }
+  __dbgKpiNav(scenario, fallback);
   return [...fallback];
 }
 
-export function parseKpiLabels(scenario: any, existingScript?: any, useDefault = true): string[] {
+// #region agent log
+function __dbgKpiNav(scenario: any, steps: string[]) {
+  fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "A", location: "mstr-overview-template.ts:parseKpiNavSteps", message: "parsed KPI nav steps", data: { title: String(scenario?.title || "").slice(0, 160), reportName: String(scenario?.reports?.name || "").slice(0, 160), descHead: String(scenario?.description || "").slice(0, 240), steps }, timestamp: Date.now() }) }).catch(() => {});
+}
+// #endregion
+
+function labelsFromScenarioText(scenario: any): string[] {
+  const title = String(scenario?.title || "");
+  const desc = String(scenario?.description || "");
+  const blob = `${title}\n${desc}`;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const add = (raw: string) => {
+    const s = String(raw || "").trim();
+    if (!s || seen.has(s.toLowerCase()) || looksLikeDateKpiNoise(s)) return;
+    seen.add(s.toLowerCase());
+    out.push(s);
+  };
+  for (const def of DEFAULT_OVERVIEW_KPIS) {
+    const re = new RegExp(def.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    if (re.test(blob)) add(def);
+  }
+  for (const m of blob.matchAll(/["“‘']([^"”’']{2,80})["”’']/g)) {
+    if (looksLikeUserKpiLabel(m[1])) add(m[1].trim());
+  }
+  for (const line of desc.split(/\r?\n/)) {
+    const t = line.replace(/^[-*•\d.)\s]+/, "").trim().replace(/^["']|["']$/g, "");
+    if (t && looksLikeUserKpiLabel(t)) add(t);
+  }
+  return out;
+}
+
+/** User-configured KPI labels only. Never inject the 18 default Overview KPIs unless useDefault=true. */
+export function parseKpiLabels(scenario: any, existingScript?: any, useDefault = false): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
   const add = (raw: any) => {
     const s = typeof raw === "string"
       ? raw.trim()
       : String(raw?.label || raw?.name || raw?.kpi || "").trim();
-    if (!s || seen.has(s.toLowerCase())) return;
+    if (!s || seen.has(s.toLowerCase()) || looksLikeDateKpiNoise(s)) return;
     seen.add(s.toLowerCase());
     out.push(s);
   };
@@ -117,26 +199,33 @@ export function parseKpiLabels(scenario: any, existingScript?: any, useDefault =
     else Object.keys(cfg).forEach(add);
   }
   if (out.length) return out;
+  const fromText = labelsFromScenarioText(scenario);
+  if (fromText.length) return fromText;
   return useDefault ? [...DEFAULT_OVERVIEW_KPIS] : [];
 }
 
-export function assembleOverviewScript(opts: {
+export function assembleKpiScript(opts: {
   reportUrl: string;
   kpiLabels: string[];
-  /** Optional tab navigation before KPI scrape (e.g. Activity). Empty = stay on Overview. */
+  /** Optional tab navigation before KPI scrape (e.g. Activity). Empty = stay on landing page. */
   navSteps?: string[];
 }): string {
   const reportUrl = normalizeReportUrl(opts.reportUrl);
-  const kpiLabels = (opts.kpiLabels || []).filter((k) => typeof k === "string" && k.trim());
-  const labels = kpiLabels.length ? kpiLabels : [...DEFAULT_OVERVIEW_KPIS];
+  const labels = (opts.kpiLabels || []).filter((k) => typeof k === "string" && k.trim());
   const navSteps = (opts.navSteps || []).filter((s) => typeof s === "string" && s.trim() && !/^(weekly|monthly|quarterly)$/i.test(s));
   const urlLit = JSON.stringify(reportUrl);
   const kpiLit = JSON.stringify(labels, null, 4).replace(/\n/g, "\n    ");
   const navLit = JSON.stringify(navSteps);
+  // #region agent log
+  fetch("http://127.0.0.1:7671/ingest/98652cf2-faf9-416e-8061-9c498534608d", { method: "POST", headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "427fbc" }, body: JSON.stringify({ sessionId: "427fbc", runId: "kpi-fail", hypothesisId: "B", location: "mstr-overview-template.ts:assembleKpiScript", message: "assembled KPI script slots", data: { urlTail: reportUrl.slice(-48), kpiLabels: labels, navSteps, navLit }, timestamp: Date.now() }) }).catch(() => {});
+  // #endregion
+  const emptyLabelsNote = labels.length
+    ? ""
+    : "\n  // KPI_LABELS empty — set labels via Add/Remove KPIs or assertion_spec. Generate validation should fail until then.\n";
 
   return `/**
- * RTB skill template: Overview / Activity KPI tiles (extractKPI).
- * Filled from UI: report URL, KPI_LABELS, optional NAV_STEPS.
+ * RTB skill template: KPI tiles (extractKPI).
+ * Filled from UI: report URL, KPI_LABELS (user-configured only), optional NAV_STEPS.
  * Filters come from runtime __filterCombinations (never hardcode Area/Region values).
  * Runtime: Browserless /chromium/function — export default async ({ page }) => { ... }
  */
@@ -598,7 +687,7 @@ export default async ({ page }) => {
     }
   };
 
-  const KPI_LABELS = ${kpiLit};
+  const KPI_LABELS = ${kpiLit};${emptyLabelsNote}
   const toNum = v => (v == null ? null : parseFloat(String(v).replace(/[^0-9.\\-]/g, '')));
 
   const filterCombinations = (typeof __filterCombinations !== 'undefined' && Array.isArray(__filterCombinations) && __filterCombinations.length > 0)
@@ -653,3 +742,6 @@ export default async ({ page }) => {
 };
 `;
 }
+
+/** @deprecated Use assembleKpiScript — same KPI template. */
+export const assembleOverviewScript = assembleKpiScript;
