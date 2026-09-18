@@ -1,0 +1,287 @@
+1
+00:00:00,070 --> 00:00:05,790
+This is Report Test Buddy — an agentic front-end validation tool.
+
+2
+00:00:06,110 --> 00:00:10,670
+We use this for performing front-end report validation.
+
+3
+00:00:11,070 --> 00:00:14,270
+Basically, we perform three types of checks using this tool.
+
+4
+00:00:14,510 --> 00:00:22,510
+First is front-end versus front-end — meaning a production front-end screen versus a pre-production front-end screen.
+
+5
+00:00:22,830 --> 00:00:23,550
+Second is
+
+6
+00:00:24,110 --> 00:00:34,750
+front-end versus front-end within the same environment — meaning within production only, we are validating two different screens.
+
+7
+00:00:35,630 --> 00:00:39,470
+Third is front-end versus back-end validation.
+
+8
+00:00:39,630 --> 00:00:45,631
+So basically, we are comparing the front-end report data against back-end warehouse data.
+
+9
+00:00:45,951 --> 00:00:51,711
+This is our main homepage or dashboard where we can see the run summary
+
+10
+00:00:52,991 --> 00:00:55,311
+and key metrics at a glance.
+
+11
+00:00:55,631 --> 00:01:03,271
+First is total scenarios — how many test cases ran, out of which how many passed and how many failed.
+
+12
+00:01:03,831 --> 00:01:09,071
+We can also view the report summary filtered by report or by brand.
+
+13
+00:01:09,711 --> 00:01:14,191
+Below that, you can see the detailed run summary.
+
+14
+00:01:14,991 --> 00:01:22,111
+Now let me walk you through the different tabs and screens in this tool.
+
+15
+00:01:23,390 --> 00:01:52,351
+There is another screen called Reports. We use this for configuring and adding new reports. You can add reports using this option. Let me show you how to add a sample report. You need to click on Add Report.
+
+16
+00:01:52,911 --> 00:01:58,911
+Then select Create New Report and enter the name of the report.
+
+17
+00:02:04,031 --> 00:02:11,471
+In the Screen Name field, we enter the screen name — for example, a sample screen name.
+
+18
+00:02:17,432 --> 00:02:24,152
+Then in the Screen URL field, we provide the exact screen URL.
+
+19
+00:02:34,432 --> 00:02:41,712
+Here we need to enter the reference screen URL — in this case, the pre-production URL.
+
+20
+00:02:45,392 --> 00:02:57,072
+Now for the login credentials — the first credential is for our main screen in production, and the second is the reference screen credential.
+
+21
+00:02:58,591 --> 00:03:00,192
+Then the warehouse credential.
+
+22
+00:03:00,352 --> 00:03:11,472
+If you want to perform a warehouse check — that is, front-end versus back-end validation — you need to enter the database connection details as well.
+
+23
+00:03:11,792 --> 00:03:22,152
+And if you have any SQL templates, we will cover that going forward.
+
+24
+00:03:22,832 --> 00:03:24,712
+Now I will click Save.
+
+25
+00:03:28,192 --> 00:03:35,312
+Now I will go to the report screen to create a test scenario.
+
+26
+00:03:35,312 --> 00:03:45,593
+Basically, we need to provide a prompt in natural language describing the test case to validate the
+
+27
+00:04:13,073 --> 00:04:13,953
+reference report.
+
+28
+00:04:21,322 --> 00:04:24,043
+Now we click on Generate Scenario.
+
+29
+00:04:36,093 --> 00:04:47,773
+You can add a test case in two ways — either provide a full description of the case in this text box and click Generate, or enter the scenario name manually. Then we have options such as
+
+30
+00:04:49,793 --> 00:04:52,433
+different types of cases: Warehouse Match, Reference Match.
+
+31
+00:04:52,753 --> 00:04:55,793
+In Warehouse Match, we compare data from front-end to back-end.
+
+32
+00:04:56,033 --> 00:05:01,473
+In Reference Match, we compare data front-end versus front-end.
+
+33
+00:05:01,473 --> 00:05:11,153
+In Trend Check, we validate the trend of a graph. Then we have Range Check, Functional Check, and so on.
+
+34
+00:05:11,393 --> 00:05:16,594
+We also have a Criticality dropdown to set the priority level —
+
+35
+00:05:16,914 --> 00:05:21,474
+Low, Medium, High, or Critical. This one is set to Medium.
+
+36
+00:05:21,554 --> 00:05:25,234
+I click Add, and the test case is created.
+
+37
+00:05:25,554 --> 00:05:34,874
+Now inside this scenario, I need to provide a description in natural language — for example, load the Overview
+
+38
+00:06:51,395 --> 00:06:55,715
+screen. This prompt drives the script generation.
+
+39
+00:06:55,955 --> 00:07:13,155
+Here we configure the assertion — whether each KPI should be equal to reference, less than or equal to reference, less than reference, or any other comparison operator.
+
+40
+00:07:13,635 --> 00:07:20,195
+Next, we need to add the filter combination so that our
+
+41
+00:07:21,475 --> 00:07:26,195
+script knows which page filters to apply. We are configuring this
+
+42
+00:07:30,435 --> 00:07:31,395
+Overview page.
+
+43
+00:07:31,555 --> 00:07:33,475
+So this is our Overview page.
+
+44
+00:07:36,915 --> 00:07:38,355
+This is the production Overview page.
+
+45
+00:07:38,595 --> 00:07:45,555
+We are validating this KPI number against the QA page — that is, this reference number.
+
+46
+00:07:46,195 --> 00:07:46,675
+So,
+
+47
+00:07:47,395 --> 00:08:00,765
+we have different filters on this page, and we need to configure those filters here as well. Let me do that — Area,
+
+48
+00:08:20,916 --> 00:09:02,266
+Region, Territory, and Time Bucket — that will be YTD. I save this filter combination. Now, once I have provided the prompt and the filter combination, I click Generate Script. Our back-end agent will start working and generate the script.
+
+49
+00:09:05,636 --> 00:09:31,236
+It typically takes a few attempts to generate and validate the script. Now our agent has completed — this is the script generated by the agent. We also have a reference script option, and we can regenerate or use the generated main script by swapping URLs.
+
+50
+00:09:31,636 --> 00:09:43,157
+We click on that. Now, to run the script, we can test it using the headless browser — it will execute the script and return the actual result.
+
+51
+00:09:45,637 --> 00:09:47,717
+I will run the reference script as well.
+
+52
+00:09:49,637 --> 00:09:54,357
+Now both scripts have run and we have the results.
+
+53
+00:09:55,557 --> 00:09:58,437
+We ran the scripts and got the results.
+
+54
+00:09:58,997 --> 00:10:07,637
+You can see that the tool scraped the KPI values from the main page, and it also scraped the reference values.
+
+55
+00:10:08,037 --> 00:10:14,917
+In the Latest Result section, we can see that the actual UI values match the reference UI values.
+
+56
+00:10:15,637 --> 00:10:24,757
+So this is how you set up a test case and run it manually. Now,
+
+57
+00:10:25,317 --> 00:10:33,797
+moving to the next part — if you want to run an entire report suite, navigate to this screen.
+
+58
+00:10:34,277 --> 00:10:41,717
+You can run the report from here, or run any screen using any of the given options.
+
+59
+00:10:42,197 --> 00:10:48,197
+Now to check the test execution status, go to the Test Execution tab.
+
+60
+00:10:48,677 --> 00:10:52,357
+Here you will find all the status reports and their results.
+
+61
+00:10:52,757 --> 00:10:59,717
+You can filter the test cases by their results — for example, selecting Passed, you can see
+
+62
+00:11:00,197 --> 00:11:01,477
+these are the passed cases.
+
+63
+00:11:01,477 --> 00:11:13,078
+You can view the exact KPI values for both the actual and reference results.
+
+64
+00:11:13,638 --> 00:11:17,478
+Similarly,
+
+65
+00:11:17,638 --> 00:11:20,198
+you can check the failed reports.
+
+66
+00:11:20,838 --> 00:11:22,118
+Why did this one fail?
+
+67
+00:11:22,118 --> 00:11:24,118
+You can see the difference highlighted here.
+
+68
+00:11:24,918 --> 00:11:26,518
+Next is the Runs tab.
+
+69
+00:11:26,918 --> 00:11:35,078
+Here you can see the latest run or previous runs. Related to SQL Templates —
+
+70
+00:11:35,078 --> 00:11:38,238
+here you can view and manage SQL templates.
+
+71
+00:11:38,918 --> 00:11:55,318
+For admin-related settings, we have an Admin option under Settings, where you can
+
+72
+00:11:56,238 --> 00:12:02,758
+enter the credentials for the database or your reporting login credentials.

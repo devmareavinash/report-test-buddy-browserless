@@ -159,16 +159,46 @@ function labelsFromScenarioText(scenario: any): string[] {
     seen.add(s.toLowerCase());
     out.push(s);
   };
+  // 1. Exact match against default KPI labels
   for (const def of DEFAULT_OVERVIEW_KPIS) {
     const re = new RegExp(def.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
     if (re.test(blob)) add(def);
   }
-  for (const m of blob.matchAll(/["“‘']([^"”’']{2,80})["”’']/g)) {
+  // 2. Quoted strings — curly quotes AND straight quotes
+  for (const m of blob.matchAll(/[““”’‘’]([^”“”’‘’]{2,80})[““”’‘’]/g)) {
     if (looksLikeUserKpiLabel(m[1])) add(m[1].trim());
   }
+  // 3. Per-line scan (bullet lists, plain lines)
   for (const line of desc.split(/\r?\n/)) {
     const t = line.replace(/^[-*•\d.)\s]+/, "").trim().replace(/^["']|["']$/g, "");
     if (t && looksLikeUserKpiLabel(t)) add(t);
+    // 3b. Comma-separated KPI labels within a line
+    if (/,/.test(t)) {
+      for (const seg of t.split(/,/)) {
+        const s = seg.trim().replace(/^["']|["']$/g, "");
+        if (s && s.length <= 50 && looksLikeUserKpiLabel(s)) add(s);
+      }
+    }
+  }
+  // 4. Extract KPI-like noun phrases from within sentences.
+  //    Matches patterns like "capture the displayed Blink TRx value" → "Blink TRx"
+  if (!out.length) {
+    const verbRe = /(?:capture|extract|check|scrape|fetch|read|compare|verify|validate|match|displayed|showing|shows?)\s+(?:the\s+)?(?:displayed\s+|corresponding\s+|current\s+|expected\s+)?([A-Z][A-Za-z\s/()%]{1,50}?)\s+(?:values?|figures?|numbers?|metrics?|kpis?|tiles?|data\b)/gi;
+    for (const m of blob.matchAll(verbRe)) {
+      const candidate = m[1].trim();
+      if (candidate && looksLikeUserKpiLabel(candidate)) add(candidate);
+    }
+  }
+  // 5. Sliding window: scan for 1–4 word phrases containing KPI keywords
+  if (!out.length) {
+    const words = blob.split(/\s+/).map((w) => w.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9%()]+$/g, "")).filter(Boolean);
+    for (let len = 4; len >= 1; len--) {
+      for (let i = 0; i <= words.length - len; i++) {
+        const phrase = words.slice(i, i + len).join(" ");
+        if (phrase.length > 50) continue;
+        if (looksLikeUserKpiLabel(phrase)) add(phrase);
+      }
+    }
   }
   return out;
 }

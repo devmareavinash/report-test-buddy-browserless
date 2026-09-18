@@ -45,6 +45,9 @@ export function isGridScenario(scenario: any, existingScript?: any): boolean {
   if (/\bgrid\b/.test(blob) && /\b(employee name|area\b|columns?:)\b/.test(blob) && !/\boverview\b/.test(blob)) {
     return true;
   }
+  if (/\bgrid\b/.test(blob) && /\brecord\s*count\b/.test(blob)) return true;
+  if (/\bgrid\b/.test(blob) && /\brow\s*count\b/.test(blob)) return true;
+  if (/\bsub\s*tabs?\b/.test(blob) && /\bgrid\b/.test(blob)) return true;
   const code = String(
     existingScript?.playwright_code ||
     existingScript?.assertion_spec?.__reference_playwright_code ||
@@ -123,6 +126,584 @@ export function parseGridColumns(scenario: any, existingScript?: any): string[] 
     DEFAULT_GEOGRAPHY_COLUMNS.forEach(add);
   }
   return out;
+}
+
+export function isRecordCountScenario(scenario: any): boolean {
+  const blob = scenarioBlob(scenario).toLowerCase();
+  return /\brecord\s*count\b/.test(blob) && /\b(sub\s*tab|tab)\b/.test(blob);
+}
+
+export function parseSubTabs(scenario: any): string[] {
+  const desc = String(scenario?.description || "");
+  const tabs: string[] = [];
+  const seen = new Set<string>();
+  for (const m of desc.matchAll(/[''‘’""“”]([^''‘’""“”]{3,80})[''‘’""“”]/g)) {
+    const t = m[1].trim();
+    if (!t || seen.has(t.toLowerCase())) continue;
+    if (/prod|pre-prod|reference|main|url/i.test(t)) continue;
+    seen.add(t.toLowerCase());
+    tabs.push(t);
+  }
+  return tabs;
+}
+
+export function assembleRecordCountScript(opts: {
+  reportUrl: string;
+  navSteps: string[];
+  subTabs: string[];
+  kpiPrefix?: string;
+}): string {
+  const reportUrl = String(opts.reportUrl || "").trim();
+  const navSteps = (opts.navSteps || []).filter((s) => typeof s === "string" && s.trim());
+  const subTabs = (opts.subTabs || []).filter((s) => typeof s === "string" && s.trim());
+  const kpiPrefix = String(opts.kpiPrefix || "Row Count").trim();
+  const urlLit = JSON.stringify(reportUrl);
+  const navLit = JSON.stringify(navSteps, null, 4).replace(/\n/g, "\n    ");
+  const tabsLit = JSON.stringify(subTabs, null, 4).replace(/\n/g, "\n    ");
+  const prefixLit = JSON.stringify(kpiPrefix);
+
+  return `/**
+ * RTB skill template: MSTR sub-tab record count via Show Data popup "Rows: N" header.
+ * Navigates to each sub-tab, opens Show Data, reads the row count, closes popup.
+ * Filters come from runtime __filterCombinations (never hardcode filter values).
+ * Runtime: Browserless /chromium/function — export default async ({ page }) => { ... }
+ */
+export default async ({ page }) => {
+
+  // === AUTO-INJECTED SESSION-AWARE AUTH CHECK (do not remove) ===
+  const __sleep = ms => new Promise(r => setTimeout(r, ms));
+  const __reportUrl = ${urlLit};
+  const __tryWidenViewport = async () => {
+    try { if (typeof page.setViewport === 'function') await page.setViewport({ width: 1920, height: 1080, deviceScaleFactor: 1 }); } catch (_) {}
+    try { if (typeof page.setViewportSize === 'function') await page.setViewportSize({ width: 1920, height: 1080 }); } catch (_) {}
+    try {
+      await page.evaluate(() => {
+        document.documentElement.style.zoom = '100%';
+        if (document.body) document.body.style.zoom = '100%';
+      });
+    } catch (_) {}
+  };
+  await __tryWidenViewport();
+  const __detectLoginForm = () => page.evaluate(() => {
+    const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const hasUserField = !!document.querySelector(
+      'input[placeholder*="user name" i], input[name*="user" i], input[id*="user" i], #Uid'
+    );
+    const hasPwdField = !!document.querySelector('input[type="password"], #Pwd');
+    const hasLoginBtn = Array.from(document.querySelectorAll('button, input[type="submit"], div[role="button"], a'))
+      .some(el => /log ?in/.test(norm(el.innerText || el.value || '')));
+    return hasUserField || hasPwdField || hasLoginBtn;
+  }).catch(() => false);
+  await page.goto(__reportUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+  await __sleep(2000);
+  let __hasLoginForm = await __detectLoginForm();
+  if (__hasLoginForm && typeof __creds !== 'undefined' && __creds && __creds.username) {
+    const __onLoginPage = await page.evaluate(() => /\\/auth\\/ui\\/loginPage/i.test(location.href)).catch(() => false);
+    if (!__onLoginPage && __creds.loginUrl) {
+      await page.goto(__creds.loginUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+      await __sleep(1000);
+    }
+    const __userSel = '#Uid, input[placeholder*="user name" i], input[name*="user" i], input[id*="user" i], input[type="text"]';
+    const __pwdSel  = '#Pwd, input[type="password"], input[placeholder*="password" i]';
+    await page.type(__userSel, __creds.username).catch(() => {});
+    await page.type(__pwdSel, __creds.password).catch(() => {});
+    await page.evaluate((pSel) => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const cands = Array.from(document.querySelectorAll('button, input[type="submit"], div[role="button"], a'));
+      let btn = cands.find(el => norm(el.innerText || el.value || '') === 'log in with credentials');
+      if (!btn) btn = cands.find(el => /log ?in/.test(norm(el.innerText || el.value || '')));
+      if (btn) { btn.click(); return true; }
+      const pwd = document.querySelector(pSel);
+      const form = pwd && pwd.closest('form');
+      if (form) { (form.requestSubmit ? form.requestSubmit() : form.submit()); return true; }
+      return false;
+    }, __pwdSel).catch(() => {});
+    await Promise.race([
+      page.waitForNavigation({ waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => null),
+      __sleep(3000),
+    ]);
+    await __sleep(1500);
+    const __loginFailed = await page.evaluate(() =>
+      /login\\s*failure|error\\s*in\\s*login|invalid (user|credentials|password)|incorrect (user|password)/i.test(document.body.innerText || '')
+    ).catch(() => false);
+    if (__loginFailed) {
+      return { ok: false, error: 'LOGIN_FAILED', message: 'Credentials rejected by the report login page' };
+    }
+    await page.goto(__reportUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+    await __sleep(2000);
+    __hasLoginForm = await __detectLoginForm();
+    if (__hasLoginForm) {
+      return { ok: false, error: 'LOGIN_FAILED', message: 'Still on login page after submitting credentials' };
+    }
+    await __tryWidenViewport();
+  } else if (__hasLoginForm) {
+    return { ok: false, error: 'AUTH_REQUIRED', message: 'Login form present but no credentials provided' };
+  }
+  // === END AUTO-INJECTED AUTH CHECK ===
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const reportUrl = ${urlLit};
+
+  const NAV_STEPS = ${navLit};
+  const SUB_TABS = ${tabsLit};
+  const KPI_PREFIX = ${prefixLit};
+
+  const waitForLoadingToFinish = async (maxMs = 45000) => {
+    const start = Date.now();
+    await sleep(400);
+    const isLoading = () => page.evaluate(() => {
+      const bodyText = document.body ? document.body.innerText : '';
+      if (/Loading\\s*Data/i.test(bodyText)) {
+        for (const el of Array.from(document.querySelectorAll('*'))) {
+          let direct = '';
+          for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) direct += n.textContent;
+          if (!/Loading\\s*Data/i.test(direct)) continue;
+          const r = el.getBoundingClientRect();
+          const st = window.getComputedStyle(el);
+          if (r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none')
+            return true;
+        }
+      }
+      const spin = document.querySelector(
+        '.mstrmojo-WaitBox, .mstrmojo-Wait, .mstrWaitBox, [class*="WaitBox" i], [class*="loading" i][class*="overlay" i]'
+      );
+      if (spin) {
+        const r = spin.getBoundingClientRect();
+        const st = window.getComputedStyle(spin);
+        if (r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none')
+          return true;
+      }
+      return false;
+    }).catch(() => false);
+    while (Date.now() - start < maxMs) {
+      const loading = await isLoading();
+      if (!loading) {
+        await sleep(800);
+        if (!(await isLoading())) return;
+      }
+      await sleep(400);
+    }
+  };
+
+  const waitForDashboard = async (maxMs = 30000) => {
+    await waitForLoadingToFinish(maxMs);
+  };
+
+  const dismissGenericErrorDialog = async () => {
+    await page.evaluate(() => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      for (const btn of Array.from(document.querySelectorAll('button, [role="button"], a, span'))) {
+        const t = norm(btn.innerText || btn.textContent || '');
+        if (t === 'ok' || t === 'close' || t === 'dismiss') {
+          const parent = btn.closest('[class*="error" i], [class*="alert" i], [class*="dialog" i], [class*="modal" i], [role="dialog"], [role="alertdialog"]');
+          if (parent) { btn.click(); return true; }
+        }
+      }
+      return false;
+    }).catch(() => false);
+    await sleep(200);
+  };
+
+  const closeAnyOpenDropdown = async () => {
+    await page.evaluate(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Escape', code: 'Escape', bubbles: true }));
+    }).catch(() => {});
+    await sleep(300);
+  };
+
+  const clickByText = async (text) => {
+    const result = await page.evaluate((label) => {
+      function getDirectText(el) {
+        let t = '';
+        for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) t += n.textContent;
+        return t.trim();
+      }
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const target = norm(label);
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        const st = el.ownerDocument.defaultView.getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      const roots = [document];
+      for (const f of Array.from(document.querySelectorAll('iframe, frame'))) {
+        try { roots.push(f.contentDocument); } catch (_) {}
+      }
+      const exact = [], contains = [];
+      for (const root of roots) {
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          if (!isVisible(el)) continue;
+          const direct = getDirectText(el);
+          if (direct && norm(direct) === target) {
+            const r = el.getBoundingClientRect();
+            exact.push({ el, area: r.width * r.height });
+            continue;
+          }
+        }
+        for (const el of Array.from(root.querySelectorAll('a, button, li, div, span, td, [role="tab"], [role="menuitem"], [role="button"]'))) {
+          if (!isVisible(el)) continue;
+          const it = norm(el.innerText || el.textContent || '');
+          if (!it || !it.includes(target)) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width * r.height > 200000) continue;
+          contains.push({ el, area: r.width * r.height, len: it.length });
+        }
+      }
+      exact.sort((a, b) => a.area - b.area);
+      contains.sort((a, b) => (a.len - b.len) || (a.area - b.area));
+      const best = exact[0] || contains[0];
+      if (best) { best.el.click(); return { clicked: true, via: 'text', text: label }; }
+      return { error: 'navigation target not found: ' + label };
+    }, text).catch(() => ({ error: 'evaluate failed: ' + text }));
+    await waitForLoadingToFinish();
+    await waitForDashboard().catch(() => {});
+    return result;
+  };
+
+  const selectByLabel = async (labelText, optionText) => {
+    await closeAnyOpenDropdown();
+    const result = await page.evaluate((label, opt) => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const extractCode = v => norm(v).split(/\\s+/)[0].trim();
+      const optCode = extractCode(opt);
+      const normOpt = norm(opt);
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        const st = getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      function getDirectText(el) {
+        let t = '';
+        for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) t += n.textContent;
+        return t.trim();
+      }
+      let labelEl = null, labelArea = Infinity;
+      for (const el of Array.from(document.querySelectorAll('*'))) {
+        if (!isVisible(el)) continue;
+        if (norm(getDirectText(el)) !== norm(label)) continue;
+        const r = el.getBoundingClientRect();
+        const area = r.width * r.height;
+        if (area < labelArea) { labelEl = el; labelArea = area; }
+      }
+      if (!labelEl) return { error: 'Label not found: ' + label };
+      const lr = labelEl.getBoundingClientRect();
+
+      let bestSelect = null, bestDist = Infinity;
+      for (const s of Array.from(document.querySelectorAll('select'))) {
+        if (!isVisible(s)) continue;
+        const r = s.getBoundingClientRect();
+        const dist = Math.abs(r.top - lr.top) + Math.abs(r.left - lr.left);
+        if (dist < 200 && dist < bestDist) { bestSelect = s; bestDist = dist; }
+      }
+      if (bestSelect) {
+        const options = Array.from(bestSelect.options);
+        let m = options.find(o => extractCode(o.textContent) === optCode)
+             || options.find(o => norm(o.textContent) === normOpt);
+        if (m) {
+          bestSelect.value = m.value;
+          bestSelect.dispatchEvent(new Event('input',  { bubbles: true }));
+          bestSelect.dispatchEvent(new Event('change', { bubbles: true }));
+          return { clicked: true, via: 'native-select', option: m.textContent.trim() };
+        }
+      }
+
+      let valueEl = null, valueDist = Infinity;
+      for (const el of Array.from(document.querySelectorAll('*'))) {
+        if (!isVisible(el)) continue;
+        const d = getDirectText(el);
+        if (!d || norm(d) === norm(label)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.top < lr.top - 2) continue;
+        if (r.top - lr.top > 60) continue;
+        const dx = Math.abs(r.left - lr.left);
+        if (dx > 250) continue;
+        const dist = (r.top - lr.top) + dx;
+        if (dist < valueDist) { valueDist = dist; valueEl = el; }
+      }
+      if (valueEl) { valueEl.click(); return { opened: true, via: 'click-current-value' }; }
+      return { error: 'No selector found near: ' + label };
+    }, labelText, optionText).catch(() => ({ error: 'evaluate failed for ' + labelText }));
+    if (result.clicked) {
+      await closeAnyOpenDropdown();
+      await waitForLoadingToFinish();
+      return { ok: true, ...result };
+    }
+    if (result.opened) {
+      await sleep(400);
+      const picked = await page.evaluate((opt) => {
+        const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const optCode = norm(opt).split(/\\s+/)[0];
+        const normOpt = norm(opt);
+        const isVisible = el => {
+          const r = el.getBoundingClientRect();
+          if (r.width === 0 || r.height === 0) return false;
+          const st = getComputedStyle(el);
+          return st.visibility !== 'hidden' && st.display !== 'none';
+        };
+        const cands = Array.from(document.querySelectorAll(
+          'li, [role="option"], [role="menuitem"], [role="listbox"] *, ul *, div, span, td'
+        ));
+        let exact = null, codeMatch = null, contains = null;
+        for (const el of cands) {
+          if (!isVisible(el)) continue;
+          const t = norm(el.innerText || el.textContent || '');
+          if (!t || t.length > 60) continue;
+          if (t === normOpt && !exact) exact = el;
+          else if (t.split(/\\s+/)[0] === optCode && !codeMatch) codeMatch = el;
+          else if (t.includes(normOpt) && !contains) contains = el;
+        }
+        const best = exact || codeMatch || contains;
+        if (best) { best.click(); return { clicked: true, text: (best.innerText || best.textContent || '').trim().substring(0, 60) }; }
+        return null;
+      }, optionText).catch(() => null);
+      if (picked && picked.clicked) {
+        await closeAnyOpenDropdown();
+        await waitForLoadingToFinish();
+        return { ok: true, via: 'opened-then-picked', ...picked };
+      }
+    }
+    return { ok: false, ...result };
+  };
+
+  // Extract the "Rows: N" text from the Show Data popup header.
+  const extractShowDataRowCount = async () => {
+    const POPUP_SEL = '.mstrmojo-Popup, .mstrmojo-popup, .mstrmojo-RootPopup, [class*="Popup"], [class*="popup"], [class*="modal" i], [class*="dialog" i], [role="dialog"]';
+    return await page.evaluate((popupSel) => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        const st = getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      // Search popup containers first, then the full document
+      const roots = [
+        ...Array.from(document.querySelectorAll(popupSel)).filter(isVisible),
+        document,
+      ];
+      for (const root of roots) {
+        for (const el of Array.from(root.querySelectorAll('*'))) {
+          if (!isVisible(el)) continue;
+          let direct = '';
+          for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) direct += n.textContent;
+          const text = norm(direct);
+          // Match "Rows: 1234" or "Rows : 1,234"
+          const m = text.match(/Rows\\s*:\\s*([\\d,]+)/i);
+          if (m) {
+            const count = parseInt(m[1].replace(/,/g, ''), 10);
+            if (!isNaN(count)) return { count, via: 'show-data-header', raw: text };
+          }
+        }
+      }
+      // Fallback: count visible table rows
+      const tables = Array.from(document.querySelectorAll('table')).filter(isVisible);
+      if (tables.length) {
+        let bestTable = null, bestArea = 0;
+        for (const t of tables) {
+          const r = t.getBoundingClientRect();
+          if (r.width * r.height > bestArea) { bestArea = r.width * r.height; bestTable = t; }
+        }
+        if (bestTable) {
+          const allRows = Array.from(bestTable.querySelectorAll('tr')).filter(isVisible);
+          const headerRows = Array.from(bestTable.querySelectorAll('thead tr')).filter(isVisible);
+          const dataRows = allRows.length - headerRows.length;
+          if (dataRows > 0) return { count: dataRows, via: 'table-row-count' };
+        }
+      }
+      return { count: null, via: 'not-found' };
+    }, POPUP_SEL).catch(() => ({ count: null, via: 'evaluate-failed' }));
+  };
+
+  // Open the Show Data popup on the current widget via right-click context menu.
+  const openShowData = async () => {
+    // Right-click in the center of the largest visible grid/table/visualization
+    const target = await page.evaluate(() => {
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width < 10 || r.height < 10) return false;
+        const st = getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      const sels = [
+        'table', '[class*="grid" i]', '[class*="xtab" i]', '[role="grid"]',
+        '[class*="mstrmojo"][class*="Table" i]', '[class*="mstrmojo"][class*="Grid" i]',
+        '[class*="visualization" i]', '[class*="widget" i]',
+      ];
+      let best = null, bestArea = 0;
+      for (const sel of sels) {
+        for (const el of Array.from(document.querySelectorAll(sel))) {
+          if (!isVisible(el)) continue;
+          const r = el.getBoundingClientRect();
+          const area = r.width * r.height;
+          if (area > bestArea) { bestArea = area; best = { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+        }
+      }
+      return best || { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+    }).catch(() => ({ x: 600, y: 400 }));
+
+    await page.mouse.click(target.x, target.y, { button: 'right' });
+    await sleep(800);
+
+    // Click "Show Data" in the context menu
+    const clicked = await page.evaluate(() => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) return false;
+        const st = getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      for (const el of Array.from(document.querySelectorAll('li, button, a, span, div, [role="menuitem"], [role="option"]'))) {
+        if (!isVisible(el)) continue;
+        const raw = (el.innerText || el.textContent || '').trim();
+        if (!raw || raw.length > 40) continue;
+        const t = norm(raw);
+        if (t === 'show data' || t === 'export data') {
+          el.click();
+          return { clicked: true, text: raw };
+        }
+      }
+      return { error: 'Show Data menu item not found' };
+    }).catch(() => ({ error: 'evaluate failed' }));
+
+    if (clicked.error) {
+      // Fallback: try in iframes
+      for (const frame of page.frames()) {
+        try {
+          const r = await frame.evaluate(() => {
+            const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+            for (const el of Array.from(document.querySelectorAll('li, button, a, span, div, [role="menuitem"]'))) {
+              const r = el.getBoundingClientRect();
+              if (r.width === 0 || r.height === 0) continue;
+              const t = norm(el.innerText || el.textContent || '');
+              if (t === 'show data' || t === 'export data') { el.click(); return { clicked: true }; }
+            }
+            return null;
+          });
+          if (r && r.clicked) return r;
+        } catch (_) {}
+      }
+    }
+    return clicked;
+  };
+
+  const closeShowDataPopup = async () => {
+    const closed = await page.evaluate(() => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      for (const el of Array.from(document.querySelectorAll('button, [role="button"], span, a'))) {
+        const t = norm(el.innerText || el.textContent || '');
+        if (t === 'close') { el.click(); return true; }
+      }
+      return false;
+    }).catch(() => false);
+    if (!closed) await page.keyboard.press('Escape').catch(() => {});
+    await sleep(400);
+  };
+
+  const waitForDossierReady = async () => {
+    const start = Date.now();
+    while (Date.now() - start < 30000) {
+      const ready = await page.evaluate(() => {
+        const b = document.body ? document.body.innerText : '';
+        return b.length > 100 && !/Loading\\s*Data/i.test(b);
+      }).catch(() => false);
+      if (ready) break;
+      await sleep(500);
+    }
+    await waitForLoadingToFinish();
+  };
+
+  await waitForDossierReady();
+
+  // Navigate to the screen (e.g. "HCP Customer")
+  const navDebug = [];
+  for (const step of NAV_STEPS) {
+    const r = await clickByText(step);
+    navDebug.push({ step, ...r });
+    if (r.error) break;
+  }
+  await waitForDashboard();
+
+  const filterCombinations = (typeof __filterCombinations !== 'undefined' && Array.isArray(__filterCombinations) && __filterCombinations.length > 0)
+    ? __filterCombinations : [];
+
+  const scrapeOnce = async (filters) => {
+    const debug = {};
+    const GEO_ORDER = ['Area', 'Region', 'Territory', 'Time Bucket'];
+    const allKeys = Object.keys(filters || {});
+    const geoKeys = GEO_ORDER.filter(k => allKeys.includes(k));
+    const otherKeys = allKeys.filter(k => !GEO_ORDER.includes(k));
+    for (const key of geoKeys) {
+      debug[key] = await selectByLabel(key, filters[key]);
+      await dismissGenericErrorDialog();
+      await closeAnyOpenDropdown();
+    }
+    for (const key of otherKeys) {
+      debug[key] = await selectByLabel(key, filters[key]);
+      await dismissGenericErrorDialog();
+      await closeAnyOpenDropdown();
+    }
+    await waitForLoadingToFinish(15000);
+    await waitForDashboard();
+
+    const row = { filters_applied: debug };
+
+    // Visit each sub-tab and extract the row count from Show Data
+    for (const tab of SUB_TABS) {
+      const kpiKey = KPI_PREFIX + ' - ' + tab;
+      const tabClick = await clickByText(tab);
+      if (tabClick.error) {
+        row[kpiKey] = null;
+        row[kpiKey + '_debug'] = { error: 'tab not found: ' + tab, ...tabClick };
+        continue;
+      }
+      await waitForLoadingToFinish();
+      await sleep(1000);
+
+      const showDataResult = await openShowData();
+      if (showDataResult.error) {
+        row[kpiKey] = null;
+        row[kpiKey + '_debug'] = { error: 'Show Data failed', ...showDataResult };
+        continue;
+      }
+      await waitForLoadingToFinish(10000);
+      await sleep(1500);
+
+      const countResult = await extractShowDataRowCount();
+      row[kpiKey] = countResult.count;
+      row[kpiKey + '_debug'] = countResult;
+
+      await closeShowDataPopup();
+      await sleep(500);
+    }
+
+    return row;
+  };
+
+  if (filterCombinations.length === 0) {
+    const row = await scrapeOnce({});
+    return { navigation: navDebug, ...row };
+  }
+
+  const results = {};
+  for (let i = 0; i < filterCombinations.length; i++) {
+    const { label = String(i), filters = {} } = filterCombinations[i];
+    if (i > 0) {
+      await page.goto(reportUrl, { waitUntil: 'domcontentloaded', timeout: 60000 }).catch(() => {});
+      await waitForDossierReady();
+      for (const step of NAV_STEPS) {
+        await clickByText(step);
+      }
+      await waitForDashboard();
+    }
+    results[label] = await scrapeOnce(filters);
+  }
+  return { navigation: navDebug, results };
+};
+`;
 }
 
 export function assembleGridScript(opts: {
@@ -557,19 +1138,31 @@ export default async ({ page }) => {
           const st = getComputedStyle(el);
           return st.visibility !== 'hidden' && st.display !== 'none';
         };
-        const cands = Array.from(document.querySelectorAll(
-          'li, [role="option"], [role="menuitem"], [role="listbox"] *, ul *, div, span, td'
-        ));
-        let exact = null, codeMatch = null, contains = null;
-        for (const el of cands) {
-          if (!isVisible(el)) continue;
-          const t = norm(el.innerText || el.textContent || '');
-          if (!t || t.length > 60) continue;
-          if (t === normOpt && !exact) exact = el;
-          else if (t.split(/\\s+/)[0] === optCode && !codeMatch) codeMatch = el;
-          else if (t.includes(normOpt) && !contains) contains = el;
+        const findIn = (root) => {
+          const cands = Array.from(root.querySelectorAll(
+            'li, [role="option"], [role="menuitem"], [role="listbox"] *, ul *, div, span, td'
+          ));
+          let exact = null, codeMatch = null, contains = null;
+          for (const el of cands) {
+            if (!isVisible(el)) continue;
+            const t = norm(el.innerText || el.textContent || '');
+            if (!t || t.length > 60) continue;
+            if (t === normOpt && !exact) exact = el;
+            else if (t.split(/\\s+/)[0] === optCode && !codeMatch) codeMatch = el;
+            else if (t.includes(normOpt) && !contains) contains = el;
+          }
+          return exact || codeMatch || contains;
+        };
+        // Search popup/dropdown containers first to avoid clicking a same-named
+        // filter label elsewhere on the page (e.g. the "Region" filter label
+        // instead of the "Region" option inside the View By dropdown).
+        const popupSels = '[role="listbox"], [role="menu"], .mstrmojo-Popup, .mstrmojo-popup, .mstrmojo-RootPopup, [class*="Popup"], [class*="dropdown" i], [class*="Dropdown" i], ul[class*="list" i], [class*="DocSelector"] ul, [class*="DocSelector"] [role="listbox"]';
+        for (const popup of Array.from(document.querySelectorAll(popupSels))) {
+          if (!isVisible(popup)) continue;
+          const hit = findIn(popup);
+          if (hit) { hit.click(); return { clicked: true, text: (hit.innerText || hit.textContent || '').trim().substring(0, 60), via: 'popup-scoped' }; }
         }
-        const best = exact || codeMatch || contains;
+        const best = findIn(document);
         if (best) { best.click(); return { clicked: true, text: (best.innerText || best.textContent || '').trim().substring(0, 60) }; }
         return null;
       }, optionText).catch(() => null);
@@ -1546,17 +2139,118 @@ export default async ({ page }) => {
   const filterCombinations = (typeof __filterCombinations !== 'undefined' && Array.isArray(__filterCombinations) && __filterCombinations.length > 0)
     ? __filterCombinations : [];
 
+  // "View By" is not a standard DocSelector — it is a custom MSTR widget
+  // (radio group / segmented control). DOM .click() is ignored by MSTR's
+  // framework, so we locate the option element and use page.mouse.click()
+  // at its coordinates to produce a real browser mouse event.
+  const applyViewBy = async (labelText, optionText) => {
+    await closeAnyOpenDropdown();
+    const target = await page.evaluate((label, opt) => {
+      const norm = s => (s || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const wantLabel = norm(label);
+      const wantOpt = norm(opt);
+      const isVisible = el => {
+        const r = el.getBoundingClientRect();
+        if (r.width < 1 || r.height < 1) return false;
+        const st = getComputedStyle(el);
+        return st.visibility !== 'hidden' && st.display !== 'none';
+      };
+      const getDirectText = el => {
+        let t = '';
+        for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE) t += n.textContent;
+        return t.trim();
+      };
+      // 1. Find the "View By" label
+      let labelEl = null, labelArea = Infinity;
+      for (const el of Array.from(document.querySelectorAll('*'))) {
+        if (!isVisible(el)) continue;
+        if (norm(getDirectText(el)) !== wantLabel) continue;
+        const r = el.getBoundingClientRect();
+        const area = r.width * r.height;
+        if (area < labelArea) { labelEl = el; labelArea = area; }
+      }
+      if (!labelEl) return { error: 'View By label not found' };
+      const lr = labelEl.getBoundingClientRect();
+      // 2. Find the option near the label — search within a generous region
+      //    (same row or row below, up to 400px right)
+      const candidates = [];
+      for (const el of Array.from(document.querySelectorAll('span, div, a, li, button, [role="option"], [role="radio"], [role="tab"], [role="button"], label, input'))) {
+        if (!isVisible(el)) continue;
+        const d = norm(getDirectText(el));
+        const full = norm(el.innerText || el.textContent || '');
+        if (d !== wantOpt && full !== wantOpt) continue;
+        const r = el.getBoundingClientRect();
+        // Must be near the label: within 80px vertically, to the right or slightly left
+        if (Math.abs(r.top - lr.top) > 80) continue;
+        if (r.left < lr.left - 40) continue;
+        const dist = Math.abs(r.top - lr.top) + Math.abs(r.left - lr.right);
+        const area = r.width * r.height;
+        candidates.push({ x: r.left + r.width / 2, y: r.top + r.height / 2, dist, area, text: d || full, tag: el.tagName });
+      }
+      if (!candidates.length) {
+        // Fallback: also check inside DocSelector / popup containers near the label
+        const containers = Array.from(document.querySelectorAll('.mstrmojo-DocSelector, [class*="DocSelector"], [class*="Selector"], [role="listbox"], [role="radiogroup"]'));
+        for (const cont of containers) {
+          if (!isVisible(cont)) continue;
+          const cr = cont.getBoundingClientRect();
+          if (Math.abs(cr.top - lr.top) > 80) continue;
+          for (const el of Array.from(cont.querySelectorAll('*'))) {
+            if (!isVisible(el)) continue;
+            const d = norm(getDirectText(el));
+            if (d !== wantOpt) continue;
+            const r = el.getBoundingClientRect();
+            candidates.push({ x: r.left + r.width / 2, y: r.top + r.height / 2, dist: 0, area: r.width * r.height, text: d, tag: el.tagName });
+          }
+        }
+      }
+      if (!candidates.length) return { error: 'View By option not found near label: ' + opt };
+      // Prefer smallest element closest to the label
+      candidates.sort((a, b) => a.dist - b.dist || a.area - b.area);
+      return { x: candidates[0].x, y: candidates[0].y, text: candidates[0].text, tag: candidates[0].tag };
+    }, labelText, optionText);
+    if (target.error) {
+      // Fallback: try selectByLabel as last resort
+      const fallback = await selectByLabel(labelText, optionText);
+      return { ...fallback, via: 'view-by-fallback-selectByLabel' };
+    }
+    // 3. Use real mouse events at the element coordinates
+    await page.mouse.click(target.x, target.y);
+    await sleep(500);
+    // Some MSTR controls need a second click or respond to mousedown specifically
+    await page.mouse.click(target.x, target.y);
+    await dismissGenericErrorDialog();
+    await closeAnyOpenDropdown();
+    await waitForLoadingToFinish(15000);
+    return { ok: true, via: 'view-by-mouse-click', x: target.x, y: target.y, text: target.text, tag: target.tag };
+  };
+
   const scrapeOnce = async (filters) => {
     const debug = {};
     const GEO_ORDER = ['Area', 'Region', 'Territory', 'Time Bucket'];
+    const VIEW_BY_KEY = 'View By';
     const allKeys = Object.keys(filters || {});
     const geoKeys = GEO_ORDER.filter(k => allKeys.includes(k));
-    const otherKeys = allKeys.filter(k => !GEO_ORDER.includes(k));
-    for (const key of geoKeys) debug[key] = await selectByLabel(key, filters[key]);
-    for (const key of otherKeys) debug[key] = await selectByLabel(key, filters[key]);
-    await closeAnyOpenDropdown();
-    await dismissGenericErrorDialog();
+    const otherKeys = allKeys.filter(k => !GEO_ORDER.includes(k) && k !== VIEW_BY_KEY);
+    // Apply geo filters and other filters first — each triggers a page
+    // reload inside MSTR that can reset View By back to its default.
+    for (const key of geoKeys) {
+      debug[key] = await selectByLabel(key, filters[key]);
+      await dismissGenericErrorDialog();
+      await closeAnyOpenDropdown();
+    }
+    for (const key of otherKeys) {
+      debug[key] = await selectByLabel(key, filters[key]);
+      await dismissGenericErrorDialog();
+      await closeAnyOpenDropdown();
+    }
     await waitForLoadingToFinish(15000);
+    // Apply "View By" LAST — after all other filters have settled.
+    // MSTR resets View By when geo filters trigger page reloads, so it
+    // must be the final filter change before scraping.
+    if (allKeys.includes(VIEW_BY_KEY)) {
+      debug[VIEW_BY_KEY] = await applyViewBy(VIEW_BY_KEY, filters[VIEW_BY_KEY]);
+      await waitForLoadingToFinish(15000);
+    }
     await waitForDashboard();
     const row = { filters_applied: debug };
     // Primary: widget Menu → Show Data (clean multi-col table). Fallback: on-page scrape.

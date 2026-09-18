@@ -10,11 +10,14 @@ import {
 } from "../_shared/mstr-overview-template.ts";
 import {
   assembleGridScript,
+  assembleRecordCountScript,
   isGridScenario,
+  isRecordCountScenario,
   parseGridColumns,
   parseGridNavSteps,
   parseGridTimeGrain,
   parseGridTitle,
+  parseSubTabs,
 } from "../_shared/mstr-grid-template.ts";
 import {
   assembleChartScript,
@@ -144,8 +147,8 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   const unauthorized = await requireAuth(req);
   if (unauthorized) return unauthorized;
+  let agentLog: ScriptAgentSessionLog | null = null;
   try {
-    let agentLog: ScriptAgentSessionLog | null = null;
     const body = await req.json();
     const scenario_id: string = body.scenario_id;
     const target: "main" | "reference" = body.target === "reference" ? "reference" : "main";
@@ -289,6 +292,41 @@ Deno.serve(async (req) => {
             { error: String((e as Error)?.message || e) },
             "error",
           );
+        }
+      }
+
+      if (isRecordCountScenario(scenario)) {
+        await log.log("script-gen", "template_try", "Trying record_count template");
+        const navSteps = parseGridNavSteps(scenario);
+        const subTabs = parseSubTabs(scenario);
+        if (subTabs.length > 0) {
+          const playwright_code = assembleRecordCountScript({
+            reportUrl: normalizeReportUrl(targetUrl),
+            navSteps,
+            subTabs,
+          });
+          const v = validateAssembledScript(playwright_code);
+          if (v.ok) {
+            await log.log("script-gen", "template_hit", "Assembled record_count", {
+              nav_steps: navSteps,
+              sub_tabs: subTabs,
+              code_bytes: playwright_code.length,
+            });
+            return {
+              playwright_code,
+              generatedBy: skillGeneratedBy("record_count"),
+              meta: {
+                nav_steps: navSteps,
+                sub_tabs: subTabs,
+                kpi_labels: subTabs.map((t: string) => `Row Count - ${t}`),
+                skill: SCRIPT_GEN_SKILL_ID,
+                skill_version: SCRIPT_GEN_SKILL_VERSION,
+              },
+            };
+          }
+          await log.log("script-gen", "template_reject", "record_count assemble invalid", { reason: v.reason }, "warn");
+        } else {
+          await log.log("script-gen", "template_reject", "record_count: no sub-tabs found in description", {}, "warn");
         }
       }
 
